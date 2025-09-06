@@ -4,5 +4,8 @@
   "scripts": {
     "lint": "echo 'No lint step defined'",
     "test": "echo 'No tests defined'"
+  },
+  "dependencies": {
+    "express": "^5.1.0"
   }
 }

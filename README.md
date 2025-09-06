@@ -14,16 +14,38 @@ MagSuite is a lightweight toolkit aimed at helping small businesses keep their s
 
 ## Prerequisites
 
+- Node.js 20 or later
+- npm or pnpm
+- Supabase CLI
 - Python 3.10 or later
 - Git
 
 ## Installation
 
+Clone the repository and move into the project directory:
+
 ```bash
 git clone https://github.com/example/MagSuite.git
 cd MagSuite
-# (Optional) set up a virtual environment
-# install dependencies when available
+```
+
+### Backend setup
+
+```bash
+cd backend
+python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+# Optional: start local Supabase instance
+supabase start
+```
+
+### Frontend setup
+
+```bash
+cd frontend
+pnpm install # or npm install
+pnpm dev     # or npm run dev
 ```
 
 ## Usage

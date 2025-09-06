@@ -7,6 +7,8 @@ import TransferList from './pages/transfers/TransferList.vue';
 import TransferForm from './pages/transfers/TransferForm.vue';
 import MovementList from './components/MovementList.vue';
 import MovementForm from './components/MovementForm.vue';
+import InventoryList from './components/InventoryList.vue';
+import InventoryWizard from './components/InventoryWizard.vue';
 
 const routes: Array<RouteRecordRaw> = [
   {
@@ -52,6 +54,17 @@ const routes: Array<RouteRecordRaw> = [
     path: '/movements/:type/:id',
     name: 'movement-form',
     component: MovementForm,
+    props: true
+  },
+  {
+    path: '/inventories',
+    name: 'inventories',
+    component: InventoryList
+  },
+  {
+    path: '/inventories/:id',
+    name: 'inventory-wizard',
+    component: InventoryWizard,
     props: true
   }
 ];

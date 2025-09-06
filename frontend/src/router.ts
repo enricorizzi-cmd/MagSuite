@@ -12,6 +12,10 @@ import InventoryWizard from './components/InventoryWizard.vue';
 import MrpSuggestions from './pages/mrp/MrpSuggestions.vue';
 import PurchaseOrderList from './pages/purchase-orders/PurchaseOrderList.vue';
 import PurchaseOrderForm from './pages/purchase-orders/PurchaseOrderForm.vue';
+import SupplierList from './pages/suppliers/SupplierList.vue';
+import SupplierForm from './pages/suppliers/SupplierForm.vue';
+import CustomerList from './pages/customers/CustomerList.vue';
+import CustomerForm from './pages/customers/CustomerForm.vue';
 
 const routes: Array<RouteRecordRaw> = [
   {
@@ -84,6 +88,28 @@ const routes: Array<RouteRecordRaw> = [
     path: '/purchase-orders/:id',
     name: 'purchase-order-form',
     component: PurchaseOrderForm,
+    props: true
+  },
+  {
+    path: '/suppliers',
+    name: 'suppliers',
+    component: SupplierList
+  },
+  {
+    path: '/suppliers/:id',
+    name: 'supplier-form',
+    component: SupplierForm,
+    props: true
+  },
+  {
+    path: '/customers',
+    name: 'customers',
+    component: CustomerList
+  },
+  {
+    path: '/customers/:id',
+    name: 'customer-form',
+    component: CustomerForm,
     props: true
   }
 ];

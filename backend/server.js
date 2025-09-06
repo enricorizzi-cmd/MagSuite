@@ -1,4 +1,5 @@
 const express = require('express');
+const multer = require('multer');
 const {
   router: authRouter,
   authenticateToken,
@@ -7,6 +8,7 @@ const {
 
 function start(port = process.env.PORT || 3000) {
   const app = express();
+  const upload = multer();
   app.use(express.json());
 
   app.use('/auth', authRouter);
@@ -17,6 +19,12 @@ function start(port = process.env.PORT || 3000) {
   const stockMovements = [];
   const inventories = [];
   let nextInvId = 1;
+  // Suppliers, customers and import logs
+  const suppliers = [];
+  let nextSupplierId = 1;
+  const customers = [];
+  let nextCustomerId = 1;
+  const importLogs = [];
 
   app.get('/health', (req, res) => {
     res.json({ status: 'ok' });
@@ -151,6 +159,88 @@ function start(port = process.env.PORT || 3000) {
       res.status(201).json({ status: 'created' });
     }
   );
+
+  // Supplier APIs
+  app.get('/suppliers', (req, res) => {
+    res.json({ items: suppliers });
+  });
+
+  app.get('/suppliers/:id', (req, res) => {
+    const sup = suppliers.find((s) => s.id == req.params.id);
+    if (!sup) return res.status(404).end();
+    res.json(sup);
+  });
+
+  app.post('/suppliers', (req, res) => {
+    const sup = { id: nextSupplierId++, name: req.body.name || '' };
+    suppliers.push(sup);
+    res.status(201).json(sup);
+  });
+
+  app.put('/suppliers/:id', (req, res) => {
+    const sup = suppliers.find((s) => s.id == req.params.id);
+    if (!sup) return res.status(404).end();
+    Object.assign(sup, req.body);
+    res.json(sup);
+  });
+
+  app.get('/suppliers/export', (req, res) => {
+    const lines = ['id,name'];
+    suppliers.forEach((s) => lines.push(`${s.id},${s.name}`));
+    res.type('text/csv').send(lines.join('\n'));
+  });
+
+  // Customer APIs
+  app.get('/customers', (req, res) => {
+    res.json({ items: customers });
+  });
+
+  app.get('/customers/:id', (req, res) => {
+    const cust = customers.find((c) => c.id == req.params.id);
+    if (!cust) return res.status(404).end();
+    res.json(cust);
+  });
+
+  app.post('/customers', (req, res) => {
+    const cust = { id: nextCustomerId++, name: req.body.name || '' };
+    customers.push(cust);
+    res.status(201).json(cust);
+  });
+
+  app.put('/customers/:id', (req, res) => {
+    const cust = customers.find((c) => c.id == req.params.id);
+    if (!cust) return res.status(404).end();
+    Object.assign(cust, req.body);
+    res.json(cust);
+  });
+
+  app.get('/customers/export', (req, res) => {
+    const lines = ['id,name'];
+    customers.forEach((c) => lines.push(`${c.id},${c.name}`));
+    res.type('text/csv').send(lines.join('\n'));
+  });
+
+  // Generic import with logging
+  app.post('/imports/:type', upload.single('file'), (req, res) => {
+    const { type } = req.params;
+    if (!req.file) return res.status(400).json({ error: 'No file' });
+    const text = req.file.buffer.toString('utf-8').trim();
+    const lines = text.split(/\r?\n/).filter(Boolean);
+    const rows = lines.slice(1); // skip header
+    let count = 0;
+    rows.forEach((line) => {
+      const [name] = line.split(',');
+      if (!name) return;
+      if (type === 'suppliers') {
+        suppliers.push({ id: nextSupplierId++, name });
+      } else if (type === 'customers') {
+        customers.push({ id: nextCustomerId++, name });
+      }
+      count++;
+    });
+    importLogs.push({ type, count });
+    res.json({ status: 'ok', count });
+  });
 
   const server = app.listen(port, () => {
     console.log(`Server listening on port ${port}`);

@@ -63,6 +63,7 @@
 
 <script setup lang="ts">
 import { onMounted, ref, computed } from 'vue';
+import { useRouter } from 'vue-router';
 
 interface Item {
   id: number | string;
@@ -75,6 +76,7 @@ interface Item {
 }
 
 const items = ref<Item[]>([]);
+const router = useRouter();
 const total = ref(0);
 const page = ref(1);
 const pageSize = ref(10);
@@ -130,11 +132,11 @@ function changePage(newPage: number) {
 }
 
 function createItem() {
-  console.log('create item');
+  router.push('/items/new');
 }
 
 function editItem(item: Item) {
-  console.log('edit', item);
+  router.push(`/items/${item.id}`);
 }
 
 async function archiveItem(item: Item) {

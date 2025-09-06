@@ -26,8 +26,50 @@ function start(port = process.env.PORT || 3000) {
   let nextCustomerId = 1;
   const importLogs = [];
 
+  // Simple in-memory stores for barcodes and settings
+  const itemBarcodes = {};
+  const settings = { defaultLabelTemplate: 'standard' };
+
   app.get('/health', (req, res) => {
     res.json({ status: 'ok' });
+  });
+
+  // Settings APIs
+  app.get('/settings', (req, res) => {
+    res.json(settings);
+  });
+
+  app.put('/settings', (req, res) => {
+    Object.assign(settings, req.body);
+    res.json(settings);
+  });
+
+  // Barcode APIs
+  app.get('/items/:id/barcodes', (req, res) => {
+    const { id } = req.params;
+    res.json(itemBarcodes[id] || []);
+  });
+
+  app.post('/items/:id/barcodes', (req, res) => {
+    const { id } = req.params;
+    if (Array.isArray(req.body)) {
+      itemBarcodes[id] = req.body;
+      return res.json({ status: 'ok' });
+    }
+    const code = `BC${Math.random().toString().slice(2, 10)}`;
+    if (!itemBarcodes[id]) itemBarcodes[id] = [];
+    itemBarcodes[id].push(code);
+    res.status(201).json({ barcode: code });
+  });
+
+  // Label rendering API
+  app.get('/labels/:template', (req, res) => {
+    const { template } = req.params;
+    const { item_id, format = 'pdf' } = req.query;
+    const content = Buffer.from(
+      `Label ${template} for item ${item_id}`,
+    ).toString('base64');
+    res.json({ format, content });
   });
 
   // Document APIs

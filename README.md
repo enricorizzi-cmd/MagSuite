@@ -26,8 +26,12 @@ MagSuite is a lightweight toolkit aimed at helping small businesses keep their s
 - Node.js 20 or later
 - npm or pnpm
 - Supabase CLI
-- Python 3.10 or later
 - Git
+
+## Node Dependencies
+
+Both the backend and frontend currently have no external Node.js packages.
+Dependencies will be listed in their respective `package.json` files as the project grows.
 
 ## Installation
 
@@ -42,9 +46,8 @@ cd MagSuite
 
 ```bash
 cd backend
-python -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
+npm install # installs dependencies from package.json (none currently)
+node server.js
 # Optional: start local Supabase instance
 supabase start
 ```
@@ -53,16 +56,24 @@ supabase start
 
 ```bash
 cd frontend
-pnpm install # or npm install
+pnpm install # or npm install (installs package.json dependencies)
 pnpm dev     # or npm run dev
 ```
 
 ## Usage
 
-Basic example using the command-line interface:
+Start the backend server:
 
 ```bash
-magsuite --inventory sample.csv
+cd backend
+node server.js
+```
+
+In another terminal, start the frontend development server:
+
+```bash
+cd frontend
+npm run dev
 ```
 
 For more examples, see the [usage guide](docs/usage.md).

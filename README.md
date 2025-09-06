@@ -1,5 +1,8 @@
 # MagSuite
 
+[![Backend CI](https://github.com/example/MagSuite/actions/workflows/ci.yml/badge.svg?job=backend)](https://github.com/example/MagSuite/actions/workflows/ci.yml)
+[![Frontend CI](https://github.com/example/MagSuite/actions/workflows/ci.yml/badge.svg?job=frontend)](https://github.com/example/MagSuite/actions/workflows/ci.yml)
+
 MagSuite — Giacenze chiare, scorte giuste, meno sprechi.
 
 ## Project Overview

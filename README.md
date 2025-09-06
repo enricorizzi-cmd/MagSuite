@@ -12,6 +12,12 @@ MagSuite is a lightweight toolkit aimed at helping small businesses keep their s
 - Simple analytics to highlight slow-moving items
 - Modular architecture for future integrations
 
+## Repository Structure
+
+- [backend](backend/) – Node.js server placeholder
+- [frontend](frontend/) – Vite app scaffold
+- [supabase](supabase/) – Supabase configuration and migrations
+
 ## Prerequisites
 
 - Node.js 20 or later

@@ -9,6 +9,9 @@ import MovementList from './components/MovementList.vue';
 import MovementForm from './components/MovementForm.vue';
 import InventoryList from './components/InventoryList.vue';
 import InventoryWizard from './components/InventoryWizard.vue';
+import MrpSuggestions from './pages/mrp/MrpSuggestions.vue';
+import PurchaseOrderList from './pages/purchase-orders/PurchaseOrderList.vue';
+import PurchaseOrderForm from './pages/purchase-orders/PurchaseOrderForm.vue';
 
 const routes: Array<RouteRecordRaw> = [
   {
@@ -65,6 +68,22 @@ const routes: Array<RouteRecordRaw> = [
     path: '/inventories/:id',
     name: 'inventory-wizard',
     component: InventoryWizard,
+    props: true
+  },
+  {
+    path: '/mrp',
+    name: 'mrp',
+    component: MrpSuggestions
+  },
+  {
+    path: '/purchase-orders',
+    name: 'purchase-orders',
+    component: PurchaseOrderList
+  },
+  {
+    path: '/purchase-orders/:id',
+    name: 'purchase-order-form',
+    component: PurchaseOrderForm,
     props: true
   }
 ];

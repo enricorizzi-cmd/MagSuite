@@ -58,6 +58,41 @@ function start(port = process.env.PORT || 3000) {
     res.json({ status: doc.status });
   });
 
+  // MRP and Purchase Order APIs
+  app.get('/mrp/suggestions', (req, res) => {
+    // Return a minimal set of suggestions. In a real system this would be
+    // calculated from stock levels and demand history.
+    res.json([
+      { item: 'demo-item', rop: 10, avg_demand: 5, suggested_qty: 15 },
+    ]);
+  });
+
+  app.get('/purchase-orders', (req, res) => {
+    const items = documents.filter((d) => d.type === 'po');
+    res.json({ items });
+  });
+
+  app.get('/purchase-orders/:id', (req, res) => {
+    const doc = documents.find(
+      (d) => d.type === 'po' && d.id == req.params.id,
+    );
+    if (!doc) return res.status(404).end();
+    res.json(doc);
+  });
+
+  app.post('/po', (req, res) => {
+    const po = {
+      id: nextDocId++,
+      type: 'po',
+      status: 'draft',
+      lines: req.body.lines || [
+        { item: req.body.item, qty: req.body.qty },
+      ],
+    };
+    documents.push(po);
+    res.status(201).json(po);
+  });
+
   // Inventory APIs
   app.get('/inventories', (req, res) => {
     res.json({ items: inventories });

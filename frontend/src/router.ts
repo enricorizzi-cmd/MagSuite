@@ -5,6 +5,8 @@ import ItemDetail from './pages/items/ItemDetail.vue';
 import WarehouseStock from './pages/warehouses/WarehouseStock.vue';
 import TransferList from './pages/transfers/TransferList.vue';
 import TransferForm from './pages/transfers/TransferForm.vue';
+import MovementList from './components/MovementList.vue';
+import MovementForm from './components/MovementForm.vue';
 
 const routes: Array<RouteRecordRaw> = [
   {
@@ -38,6 +40,18 @@ const routes: Array<RouteRecordRaw> = [
     path: '/transfers/:id',
     name: 'transfer-form',
     component: TransferForm,
+    props: true
+  },
+  {
+    path: '/movements/:type',
+    name: 'movements',
+    component: MovementList,
+    props: true
+  },
+  {
+    path: '/movements/:type/:id',
+    name: 'movement-form',
+    component: MovementForm,
     props: true
   }
 ];

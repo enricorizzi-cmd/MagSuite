@@ -76,6 +76,12 @@ cd frontend
 npm run dev
 ```
 
+A lightweight Python CLI is available for quick inventory summaries:
+
+```bash
+magsuite --inventory docs/sample_inventory.csv
+```
+
 For more examples, see the [usage guide](docs/usage.md).
 
 ## Contribution Guidelines

@@ -1,0 +1,8 @@
+[project]
+name = "magsuite"
+version = "0.0.0"
+description = "Minimal MagSuite example package"
+requires-python = ">=3.8"
+
+[project.scripts]
+magsuite = "magsuite.cli:main"

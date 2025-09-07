@@ -19,6 +19,7 @@ import CustomerForm from './pages/customers/CustomerForm.vue';
 import LabelGenerator from './pages/labels/LabelGenerator.vue';
 import ReportList from './pages/reports/ReportList.vue';
 import ReportView from './pages/reports/ReportView.vue';
+import Settings from './pages/settings/Settings.vue';
 
 const routes: Array<RouteRecordRaw> = [
   {
@@ -130,6 +131,11 @@ const routes: Array<RouteRecordRaw> = [
     path: '/labels',
     name: 'labels',
     component: LabelGenerator
+  },
+  {
+    path: '/settings',
+    name: 'settings',
+    component: Settings
   }
 ];
 

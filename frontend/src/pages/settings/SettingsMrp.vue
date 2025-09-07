@@ -1,0 +1,52 @@
+<template>
+  <div class="settings-mrp">
+    <label>
+      MRP Horizon (days)
+      <input type="number" v-model.number="mrp.mrpDays" />
+    </label>
+    <div class="actions">
+      <button @click="save">Save</button>
+    </div>
+  </div>
+</template>
+
+<script setup lang="ts">
+import { ref, onMounted } from 'vue';
+
+const mrp = ref<{ mrpDays: number }>({ mrpDays: 0 });
+
+onMounted(async () => {
+  try {
+    const res = await fetch('/settings');
+    if (res.ok) {
+      const data = await res.json();
+      mrp.value = data.mrp || { mrpDays: 0 };
+    }
+  } catch (err) {
+    console.error('Failed to load settings', err);
+  }
+});
+
+async function save() {
+  try {
+    await fetch('/settings', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ mrp: mrp.value })
+    });
+  } catch (err) {
+    console.error('Failed to save settings', err);
+  }
+}
+</script>
+
+<style scoped>
+.settings-mrp {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.actions {
+  margin-top: 1rem;
+}
+</style>

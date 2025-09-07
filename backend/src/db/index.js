@@ -6,7 +6,12 @@ const ca = fs.readFileSync(path.join(__dirname, '..', '..', 'prod-ca-2021.crt'),
 
 // Allow opt-out of certificate verification when dealing with self-signed certs.
 // Set ALLOW_SELF_SIGNED_CERT=true in environments (like Render) where the
-// database uses a self-signed certificate.
+// database uses a self-signed certificate. When enabled, also set the global
+// Node.js flag to permit self-signed certificates.
+if (process.env.ALLOW_SELF_SIGNED_CERT === 'true') {
+  process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
+}
+
 const sslConfig = process.env.ALLOW_SELF_SIGNED_CERT === 'true'
   ? { rejectUnauthorized: false }
   : { rejectUnauthorized: true, ca };

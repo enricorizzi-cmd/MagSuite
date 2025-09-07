@@ -89,6 +89,11 @@ The backend relies on a few variables at runtime:
 - `REFRESH_SECRET` – secret used to sign refresh tokens
 - `ALERT_EMAIL` – destination for alert notifications (optional)
 - `BATCH_STRATEGY` – `FIFO` (default) or `FEFO` for batch handling (optional)
+- `ALLOW_SELF_SIGNED_CERT` – set to `true` if your database uses a self-signed certificate
+
+Enabling `ALLOW_SELF_SIGNED_CERT` disables certificate verification for the
+database connection, avoiding errors like `SELF_SIGNED_CERT_IN_CHAIN` when using
+providers that supply self-signed certificates (e.g. Render's free Postgres).
 
 On Render, add them via **Environment → Add Environment Variable**:
 
@@ -98,6 +103,8 @@ ACCESS_SECRET=replace-me
 REFRESH_SECRET=replace-me-too
 ALERT_EMAIL=alerts@example.com
 BATCH_STRATEGY=FIFO
+# Only needed if the database uses a self-signed certificate
+ALLOW_SELF_SIGNED_CERT=true
 ```
 
 For local development, create a `.env` file inside `backend/` and run Node with the
@@ -111,6 +118,8 @@ ACCESS_SECRET=dev-access-secret
 REFRESH_SECRET=dev-refresh-secret
 ALERT_EMAIL=alerts@example.com
 BATCH_STRATEGY=FIFO
+# Uncomment if using a self-signed certificate locally
+# ALLOW_SELF_SIGNED_CERT=true
 EOF
 node --env-file=.env server.js
 ```

@@ -1,15 +1,17 @@
 import { createRouter, createWebHistory, RouteRecordRaw } from 'vue-router';
 import Dashboard from './pages/dashboard/Dashboard.vue';
-import ItemList from './pages/items/ItemList.vue';
+import Items from './pages/items/Items.vue';
 import ItemDetail from './pages/items/ItemDetail.vue';
+import Warehouses from './pages/warehouses/Warehouses.vue';
 import WarehouseStock from './pages/warehouses/WarehouseStock.vue';
 import TransferList from './pages/transfers/TransferList.vue';
 import TransferForm from './pages/transfers/TransferForm.vue';
 import MovementList from './components/MovementList.vue';
 import MovementForm from './components/MovementForm.vue';
-import InventoryList from './components/InventoryList.vue';
+import Inventories from './pages/inventories/Inventories.vue';
 import InventoryWizard from './components/InventoryWizard.vue';
-import MrpSuggestions from './pages/mrp/MrpSuggestions.vue';
+import Documents from './pages/documents/Documents.vue';
+import Mrp from './pages/mrp/Mrp.vue';
 import PurchaseOrderList from './pages/purchase-orders/PurchaseOrderList.vue';
 import PurchaseOrderForm from './pages/purchase-orders/PurchaseOrderForm.vue';
 import SupplierList from './pages/suppliers/SupplierList.vue';
@@ -32,13 +34,18 @@ const routes: Array<RouteRecordRaw> = [
   {
     path: '/items',
     name: 'items',
-    component: ItemList
+    component: Items
   },
   {
     path: '/items/:id',
     name: 'item-detail',
     component: ItemDetail,
     props: true
+  },
+  {
+    path: '/warehouses',
+    name: 'warehouses',
+    component: Warehouses
   },
   {
     path: '/warehouses/:id/stock',
@@ -72,7 +79,7 @@ const routes: Array<RouteRecordRaw> = [
   {
     path: '/inventories',
     name: 'inventories',
-    component: InventoryList
+    component: Inventories
   },
   {
     path: '/inventories/:id',
@@ -83,7 +90,12 @@ const routes: Array<RouteRecordRaw> = [
   {
     path: '/mrp',
     name: 'mrp',
-    component: MrpSuggestions
+    component: Mrp
+  },
+  {
+    path: '/documents',
+    name: 'documents',
+    component: Documents
   },
   {
     path: '/purchase-orders',

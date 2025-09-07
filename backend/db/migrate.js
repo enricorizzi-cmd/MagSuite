@@ -3,7 +3,8 @@ const path = require('path');
 const { Pool } = require('pg');
 
 const connectionString = process.env.DATABASE_URL || 'postgres://postgres:postgres@localhost:5432/postgres';
-const pool = new Pool({ connectionString });
+const ca = fs.readFileSync(path.join(__dirname, '..', 'prod-ca-2021.crt'), 'utf8');
+const pool = new Pool({ connectionString, ssl: { rejectUnauthorized: true, ca } });
 
 async function run() {
   const dir = path.join(__dirname, '..', '..', 'supabase', 'migrations');

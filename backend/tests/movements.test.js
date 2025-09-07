@@ -7,7 +7,7 @@ let server;
 
 beforeAll(async () => {
   await ready;
-  server = start(0);
+  server = await start(0);
   await db.query("INSERT INTO items(id, name) VALUES (1, 'Item')");
   await db.query("INSERT INTO warehouses(id, name) VALUES (1, 'Main')");
   await db.query("INSERT INTO documents(id, type, status) VALUES (1, 'receipt', 'draft')");

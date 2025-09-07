@@ -2,8 +2,8 @@ const request = require('supertest');
 const { start } = require('./server');
 let server;
 
-beforeAll(() => {
-  server = start(0);
+beforeAll(async () => {
+  server = await start(0);
 });
 
 afterAll((done) => {

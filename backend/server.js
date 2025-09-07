@@ -7,13 +7,14 @@ const documents = require('./src/documents');
 const inventories = require('./src/inventories');
 const labels = require('./src/labels');
 const imports = require('./src/imports');
-const db = require('./src/db');
+const pool = require('./src/db');
+const db = pool;
 const { calculateReorderPoint, calculateOrderQuantity } = require('./src/mrp');
 const { sendPdf } = require('./src/mail');
 const logger = require('./src/logger');
 const { sendHealthAlert } = require('./src/alerts');
 
-(async () => {
+;(async () => {
   await db.query(`CREATE TABLE IF NOT EXISTS purchase_orders (
     id SERIAL PRIMARY KEY,
     supplier TEXT,
@@ -27,11 +28,17 @@ const { sendHealthAlert } = require('./src/alerts');
   )`);
 })();
 
-function start(port = process.env.PORT || 3000) {
+async function start(port = process.env.PORT || 3000) {
+  await pool
+    .connect()
+    .then((client) => client.release())
+    .then(() => console.log('Database connection established'))
+    .catch((err) => {
+      console.error('Failed to connect to database', err);
+      process.exit(1);
+    });
+
   const app = express();
-  db.query('SELECT 1')
-    .then(() => logger.info('Database connection established'))
-    .catch((err) => logger.error('Database connection error', err));
   app.use(express.json());
   app.use((req, res, next) => {
     logger.info(`${req.method} ${req.url}`);

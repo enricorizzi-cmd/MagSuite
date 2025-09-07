@@ -6,7 +6,7 @@ const { selectNextBatch, ready: docsReady } = require('./src/documents');
 let server;
 
 beforeAll(async () => {
-  server = start(0);
+  server = await start(0);
   await docsReady;
 });
 

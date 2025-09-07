@@ -1,11 +1,15 @@
 const { Pool } = require('pg');
 
+const ssl = process.env.DATABASE_URL?.includes('sslmode=require')
+  ? { rejectUnauthorized: false }
+  : undefined;
+
 let pool;
 if (process.env.NODE_ENV === 'test') {
   const { newDb } = require('pg-mem');
   const db = newDb();
   const pg = db.adapters.createPg();
-  pool = new pg.Pool();
+  pool = new pg.Pool({ ssl });
 } else {
   const {
     PGHOST,
@@ -17,7 +21,7 @@ if (process.env.NODE_ENV === 'test') {
   } = process.env;
 
   if (DATABASE_URL) {
-    pool = new Pool({ connectionString: DATABASE_URL });
+    pool = new Pool({ connectionString: DATABASE_URL, ssl });
   } else {
     pool = new Pool({
       host: PGHOST,
@@ -25,6 +29,7 @@ if (process.env.NODE_ENV === 'test') {
       password: PGPASSWORD,
       database: PGDATABASE,
       port: PGPORT ? Number(PGPORT) : undefined,
+      ssl,
     });
   }
 }

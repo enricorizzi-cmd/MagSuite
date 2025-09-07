@@ -1,16 +1,5 @@
 version: '3.9'
 services:
-  db:
-    image: postgres:15
-    environment:
-      POSTGRES_DB: magsuite
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-    ports:
-      - "5432:5432"
-    volumes:
-      - pgdata:/var/lib/postgresql/data
-
   backend:
     build: ./backend
     environment:
@@ -22,8 +11,6 @@ services:
       PGPORT: ${PGPORT}
       DATABASE_URL: "postgres://${PGUSER}:${PGPASSWORD}@${PGHOST}:${PGPORT}/${PGDATABASE}"
       ALERT_EMAIL: alerts@example.com
-    depends_on:
-      - db
     ports:
       - "3000:3000"
 
@@ -33,6 +20,3 @@ services:
       - backend
     ports:
       - "5173:80"
-
-volumes:
-  pgdata:

@@ -2,8 +2,6 @@ const express = require('express');
 const multer = require('multer');
 const {
   router: authRouter,
-  authenticateToken,
-  rbac,
 } = require('./src/auth');
 const items = require('./src/items');
 const documents = require('./src/documents');

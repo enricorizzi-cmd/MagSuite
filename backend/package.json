@@ -12,9 +12,12 @@
     "express": "^5.1.0",
     "jsonwebtoken": "^9.0.2",
     "multer": "^1.4.5-lts.1",
+    "nodemailer": "^6.9.11",
+    "pdfkit": "^0.17.2",
     "pg": "^8.11.5",
     "pg-mem": "^3.0.5",
-    "nodemailer": "^6.9.11"
+    "tslib": "^2.8.1",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "eslint": "^8.57.1",

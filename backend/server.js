@@ -1,11 +1,12 @@
 const express = require('express');
-const multer = require('multer');
 const {
   router: authRouter,
 } = require('./src/auth');
 const items = require('./src/items');
 const documents = require('./src/documents');
 const inventories = require('./src/inventories');
+const labels = require('./src/labels');
+const imports = require('./src/imports');
 const db = require('./db');
 const { calculateReorderPoint, calculateOrderQuantity } = require('./src/mrp');
 const { sendPdf } = require('./src/mail');
@@ -26,21 +27,20 @@ const { sendPdf } = require('./src/mail');
 
 function start(port = process.env.PORT || 3000) {
   const app = express();
-  const upload = multer();
   app.use(express.json());
 
   app.use('/auth', authRouter);
   app.use('/items', items.router);
   app.use('/documents', documents.router);
   app.use('/', inventories.router);
+  app.use('/', labels.router);
+  app.use('/', imports.router);
 
-  // Suppliers, customers and import logs
+  // Suppliers and customers
   const suppliers = [];
   let nextSupplierId = 1;
   const customers = [];
   let nextCustomerId = 1;
-  const importLogs = [];
-  let nextImportId = 1;
 
   const jobQueue = [];
   const { version } = require('./package.json');
@@ -83,16 +83,6 @@ function start(port = process.env.PORT || 3000) {
     if (!itemBarcodes[id]) itemBarcodes[id] = [];
     itemBarcodes[id].push(code);
     res.status(201).json({ barcode: code });
-  });
-
-  // Label rendering API
-  app.get('/labels/:template', (req, res) => {
-    const { template } = req.params;
-    const { item_id, format = 'pdf' } = req.query;
-    const content = Buffer.from(
-      `Label ${template} for item ${item_id}`,
-    ).toString('base64');
-    res.json({ format, content });
   });
 
   // MRP and Purchase Order APIs
@@ -217,56 +207,6 @@ function start(port = process.env.PORT || 3000) {
     res.type('text/csv').send(lines.join('\n'));
   });
 
-  app.get('/system/imports', (req, res) => {
-    res.json(importLogs.map(({ id, type, count }) => ({ id, type, count })));
-  });
-
-  app.get('/imports/:id/log', (req, res) => {
-    const log = importLogs.find((l) => l.id == req.params.id);
-    if (!log) return res.status(404).end();
-    res.json({ log: log.log || [] });
-  });
-
-  app.get('/imports/:id/file', (req, res) => {
-    const log = importLogs.find((l) => l.id == req.params.id);
-    if (!log) return res.status(404).end();
-    res.json({ filename: log.filename, content: log.file.toString('base64') });
-  });
-
-  // Generic import with logging
-  app.post('/imports/:type', upload.single('file'), (req, res) => {
-    const { type } = req.params;
-    if (!req.file) return res.status(400).json({ error: 'No file' });
-    const text = req.file.buffer.toString('utf-8').trim();
-    const lines = text.split(/\r?\n/).filter(Boolean);
-    const rows = lines.slice(1); // skip header
-    let count = 0;
-    const log = [];
-    rows.forEach((line, idx) => {
-      const [name] = line.split(',');
-      if (!name) {
-        log.push({ line: idx + 2, message: 'Missing name', error: true });
-        return;
-      }
-      if (type === 'suppliers') {
-        suppliers.push({ id: nextSupplierId++, name });
-      } else if (type === 'customers') {
-        customers.push({ id: nextCustomerId++, name });
-      }
-      count++;
-      log.push({ line: idx + 2, message: `Imported ${name}`, error: false });
-    });
-    const id = nextImportId++;
-    importLogs.push({
-      id,
-      type,
-      count,
-      log,
-      file: req.file.buffer,
-      filename: req.file.originalname,
-    });
-    res.json({ status: 'ok', count, id });
-  });
 
   const server = app.listen(port, () => {
     console.log(`Server listening on port ${port}`);

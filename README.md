@@ -23,10 +23,38 @@ MagSuite is a lightweight toolkit aimed at helping small businesses keep their s
 
 ## Prerequisites
 
+- Python 3.8 or later
 - Node.js 20 or later
 - npm or pnpm
 - Supabase CLI
+- Docker and Docker Compose
 - Git
+
+## Environment Setup
+
+### Python
+
+```bash
+python -m venv .venv
+source .venv/bin/activate
+pip install -e .
+```
+
+### Node
+
+Install project dependencies for both services:
+
+```bash
+cd backend && npm install
+cd ../frontend && npm install
+```
+
+### Supabase
+
+```bash
+supabase login   # authenticate the CLI
+supabase start   # start local services
+```
 
 ## Node Dependencies
 
@@ -58,6 +86,31 @@ supabase start
 cd frontend
 pnpm install # or npm install (installs package.json dependencies)
 pnpm dev     # or npm run dev
+```
+
+## Build
+
+Create production-ready artifacts using Docker or Vite:
+
+```bash
+docker-compose build
+# or build the frontend bundle alone
+cd frontend && npx vite build
+```
+
+## Deployment
+
+Launch the entire stack with Docker Compose:
+
+```bash
+docker-compose up --build
+```
+
+To run services manually without containers:
+
+```bash
+cd backend && node server.js
+cd ../frontend && npm run dev
 ```
 
 ## Usage

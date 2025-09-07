@@ -4,7 +4,8 @@
   "scripts": {
     "lint": "eslint .",
     "test": "jest",
-    "dev": "echo 'No dev server'"
+    "dev": "echo 'No dev server'",
+    "test:ui": "vitest run"
   },
   "dependencies": {
     "axios": "^1.6.0",
@@ -20,9 +21,11 @@
     "jest-environment-jsdom": "^30.1.2",
     "@vitejs/plugin-vue": "^5.1.2",
     "vite": "^5.1.0",
-    "vite-plugin-pwa": "^0.17.0"
+    "vite-plugin-pwa": "^0.17.0",
+    "vitest": "^1.6.0"
   },
   "jest": {
-    "testEnvironment": "jsdom"
+    "testEnvironment": "jsdom",
+    "testPathIgnorePatterns": ["/tests/"]
   }
 }

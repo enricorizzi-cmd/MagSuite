@@ -8,5 +8,9 @@ export default defineConfig({
     VitePWA({
       registerType: 'autoUpdate'
     })
-  ]
+  ],
+  test: {
+    environment: 'jsdom',
+    include: ['tests/**/*.test.ts']
+  }
 });

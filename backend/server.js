@@ -7,6 +7,22 @@ const items = require('./src/items');
 const documents = require('./src/documents');
 const inventories = require('./src/inventories');
 const db = require('./db');
+const { calculateReorderPoint, calculateOrderQuantity } = require('./src/mrp');
+const { sendPdf } = require('./src/mail');
+
+(async () => {
+  await db.query(`CREATE TABLE IF NOT EXISTS purchase_orders (
+    id SERIAL PRIMARY KEY,
+    supplier TEXT,
+    created_at TIMESTAMP DEFAULT NOW()
+  )`);
+  await db.query(`CREATE TABLE IF NOT EXISTS purchase_order_lines (
+    id SERIAL PRIMARY KEY,
+    po_id INTEGER REFERENCES purchase_orders(id) ON DELETE CASCADE,
+    item TEXT NOT NULL,
+    qty INTEGER NOT NULL
+  )`);
+})();
 
 function start(port = process.env.PORT || 3000) {
   const app = express();
@@ -81,39 +97,63 @@ function start(port = process.env.PORT || 3000) {
 
   // MRP and Purchase Order APIs
   app.get('/mrp/suggestions', (req, res) => {
-    // Return a minimal set of suggestions. In a real system this would be
-    // calculated from stock levels and demand history.
+    // In a real system these would come from inventory and demand data.
+    const avgDemand = 5;
+    const leadTime = 2;
+    const rop = calculateReorderPoint(avgDemand, leadTime);
+    const suggestedQty = calculateOrderQuantity(avgDemand, leadTime, 0);
     res.json([
-      { item: 'demo-item', rop: 10, avg_demand: 5, suggested_qty: 15 },
+      { item: 'demo-item', rop, avg_demand: avgDemand, suggested_qty: suggestedQty },
     ]);
   });
 
   app.get('/purchase-orders', async (req, res) => {
-    const result = await db.query(
-      "SELECT * FROM documents WHERE type='po'"
-    );
+    const result = await db.query('SELECT * FROM purchase_orders ORDER BY id');
     res.json({ items: result.rows });
   });
 
   app.get('/purchase-orders/:id', async (req, res) => {
-    const result = await db.query(
-      "SELECT * FROM documents WHERE type='po' AND id=$1",
-      [req.params.id]
+    const id = Number(req.params.id);
+    const poRes = await db.query('SELECT * FROM purchase_orders WHERE id=$1', [id]);
+    const po = poRes.rows[0];
+    if (!po) return res.status(404).end();
+    const linesRes = await db.query(
+      'SELECT item, qty FROM purchase_order_lines WHERE po_id=$1',
+      [id]
     );
-    const doc = result.rows[0];
-    if (!doc) return res.status(404).end();
-    res.json(doc);
+    po.lines = linesRes.rows;
+    res.json(po);
   });
 
   app.post('/po', async (req, res) => {
     const lines = req.body.lines || [
       { item: req.body.item, qty: req.body.qty },
     ];
-    const result = await db.query(
-      "INSERT INTO documents(type, status, lines) VALUES('po','draft',$1::jsonb) RETURNING *",
-      [JSON.stringify(lines)]
+    const poRes = await db.query(
+      'INSERT INTO purchase_orders(supplier) VALUES($1) RETURNING id',
+      [req.body.supplier || null]
     );
-    res.status(201).json(result.rows[0]);
+    const poId = poRes.rows[0].id;
+
+    if (lines.length) {
+      const placeholders = [];
+      const values = [];
+      lines.forEach((line, i) => {
+        placeholders.push(`($${i * 3 + 1}, $${i * 3 + 2}, $${i * 3 + 3})`);
+        values.push(poId, line.item, line.qty);
+      });
+      await db.query(
+        `INSERT INTO purchase_order_lines(po_id, item, qty) VALUES ${placeholders.join(',')}`,
+        values
+      );
+    }
+
+    const pdf = Buffer.from(`Purchase Order ${poId}`);
+    if (req.body.email) {
+      await sendPdf(req.body.email, `Purchase Order ${poId}`, pdf);
+    }
+
+    res.status(201).json({ id: poId });
   });
 
   // Inventory APIs

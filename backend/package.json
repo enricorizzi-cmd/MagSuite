@@ -13,7 +13,8 @@
     "jsonwebtoken": "^9.0.2",
     "multer": "^1.4.5-lts.1",
     "pg": "^8.11.5",
-    "pg-mem": "^3.0.5"
+    "pg-mem": "^3.0.5",
+    "nodemailer": "^6.9.11"
   },
   "devDependencies": {
     "eslint": "^8.57.1",

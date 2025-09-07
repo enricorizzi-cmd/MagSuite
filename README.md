@@ -80,6 +80,41 @@ node server.js
 supabase start
 ```
 
+#### Environment variables
+
+The backend relies on a few variables at runtime:
+
+- `DATABASE_URL` – PostgreSQL connection string
+- `ACCESS_SECRET` – secret used to sign access tokens
+- `REFRESH_SECRET` – secret used to sign refresh tokens
+- `ALERT_EMAIL` – destination for alert notifications (optional)
+- `BATCH_STRATEGY` – `FIFO` (default) or `FEFO` for batch handling (optional)
+
+On Render, add them via **Environment → Add Environment Variable**:
+
+```
+DATABASE_URL=postgres://user:pass@db:5432/magsuite
+ACCESS_SECRET=replace-me
+REFRESH_SECRET=replace-me-too
+ALERT_EMAIL=alerts@example.com
+BATCH_STRATEGY=FIFO
+```
+
+For local development, create a `.env` file inside `backend/` and run Node with the
+[`--env-file`](https://nodejs.org/api/cli.html#--env-file) flag:
+
+```bash
+cd backend
+cat <<'EOF' > .env
+DATABASE_URL=postgres://postgres:postgres@localhost:5432/magsuite
+ACCESS_SECRET=dev-access-secret
+REFRESH_SECRET=dev-refresh-secret
+ALERT_EMAIL=alerts@example.com
+BATCH_STRATEGY=FIFO
+EOF
+node --env-file=.env server.js
+```
+
 ### Frontend setup
 
 ```bash

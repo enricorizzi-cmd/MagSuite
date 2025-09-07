@@ -1,6 +1,9 @@
 {
   "name": "magsuite-backend",
   "version": "0.1.0",
+  "engines": {
+    "node": "20.x"
+  },
   "scripts": {
     "lint": "eslint .",
     "test": "jest",

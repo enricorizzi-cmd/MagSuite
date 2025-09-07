@@ -10,6 +10,8 @@ const imports = require('./src/imports');
 const db = require('./db');
 const { calculateReorderPoint, calculateOrderQuantity } = require('./src/mrp');
 const { sendPdf } = require('./src/mail');
+const logger = require('./src/logger');
+const { sendHealthAlert } = require('./src/alerts');
 
 (async () => {
   await db.query(`CREATE TABLE IF NOT EXISTS purchase_orders (
@@ -28,6 +30,10 @@ const { sendPdf } = require('./src/mail');
 function start(port = process.env.PORT || 3000) {
   const app = express();
   app.use(express.json());
+  app.use((req, res, next) => {
+    logger.info(`${req.method} ${req.url}`);
+    next();
+  });
 
   app.use('/auth', authRouter);
   app.use('/items', items.router);
@@ -53,8 +59,15 @@ function start(port = process.env.PORT || 3000) {
     res.json({ status: 'ok' });
   });
 
-  app.get('/system/status', (req, res) => {
-    res.json({ version, migrations: [], jobs: jobQueue });
+  app.get('/system/status', async (req, res) => {
+    try {
+      await db.query('SELECT 1');
+      res.json({ version, migrations: [], jobs: jobQueue });
+    } catch (err) {
+      logger.error('Health check failed', err);
+      await sendHealthAlert(err.message);
+      res.status(500).json({ status: 'error', message: err.message });
+    }
   });
 
   // Settings APIs
@@ -209,7 +222,7 @@ function start(port = process.env.PORT || 3000) {
 
 
   const server = app.listen(port, () => {
-    console.log(`Server listening on port ${port}`);
+    logger.info(`Server listening on port ${port}`);
   });
 
   return server;

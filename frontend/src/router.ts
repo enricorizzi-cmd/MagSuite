@@ -17,6 +17,8 @@ import SupplierForm from './pages/suppliers/SupplierForm.vue';
 import CustomerList from './pages/customers/CustomerList.vue';
 import CustomerForm from './pages/customers/CustomerForm.vue';
 import LabelGenerator from './pages/labels/LabelGenerator.vue';
+import ReportList from './pages/reports/ReportList.vue';
+import ReportView from './pages/reports/ReportView.vue';
 
 const routes: Array<RouteRecordRaw> = [
   {
@@ -111,6 +113,17 @@ const routes: Array<RouteRecordRaw> = [
     path: '/customers/:id',
     name: 'customer-form',
     component: CustomerForm,
+    props: true
+  },
+  {
+    path: '/reports',
+    name: 'reports',
+    component: ReportList
+  },
+  {
+    path: '/reports/:type',
+    name: 'report-view',
+    component: ReportView,
     props: true
   },
   {

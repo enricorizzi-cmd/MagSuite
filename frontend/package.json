@@ -5,6 +5,7 @@
     "lint": "eslint .",
     "test": "jest",
     "dev": "echo 'No dev server'",
+    "build": "vite build",
     "test:ui": "vitest run"
   },
   "dependencies": {

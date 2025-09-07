@@ -20,6 +20,8 @@ import LabelGenerator from './pages/labels/LabelGenerator.vue';
 import ReportList from './pages/reports/ReportList.vue';
 import ReportView from './pages/reports/ReportView.vue';
 import Settings from './pages/settings/Settings.vue';
+import SystemStatus from './pages/system/SystemStatus.vue';
+import ImportLogList from './pages/system/ImportLogList.vue';
 
 const routes: Array<RouteRecordRaw> = [
   {
@@ -136,6 +138,22 @@ const routes: Array<RouteRecordRaw> = [
     path: '/settings',
     name: 'settings',
     component: Settings
+  },
+  {
+    path: '/system/status',
+    name: 'system-status',
+    component: SystemStatus
+  },
+  {
+    path: '/system/imports',
+    name: 'system-imports',
+    component: ImportLogList
+  },
+  {
+    path: '/system/imports/:id',
+    name: 'import-log',
+    component: ImportLogList,
+    props: true
   }
 ];
 

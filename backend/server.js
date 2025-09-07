@@ -25,6 +25,10 @@ function start(port = process.env.PORT || 3000) {
   const customers = [];
   let nextCustomerId = 1;
   const importLogs = [];
+  let nextImportId = 1;
+
+  const jobQueue = [];
+  const { version } = require('./package.json');
 
   // Simple in-memory stores for barcodes and settings
   const itemBarcodes = {};
@@ -32,6 +36,10 @@ function start(port = process.env.PORT || 3000) {
 
   app.get('/health', (req, res) => {
     res.json({ status: 'ok' });
+  });
+
+  app.get('/system/status', (req, res) => {
+    res.json({ version, migrations: [], jobs: jobQueue });
   });
 
   // Settings APIs
@@ -262,6 +270,22 @@ function start(port = process.env.PORT || 3000) {
     res.type('text/csv').send(lines.join('\n'));
   });
 
+  app.get('/system/imports', (req, res) => {
+    res.json(importLogs.map(({ id, type, count }) => ({ id, type, count })));
+  });
+
+  app.get('/imports/:id/log', (req, res) => {
+    const log = importLogs.find((l) => l.id == req.params.id);
+    if (!log) return res.status(404).end();
+    res.json({ log: log.log || [] });
+  });
+
+  app.get('/imports/:id/file', (req, res) => {
+    const log = importLogs.find((l) => l.id == req.params.id);
+    if (!log) return res.status(404).end();
+    res.json({ filename: log.filename, content: log.file.toString('base64') });
+  });
+
   // Generic import with logging
   app.post('/imports/:type', upload.single('file'), (req, res) => {
     const { type } = req.params;
@@ -270,18 +294,31 @@ function start(port = process.env.PORT || 3000) {
     const lines = text.split(/\r?\n/).filter(Boolean);
     const rows = lines.slice(1); // skip header
     let count = 0;
-    rows.forEach((line) => {
+    const log = [];
+    rows.forEach((line, idx) => {
       const [name] = line.split(',');
-      if (!name) return;
+      if (!name) {
+        log.push({ line: idx + 2, message: 'Missing name', error: true });
+        return;
+      }
       if (type === 'suppliers') {
         suppliers.push({ id: nextSupplierId++, name });
       } else if (type === 'customers') {
         customers.push({ id: nextCustomerId++, name });
       }
       count++;
+      log.push({ line: idx + 2, message: `Imported ${name}`, error: false });
     });
-    importLogs.push({ type, count });
-    res.json({ status: 'ok', count });
+    const id = nextImportId++;
+    importLogs.push({
+      id,
+      type,
+      count,
+      log,
+      file: req.file.buffer,
+      filename: req.file.originalname,
+    });
+    res.json({ status: 'ok', count, id });
   });
 
   const server = app.listen(port, () => {

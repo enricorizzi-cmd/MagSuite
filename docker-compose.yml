@@ -15,6 +15,11 @@ services:
     build: ./backend
     environment:
       NODE_ENV: production
+      PGHOST: db
+      PGUSER: postgres
+      PGPASSWORD: postgres
+      PGDATABASE: magsuite
+      PGPORT: 5432
       DATABASE_URL: postgres://postgres:postgres@db:5432/magsuite
       ALERT_EMAIL: alerts@example.com
     depends_on:

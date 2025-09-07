@@ -1,6 +1,6 @@
 const request = require('supertest');
 const { start } = require('./server');
-const db = require('./db');
+const db = require('./src/db');
 const { selectNextBatch, ready: docsReady } = require('./src/documents');
 
 let server;

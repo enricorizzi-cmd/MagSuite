@@ -7,7 +7,7 @@ const documents = require('./src/documents');
 const inventories = require('./src/inventories');
 const labels = require('./src/labels');
 const imports = require('./src/imports');
-const db = require('./db');
+const db = require('./src/db');
 const { calculateReorderPoint, calculateOrderQuantity } = require('./src/mrp');
 const { sendPdf } = require('./src/mail');
 const logger = require('./src/logger');
@@ -29,6 +29,9 @@ const { sendHealthAlert } = require('./src/alerts');
 
 function start(port = process.env.PORT || 3000) {
   const app = express();
+  db.query('SELECT 1')
+    .then(() => logger.info('Database connection established'))
+    .catch((err) => logger.error('Database connection error', err));
   app.use(express.json());
   app.use((req, res, next) => {
     logger.info(`${req.method} ${req.url}`);

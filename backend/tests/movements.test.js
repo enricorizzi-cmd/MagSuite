@@ -1,5 +1,5 @@
 const request = require('supertest');
-const db = require('../db');
+const db = require('../src/db');
 const { start } = require('../server');
 const { ready } = require('../src/documents');
 

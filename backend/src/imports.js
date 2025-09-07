@@ -1,7 +1,7 @@
 const express = require('express');
 const multer = require('multer');
 const XLSX = require('xlsx');
-const db = require('../db');
+const db = require('./db');
 
 const router = express.Router();
 const upload = multer();

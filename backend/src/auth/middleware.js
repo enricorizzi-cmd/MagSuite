@@ -2,8 +2,13 @@ const { verifyAccessToken } = require('./tokens');
 
 const rolePermissions = {
   admin: { '*': ['*'] },
-  manager: { inventory: ['read', 'write'], orders: ['read'] },
-  worker: { inventory: ['read'] },
+  manager: {
+    inventory: ['read', 'write'],
+    orders: ['read'],
+    documents: ['read', 'write'],
+    items: ['read', 'write'],
+  },
+  worker: { inventory: ['read'], items: ['read'] },
 };
 
 function authenticateToken(req, res, next) {

@@ -1,6 +1,17 @@
 services:
+  postgres:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: magsuite_test
+    ports:
+      - "5432:5432"
+
   backend:
     build: ./backend
+    depends_on:
+      - postgres
     environment:
       NODE_ENV: production
       PGHOST: ${PGHOST}

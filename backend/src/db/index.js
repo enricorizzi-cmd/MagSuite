@@ -21,10 +21,12 @@ const baseConfig = connectionString
       database: process.env.PGDATABASE,
     };
 
+const useSSL = process.env.PGSSLMODE !== 'disable';
+
 const pool = new Pool({
   ...baseConfig,
-  ssl: { ca, rejectUnauthorized: true, minVersion: 'TLSv1.2' },
-  enableChannelBinding: true,
+  ssl: useSSL ? { ca, rejectUnauthorized: true, minVersion: 'TLSv1.2' } : false,
+  enableChannelBinding: useSSL,
 });
 
 pool.query('SELECT 1').catch((err) => {

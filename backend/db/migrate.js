@@ -12,10 +12,12 @@ try {
   // Custom CA not provided; rely on default trust store
 }
 
+const useSSL = process.env.PGSSLMODE !== 'disable';
+
 const pool = new Pool({
   connectionString,
-  ssl: { ca, rejectUnauthorized: true, minVersion: 'TLSv1.2' },
-  enableChannelBinding: true,
+  ssl: useSSL ? { ca, rejectUnauthorized: true, minVersion: 'TLSv1.2' } : false,
+  enableChannelBinding: useSSL,
 });
 
 async function run() {

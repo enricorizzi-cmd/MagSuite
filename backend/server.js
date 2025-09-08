@@ -52,6 +52,11 @@ async function start(port = process.env.PORT || 3000) {
   app.use('/', labels.router);
   app.use('/', imports.router);
 
+  // Basic root endpoint
+  app.get('/', (req, res) => {
+    res.send('MagSuite backend');
+  });
+
   // Suppliers and customers
   const suppliers = [];
   let nextSupplierId = 1;

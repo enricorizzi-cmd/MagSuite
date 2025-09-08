@@ -105,6 +105,9 @@ DB_CA_PATH=/etc/secrets/supabase-ca.crt
 NODE_EXTRA_CA_CERTS=/etc/secrets/supabase-ca.crt
 ```
 
+Store the CA certificate in your deployment platform's secret manager (e.g., GitHub
+Secrets) and write it to the location referenced by `DB_CA_PATH` at runtime.
+
 For local development, create a `.env` file inside `backend/` and run Node with the
 [`--env-file`](https://nodejs.org/api/cli.html#--env-file) flag:
 

@@ -151,11 +151,13 @@ Launch the entire stack with Docker Compose:
 docker-compose up --build
 ```
 
-To run services manually without containers, start both servers with:
+To run services manually without containers during local development, start both servers with:
 
 ```bash
 ./start.sh
 ```
+
+This helper script is intended for local development only.
 
 If you prefer to run them separately:
 
@@ -163,6 +165,14 @@ If you prefer to run them separately:
 cd backend && npm start
 cd ../frontend && npm run dev
 ```
+
+### Render
+
+Deploying on [Render](https://render.com) requires the following configuration:
+
+- **Dockerfile path:** `backend/Dockerfile` (with the repository root as the build context)
+- **Environment variables:** `DATABASE_URL`, `ACCESS_SECRET`, `REFRESH_SECRET`, `ALERT_EMAIL` (optional), `BATCH_STRATEGY` (optional), `DB_CA_PATH`, and optionally `NODE_EXTRA_CA_CERTS`
+- **Secret file:** Optionally provide a `supabase-ca.crt` and mount it at `/etc/secrets/supabase-ca.crt` (referenced by `DB_CA_PATH`)
 
 ## Usage
 

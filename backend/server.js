@@ -13,6 +13,7 @@ const { calculateReorderPoint, calculateOrderQuantity } = require('./src/mrp');
 const { sendPdf } = require('./src/mail');
 const logger = require('./src/logger');
 const { sendHealthAlert } = require('./src/alerts');
+const path = require('path');
 
 (async () => {
   await db.query(`CREATE TABLE IF NOT EXISTS purchase_orders (
@@ -53,11 +54,6 @@ async function start(port = process.env.PORT || 3000) {
   app.use('/', inventories.router);
   app.use('/', labels.router);
   app.use('/', imports.router);
-
-  // Basic root endpoint
-  app.get('/', (req, res) => {
-    res.send('MagSuite backend');
-  });
 
   // Suppliers and customers
   const suppliers = [];
@@ -260,7 +256,9 @@ async function start(port = process.env.PORT || 3000) {
     customers.forEach((c) => lines.push(`${c.id},${c.name}`));
     res.type('text/csv').send(lines.join('\n'));
   });
-
+  app.get('*', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+  });
 
   const server = app.listen(port, () => {
     logger.info(`Server listening on port ${port}`);

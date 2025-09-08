@@ -87,6 +87,21 @@ async function start(port = process.env.PORT || 3000) {
     }
   });
 
+  // Dashboard reports
+  app.get('/reports/dashboard', (req, res) => {
+    res.json({
+      kpis: { inventory: 0, orders: 0 },
+      charts: { sales: [] },
+    });
+  });
+
+  // Alerts endpoint
+  app.get('/alerts', (req, res) => {
+    res.json([
+      { id: 1, message: 'Sample alert' },
+    ]);
+  });
+
   // Settings APIs
   app.get('/settings', (req, res) => {
     res.json(settings);

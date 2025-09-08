@@ -1,10 +1,28 @@
 const express = require('express');
 const multer = require('multer');
 const ExcelJS = require('exceljs');
+const fs = require('fs/promises');
+const os = require('os');
 const db = require('./db');
 
 const router = express.Router();
-const upload = multer();
+
+const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+const storage = multer.diskStorage({
+  destination: os.tmpdir(),
+  filename: (req, file, cb) => cb(null, file.originalname),
+});
+const upload = multer({ storage, limits: { fileSize: MAX_FILE_SIZE } });
+
+function uploadMiddleware(req, res, next) {
+  upload.single('file')(req, res, (err) => {
+    if (err) {
+      if (err.code === 'LIMIT_FILE_SIZE') return res.status(413).json({ error: 'File too large' });
+      return res.status(400).json({ error: err.message });
+    }
+    next();
+  });
+}
 
 (async () => {
   await db.query(`CREATE TABLE IF NOT EXISTS import_logs (
@@ -40,10 +58,15 @@ async function parseBuffer(buffer) {
   return rows;
 }
 
-router.post('/imports/:type', upload.single('file'), async (req, res) => {
+router.post('/imports/:type', uploadMiddleware, async (req, res) => {
   const { type } = req.params;
   if (!req.file) return res.status(400).json({ error: 'No file' });
-  const { originalname, buffer } = req.file;
+  const { originalname, path: filePath, size } = req.file;
+  if (size > MAX_FILE_SIZE) {
+    await fs.unlink(filePath).catch(() => {});
+    return res.status(413).json({ error: 'File too large' });
+  }
+  const buffer = await fs.readFile(filePath);
   try {
     const rows = await parseBuffer(buffer);
     const log = [];
@@ -70,6 +93,8 @@ router.post('/imports/:type', upload.single('file'), async (req, res) => {
       [type, originalname, JSON.stringify([{ line: 0, message: err.message, error: true }]), buffer]
     );
     res.status(400).json({ error: err.message });
+  } finally {
+    await fs.unlink(filePath).catch(() => {});
   }
 });
 

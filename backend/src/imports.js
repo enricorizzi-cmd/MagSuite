@@ -1,6 +1,6 @@
 const express = require('express');
 const multer = require('multer');
-const XLSX = require('xlsx');
+const ExcelJS = require('exceljs');
 const db = require('./db');
 
 const router = express.Router();
@@ -18,10 +18,26 @@ const upload = multer();
   )`);
 })();
 
-function parseBuffer(buffer) {
-  const workbook = XLSX.read(buffer, { type: 'buffer' });
-  const sheet = workbook.SheetNames[0];
-  return XLSX.utils.sheet_to_json(workbook.Sheets[sheet], { defval: '' });
+async function parseBuffer(buffer) {
+  const workbook = new ExcelJS.Workbook();
+  await workbook.xlsx.load(buffer);
+  const worksheet = workbook.worksheets[0];
+  if (!worksheet) return [];
+  const rows = [];
+  let headers = [];
+  worksheet.eachRow((row, rowNumber) => {
+    const values = row.values;
+    if (rowNumber === 1) {
+      headers = values.slice(1).map((v) => v || '');
+    } else {
+      const obj = {};
+      headers.forEach((header, i) => {
+        obj[header] = values[i + 1] || '';
+      });
+      rows.push(obj);
+    }
+  });
+  return rows;
 }
 
 router.post('/imports/:type', upload.single('file'), async (req, res) => {
@@ -29,7 +45,7 @@ router.post('/imports/:type', upload.single('file'), async (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'No file' });
   const { originalname, buffer } = req.file;
   try {
-    const rows = parseBuffer(buffer);
+    const rows = await parseBuffer(buffer);
     const log = [];
     let count = 0;
     rows.forEach((row, idx) => {

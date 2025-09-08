@@ -85,8 +85,8 @@ supabase start
 The backend relies on a few variables at runtime:
 
 - `DATABASE_URL` – PostgreSQL connection string
-- `ACCESS_SECRET` – secret used to sign access tokens
-- `REFRESH_SECRET` – secret used to sign refresh tokens
+- `ACCESS_SECRET` – secret used to sign access tokens (required)
+- `REFRESH_SECRET` – secret used to sign refresh tokens (required)
 - `ALERT_EMAIL` – destination for alert notifications (optional)
 - `BATCH_STRATEGY` – `FIFO` (default) or `FEFO` for batch handling (optional)
 - `DB_CA_PATH` – path to the CA certificate used to verify the database TLS connection

@@ -38,5 +38,5 @@ tar -xzf uploads.tgz -C uploads/
 
 - Gestisci gli utenti dell'applicazione tramite ruoli nel database.
 - Genera token JWT per gli utenti amministratori.
-- Proteggi le variabili d'ambiente (come `DATABASE_URL` e `ALERT_EMAIL`) utilizzando un file `.env` con permessi limitati.
+- Proteggi le variabili d'ambiente (come `DATABASE_URL`, `ACCESS_SECRET`, `REFRESH_SECRET` e `ALERT_EMAIL`) utilizzando un file `.env` con permessi limitati.
 

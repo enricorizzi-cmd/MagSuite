@@ -1,6 +1,6 @@
 <template>
   <div class="transfer-list">
-    <button @click="createTransfer">Create Transfer</button>
+    <button @click="createTransfer">New Transfer</button>
     <table v-if="transfers.length">
       <thead>
         <tr>

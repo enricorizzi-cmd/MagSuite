@@ -4,7 +4,7 @@
   "scripts": {
     "lint": "eslint .",
     "test": "jest",
-    "dev": "echo 'No dev server'",
+    "dev": "vite",
     "build": "vite build",
     "test:ui": "vitest run"
   },

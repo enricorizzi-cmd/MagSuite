@@ -75,7 +75,7 @@ cd MagSuite
 ```bash
 cd backend
 npm install # installs dependencies from package.json (none currently)
-node server.js
+npm start
 # Optional: start local Supabase instance
 supabase start
 ```
@@ -151,10 +151,16 @@ Launch the entire stack with Docker Compose:
 docker-compose up --build
 ```
 
-To run services manually without containers:
+To run services manually without containers, start both servers with:
 
 ```bash
-cd backend && node server.js
+./start.sh
+```
+
+If you prefer to run them separately:
+
+```bash
+cd backend && npm start
 cd ../frontend && npm run dev
 ```
 
@@ -164,7 +170,7 @@ Start the backend server:
 
 ```bash
 cd backend
-node server.js
+npm start
 ```
 
 In another terminal, start the frontend development server:

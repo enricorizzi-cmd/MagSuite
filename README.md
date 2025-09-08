@@ -89,11 +89,8 @@ The backend relies on a few variables at runtime:
 - `REFRESH_SECRET` – secret used to sign refresh tokens
 - `ALERT_EMAIL` – destination for alert notifications (optional)
 - `BATCH_STRATEGY` – `FIFO` (default) or `FEFO` for batch handling (optional)
-- `ALLOW_SELF_SIGNED_CERT` – set to `true` if your database uses a self-signed certificate
-
-Enabling `ALLOW_SELF_SIGNED_CERT` disables certificate verification for the
-database connection, avoiding errors like `SELF_SIGNED_CERT_IN_CHAIN` when using
-providers that supply self-signed certificates (e.g. Render's free Postgres).
+- `DB_CA_PATH` – path to the CA certificate used to verify the database TLS connection
+- `NODE_EXTRA_CA_CERTS` – optional, adds the same CA to Node's global trust store
 
 On Render, add them via **Environment → Add Environment Variable**:
 
@@ -103,8 +100,9 @@ ACCESS_SECRET=replace-me
 REFRESH_SECRET=replace-me-too
 ALERT_EMAIL=alerts@example.com
 BATCH_STRATEGY=FIFO
-# Only needed if the database uses a self-signed certificate
-ALLOW_SELF_SIGNED_CERT=true
+DB_CA_PATH=/etc/secrets/supabase-ca.crt
+# Optional: extend Node's global trust store
+NODE_EXTRA_CA_CERTS=/etc/secrets/supabase-ca.crt
 ```
 
 For local development, create a `.env` file inside `backend/` and run Node with the
@@ -118,8 +116,8 @@ ACCESS_SECRET=dev-access-secret
 REFRESH_SECRET=dev-refresh-secret
 ALERT_EMAIL=alerts@example.com
 BATCH_STRATEGY=FIFO
-# Uncomment if using a self-signed certificate locally
-# ALLOW_SELF_SIGNED_CERT=true
+# Uncomment if you have a custom CA certificate locally
+# DB_CA_PATH=/path/to/ca.crt
 EOF
 node --env-file=.env server.js
 ```

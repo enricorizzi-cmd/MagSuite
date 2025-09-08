@@ -3,8 +3,20 @@ const path = require('path');
 const { Pool } = require('pg');
 
 const connectionString = process.env.DATABASE_URL || 'postgres://postgres:postgres@localhost:5432/postgres';
-const ca = fs.readFileSync(path.join(__dirname, '..', 'prod-ca-2021.crt'), 'utf8');
-const pool = new Pool({ connectionString, ssl: { rejectUnauthorized: true, ca } });
+const caPath = process.env.DB_CA_PATH || '/etc/secrets/supabase-ca.crt';
+
+let ca;
+try {
+  ca = fs.readFileSync(caPath, 'utf8');
+} catch (err) {
+  // Custom CA not provided; rely on default trust store
+}
+
+const pool = new Pool({
+  connectionString,
+  ssl: { ca, rejectUnauthorized: true, minVersion: 'TLSv1.2' },
+  enableChannelBinding: true,
+});
 
 async function run() {
   const dir = path.join(__dirname, '..', '..', 'supabase', 'migrations');

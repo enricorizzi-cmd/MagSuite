@@ -1,31 +1,35 @@
 const fs = require('fs');
-const path = require('path');
 const { Pool } = require('pg');
 
-const ca = fs.readFileSync(path.join(__dirname, '..', '..', 'prod-ca-2021.crt'), 'utf8');
+const connectionString = process.env.DATABASE_URL;
+const caPath = process.env.DB_CA_PATH || '/etc/secrets/supabase-ca.crt';
 
-// Allow opt-out of certificate verification when dealing with self-signed certs.
-// Set ALLOW_SELF_SIGNED_CERT=true in environments (like Render) where the
-// database uses a self-signed certificate. When enabled, also set the global
-// Node.js flag to permit self-signed certificates.
-if (process.env.ALLOW_SELF_SIGNED_CERT === 'true') {
-  process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
+let ca;
+try {
+  ca = fs.readFileSync(caPath, 'utf8');
+} catch (err) {
+  // Fall back to default trust store if custom CA is not available
 }
 
-const sslConfig = process.env.ALLOW_SELF_SIGNED_CERT === 'true'
-  ? { rejectUnauthorized: false }
-  : { rejectUnauthorized: true, ca };
-
-const pool = process.env.DATABASE_URL
-  ? new Pool({ connectionString: process.env.DATABASE_URL, ssl: sslConfig })
-  : new Pool({
+const baseConfig = connectionString
+  ? { connectionString }
+  : {
       host: process.env.PGHOST,
       port: process.env.PGPORT,
       user: process.env.PGUSER,
       password: process.env.PGPASSWORD,
       database: process.env.PGDATABASE,
-      ssl: sslConfig,
-    });
+    };
+
+const pool = new Pool({
+  ...baseConfig,
+  ssl: { ca, rejectUnauthorized: true, minVersion: 'TLSv1.2' },
+  enableChannelBinding: true,
+});
+
+pool.query('SELECT 1').catch((err) => {
+  console.error('Database connection failed', err);
+});
 
 module.exports = pool;
 

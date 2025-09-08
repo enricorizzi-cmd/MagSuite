@@ -27,6 +27,9 @@
   },
   "jest": {
     "testEnvironment": "jsdom",
-    "testPathIgnorePatterns": ["/tests/"]
-  }
+    "testPathIgnorePatterns": [
+      "/tests/"
+    ]
+  },
+  "type": "module"
 }

@@ -10,6 +10,7 @@ services:
       PGPORT: ${PGPORT}
       DATABASE_URL: "postgres://${PGUSER}:${PGPASSWORD}@${PGHOST}:${PGPORT}/${PGDATABASE}"
       ALERT_EMAIL: alerts@example.com
+      SUPABASE_CA_CERT: ${SUPABASE_CA_CERT}
     ports:
       - "3000:3000"
 

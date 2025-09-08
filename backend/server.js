@@ -14,7 +14,7 @@ const { sendPdf } = require('./src/mail');
 const logger = require('./src/logger');
 const { sendHealthAlert } = require('./src/alerts');
 
-;(async () => {
+(async () => {
   await db.query(`CREATE TABLE IF NOT EXISTS purchase_orders (
     id SERIAL PRIMARY KEY,
     supplier TEXT,

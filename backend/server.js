@@ -256,7 +256,7 @@ async function start(port = process.env.PORT || 3000) {
     customers.forEach((c) => lines.push(`${c.id},${c.name}`));
     res.type('text/csv').send(lines.join('\n'));
   });
-  app.get('*', (req, res) => {
+  app.get('/*splat', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
   });
 

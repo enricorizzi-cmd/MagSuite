@@ -60,6 +60,11 @@ async function start(port = process.env.PORT || 3000) {
   let nextSupplierId = 1;
   const customers = [];
   let nextCustomerId = 1;
+  // Simple in-memory stores for warehouses and users
+  const warehouses = [];
+  let nextWarehouseId = 1;
+  const userSettings = [];
+  let nextUserId = 1;
 
   const jobQueue = [];
   const { version } = require('./package.json');
@@ -255,6 +260,50 @@ async function start(port = process.env.PORT || 3000) {
     const lines = ['id,name'];
     customers.forEach((c) => lines.push(`${c.id},${c.name}`));
     res.type('text/csv').send(lines.join('\n'));
+  });
+  // Warehouse APIs
+  app.get('/warehouses', (req, res) => {
+    res.json({ warehouses });
+  });
+
+  app.post('/warehouses', (req, res) => {
+    const w = { id: nextWarehouseId++, name: req.body.name || '' };
+    warehouses.push(w);
+    res.status(201).json(w);
+  });
+
+  app.put('/warehouses/:id', (req, res) => {
+    const id = Number(req.params.id);
+    if (Number.isNaN(id)) return res.status(400).json({ error: 'Invalid id' });
+    const w = warehouses.find((w) => w.id === id);
+    if (!w) return res.status(404).end();
+    Object.assign(w, req.body);
+    res.json(w);
+  });
+
+  // User management APIs
+  app.get('/users', (req, res) => {
+    res.json({ users: userSettings });
+  });
+
+  app.post('/users', (req, res) => {
+    const u = {
+      id: nextUserId++,
+      name: req.body.name || '',
+      role: req.body.role || 'user',
+      warehouseId: req.body.warehouseId || null,
+    };
+    userSettings.push(u);
+    res.status(201).json(u);
+  });
+
+  app.put('/users/:id', (req, res) => {
+    const id = Number(req.params.id);
+    if (Number.isNaN(id)) return res.status(400).json({ error: 'Invalid id' });
+    const u = userSettings.find((u) => u.id === id);
+    if (!u) return res.status(404).end();
+    Object.assign(u, req.body);
+    res.json(u);
   });
   app.get('/*splat', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));

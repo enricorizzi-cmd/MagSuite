@@ -149,6 +149,7 @@ async function start(port = process.env.PORT || 3000) {
 
   app.get('/purchase-orders/:id', async (req, res) => {
     const id = Number(req.params.id);
+    if (Number.isNaN(id)) return res.status(400).json({ error: 'Invalid id' });
     const poRes = await db.query('SELECT * FROM purchase_orders WHERE id=$1', [id]);
     const po = poRes.rows[0];
     if (!po) return res.status(404).end();
@@ -198,7 +199,9 @@ async function start(port = process.env.PORT || 3000) {
   });
 
   app.get('/suppliers/:id', (req, res) => {
-    const sup = suppliers.find((s) => s.id == req.params.id);
+    const id = Number(req.params.id);
+    if (Number.isNaN(id)) return res.status(400).json({ error: 'Invalid id' });
+    const sup = suppliers.find((s) => s.id === id);
     if (!sup) return res.status(404).end();
     res.json(sup);
   });
@@ -210,7 +213,9 @@ async function start(port = process.env.PORT || 3000) {
   });
 
   app.put('/suppliers/:id', (req, res) => {
-    const sup = suppliers.find((s) => s.id == req.params.id);
+    const id = Number(req.params.id);
+    if (Number.isNaN(id)) return res.status(400).json({ error: 'Invalid id' });
+    const sup = suppliers.find((s) => s.id === id);
     if (!sup) return res.status(404).end();
     Object.assign(sup, req.body);
     res.json(sup);
@@ -228,7 +233,9 @@ async function start(port = process.env.PORT || 3000) {
   });
 
   app.get('/customers/:id', (req, res) => {
-    const cust = customers.find((c) => c.id == req.params.id);
+    const id = Number(req.params.id);
+    if (Number.isNaN(id)) return res.status(400).json({ error: 'Invalid id' });
+    const cust = customers.find((c) => c.id === id);
     if (!cust) return res.status(404).end();
     res.json(cust);
   });
@@ -240,7 +247,9 @@ async function start(port = process.env.PORT || 3000) {
   });
 
   app.put('/customers/:id', (req, res) => {
-    const cust = customers.find((c) => c.id == req.params.id);
+    const id = Number(req.params.id);
+    if (Number.isNaN(id)) return res.status(400).json({ error: 'Invalid id' });
+    const cust = customers.find((c) => c.id === id);
     if (!cust) return res.status(404).end();
     Object.assign(cust, req.body);
     res.json(cust);

@@ -1,8 +1,10 @@
 <template>
+  <TopBar />
   <router-view />
 </template>
 
 <script setup lang="ts">
+import TopBar from './components/TopBar.vue';
 // Root application component
 </script>
 

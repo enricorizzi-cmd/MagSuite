@@ -45,6 +45,8 @@ async function start(port = process.env.PORT || 3000) {
     next();
   });
 
+  app.use(express.static('public'));
+
   app.use('/auth', authRouter);
   app.use('/items', items.router);
   app.use('/documents', documents.router);

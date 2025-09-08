@@ -26,6 +26,7 @@ import SystemStatus from './pages/system/SystemStatus.vue';
 import ImportLogList from './pages/system/ImportLogList.vue';
 
 const routes: Array<RouteRecordRaw> = [
+  { path: '/', redirect: '/dashboard' },
   {
     path: '/dashboard',
     name: 'dashboard',

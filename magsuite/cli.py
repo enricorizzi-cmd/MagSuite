@@ -24,7 +24,11 @@ def build_parser() -> argparse.ArgumentParser:
 def main(argv=None) -> None:
     parser = build_parser()
     args = parser.parse_args(argv)
-    app = MagSuite(args.inventory)
+    inventory_path = Path(args.inventory)
+    if not inventory_path.exists():
+        parser.error("Inventory file not found")
+
+    app = MagSuite(inventory_path)
 
     filters: Dict[str, Optional[str]] = {
         "name": args.filter_name,

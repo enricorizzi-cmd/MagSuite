@@ -38,3 +38,14 @@ def test_cli_filters_and_export(tmp_path):
     )
     assert "widget\tA\tL1\t10" in result.stdout
     assert export_path.exists()
+
+
+def test_cli_missing_inventory(tmp_path):
+    missing = tmp_path / "missing.csv"
+    result = subprocess.run(
+        [sys.executable, "-m", "magsuite", "--inventory", str(missing)],
+        capture_output=True,
+        text=True,
+    )
+    assert result.returncode != 0
+    assert "Inventory file not found" in result.stderr

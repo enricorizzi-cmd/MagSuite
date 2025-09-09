@@ -1,5 +1,6 @@
 const fs = require('fs');
 const { Pool } = require('pg');
+const companyContext = require('../companyContext');
 
 const connectionString = process.env.DATABASE_URL;
 const caPath = process.env.DB_CA_PATH || '/etc/secrets/supabase-ca.crt';
@@ -33,5 +34,20 @@ pool.query('SELECT 1').catch((err) => {
   console.error('Database connection failed', err);
 });
 
-module.exports = pool;
+async function query(text, params) {
+  const store = companyContext.getStore();
+  const companyId = store && store.companyId;
+  if (companyId) {
+    const client = await pool.connect();
+    try {
+      await client.query('set local app.current_company_id = $1', [companyId]);
+      return await client.query(text, params);
+    } finally {
+      client.release();
+    }
+  }
+  return pool.query(text, params);
+}
+
+module.exports = { query, connect: () => pool.connect() };
 

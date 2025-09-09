@@ -4,10 +4,18 @@ const db = require('./src/db');
 const { selectNextBatch, ready: docsReady } = require('./src/documents');
 
 let server;
+let token;
 
 beforeAll(async () => {
   server = await start(0);
   await docsReady;
+  await request(server)
+    .post('/auth/register')
+    .send({ email: 'user@example.com', password: 'pass', company_id: 1 });
+  const login = await request(server)
+    .post('/auth/login')
+    .send({ email: 'user@example.com', password: 'pass' });
+  token = login.body.accessToken;
 });
 
 afterAll((done) => {
@@ -17,12 +25,19 @@ afterAll((done) => {
 test('requires lot_id for lot-tracked items', async () => {
   const wh = await db.query("INSERT INTO warehouses(name) VALUES('Main') RETURNING id");
   const warehouseId = wh.rows[0].id;
-  let res = await request(server).post('/items').send({ name: 'LotItem', lotti: true });
+  let res = await request(server)
+    .post('/items')
+    .set('Authorization', `Bearer ${token}`)
+    .send({ name: 'LotItem', lotti: true });
   const itemId = res.body.id;
-  res = await request(server).post('/documents').send({ type: 'in', lines: [] });
+  res = await request(server)
+    .post('/documents')
+    .set('Authorization', `Bearer ${token}`)
+    .send({ type: 'in', lines: [] });
   const docId = res.body.id;
   res = await request(server)
     .post(`/documents/${docId}/confirm`)
+    .set('Authorization', `Bearer ${token}`)
     .send({ movements: [{ item_id: itemId, warehouse_id: warehouseId, quantity: 5 }] });
   expect(res.status).toBe(400);
   const lot = await db.query(
@@ -32,6 +47,7 @@ test('requires lot_id for lot-tracked items', async () => {
   const lotId = lot.rows[0].id;
   res = await request(server)
     .post(`/documents/${docId}/confirm`)
+    .set('Authorization', `Bearer ${token}`)
     .send({ movements: [{ item_id: itemId, warehouse_id: warehouseId, quantity: 5, lot_id: lotId }] });
   expect(res.status).toBe(200);
 });
@@ -39,7 +55,10 @@ test('requires lot_id for lot-tracked items', async () => {
 test('selectNextBatch applies FEFO and FIFO', async () => {
   const wh = await db.query("INSERT INTO warehouses(name) VALUES('W2') RETURNING id");
   const warehouseId = wh.rows[0].id;
-  let res = await request(server).post('/items').send({ name: 'BatchItem', lotti: true });
+  let res = await request(server)
+    .post('/items')
+    .set('Authorization', `Bearer ${token}`)
+    .send({ name: 'BatchItem', lotti: true });
   const itemId = res.body.id;
   const lot1 = await db.query(
     "INSERT INTO lots(item_id, lot, expiry) VALUES($1,$2,$3) RETURNING id",

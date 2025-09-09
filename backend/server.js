@@ -1,14 +1,14 @@
 const express = require('express');
 const {
   router: authRouter,
+  authenticateToken,
 } = require('./src/auth');
 const items = require('./src/items');
 const documents = require('./src/documents');
 const inventories = require('./src/inventories');
 const labels = require('./src/labels');
 const imports = require('./src/imports');
-const pool = require('./src/db');
-const db = pool;
+const db = require('./src/db');
 const { calculateReorderPoint, calculateOrderQuantity } = require('./src/mrp');
 const { sendPdf } = require('./src/mail');
 const logger = require('./src/logger');
@@ -30,7 +30,7 @@ const path = require('path');
 })();
 
 async function start(port = process.env.PORT || 3000) {
-  await pool
+  await db
     .connect()
     .then((client) => client.release())
     .then(() => console.log('Database connection established'))
@@ -48,7 +48,12 @@ async function start(port = process.env.PORT || 3000) {
 
   app.use(express.static('public'));
 
+  app.get('/health', (req, res) => {
+    res.json({ status: 'ok' });
+  });
+
   app.use('/auth', authRouter);
+  app.use(authenticateToken);
   app.use('/items', items.router);
   app.use('/documents', documents.router);
   app.use('/', inventories.router);
@@ -72,10 +77,6 @@ async function start(port = process.env.PORT || 3000) {
   // Simple in-memory stores for barcodes and settings
   const itemBarcodes = {};
   const settings = { defaultLabelTemplate: 'standard' };
-
-  app.get('/health', (req, res) => {
-    res.json({ status: 'ok' });
-  });
 
   app.get('/system/status', async (req, res) => {
     try {

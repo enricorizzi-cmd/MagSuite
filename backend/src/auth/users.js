@@ -3,12 +3,12 @@ const bcrypt = require('bcryptjs');
 const users = [];
 let idSeq = 1;
 
-async function createUser({ email, password, role = 'worker', warehouse_id }) {
+async function createUser({ email, password, role = 'worker', warehouse_id, company_id }) {
   if (users.find((u) => u.email === email)) {
     throw new Error('User exists');
   }
   const password_hash = await bcrypt.hash(password, 10);
-  const user = { id: idSeq++, email, password_hash, role, warehouse_id };
+  const user = { id: idSeq++, email, password_hash, role, warehouse_id, company_id };
   users.push(user);
   return user;
 }

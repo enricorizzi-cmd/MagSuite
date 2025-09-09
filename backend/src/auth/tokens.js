@@ -9,7 +9,12 @@ if (!ACCESS_SECRET || !REFRESH_SECRET) {
 
 function generateTokens(user) {
   const accessToken = jwt.sign(
-    { id: user.id, role: user.role, warehouse_id: user.warehouse_id },
+    {
+      id: user.id,
+      role: user.role,
+      warehouse_id: user.warehouse_id,
+      company_id: user.company_id,
+    },
     ACCESS_SECRET,
     { expiresIn: '15m' }
   );

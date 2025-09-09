@@ -17,7 +17,7 @@ test('rejects invalid login', async () => {
 
   await request(server)
     .post('/auth/register')
-    .send({ email, password, role: 'worker', warehouse_id: 1 })
+    .send({ email, password, role: 'worker', warehouse_id: 1, company_id: 1 })
     .expect(201);
 
   const res = await request(server)

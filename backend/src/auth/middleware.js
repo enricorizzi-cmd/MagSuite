@@ -1,4 +1,5 @@
 const { verifyAccessToken } = require('./tokens');
+const companyContext = require('../companyContext');
 
 const rolePermissions = {
   admin: { '*': ['*'] },
@@ -17,7 +18,7 @@ function authenticateToken(req, res, next) {
   if (!token) return res.sendStatus(401);
   try {
     req.user = verifyAccessToken(token);
-    next();
+    companyContext.run({ companyId: req.user.company_id }, next);
   } catch {
     return res.sendStatus(401);
   }

@@ -4,9 +4,9 @@ const { createUser, authenticate } = require('./users');
 const { generateTokens } = require('./tokens');
 
 router.post('/register', async (req, res) => {
-  const { email, password, role, warehouse_id } = req.body;
+  const { email, password, role, warehouse_id, company_id } = req.body;
   try {
-    const user = await createUser({ email, password, role, warehouse_id });
+    const user = await createUser({ email, password, role, warehouse_id, company_id });
     res.status(201).json({ id: user.id, email: user.email });
   } catch (err) {
     res.status(400).json({ error: err.message });

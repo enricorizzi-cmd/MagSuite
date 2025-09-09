@@ -17,7 +17,7 @@ test('register and login', async () => {
 
   const register = await request(server)
     .post('/auth/register')
-    .send({ email, password, role: 'worker', warehouse_id: 1 });
+    .send({ email, password, role: 'worker', warehouse_id: 1, company_id: 1 });
   expect(register.status).toBe(201);
 
   const login = await request(server)

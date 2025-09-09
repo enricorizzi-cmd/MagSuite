@@ -4,11 +4,24 @@ const { start } = require('../server');
 const { ready } = require('../src/documents');
 
 let server;
+let token;
+let itemId;
 
 beforeAll(async () => {
   await ready;
   server = await start(0);
-  await db.query("INSERT INTO items(id, name) VALUES (1, 'Item')");
+  await request(server)
+    .post('/auth/register')
+    .send({ email: 'move@example.com', password: 'pass', company_id: 1 });
+  const login = await request(server)
+    .post('/auth/login')
+    .send({ email: 'move@example.com', password: 'pass' });
+  token = login.body.accessToken;
+  const itemRes = await request(server)
+    .post('/items')
+    .set('Authorization', `Bearer ${token}`)
+    .send({ name: 'Item' });
+  itemId = itemRes.body.id;
   await db.query("INSERT INTO warehouses(id, name) VALUES (1, 'Main')");
   await db.query("INSERT INTO documents(id, type, status) VALUES (1, 'receipt', 'draft')");
 });
@@ -20,7 +33,8 @@ afterAll((done) => {
 test('confirming document records movement', async () => {
   const res = await request(server)
     .post('/documents/1/confirm')
-    .send({ movements: [{ item_id: 1, warehouse_id: 1, quantity: 5 }] });
+    .set('Authorization', `Bearer ${token}`)
+    .send({ movements: [{ item_id: itemId, warehouse_id: 1, quantity: 5 }] });
   expect(res.status).toBe(200);
   const { rows } = await db.query('SELECT quantity FROM stock_movements WHERE document_id=1');
   expect(rows).toHaveLength(1);

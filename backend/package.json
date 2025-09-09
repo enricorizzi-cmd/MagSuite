@@ -13,7 +13,6 @@
   "dependencies": {
     "bcryptjs": "^3.0.2",
     "bwip-js": "^4.7.0",
-    "ci": "^2.3.0",
     "exceljs": "^4.4.0",
     "express": "^5.1.0",
     "jimp": "^1.6.0",

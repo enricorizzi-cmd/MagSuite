@@ -21,6 +21,8 @@ const { sendPdf } = require('./src/mail');
 const logger = require('./src/logger');
 const { sendHealthAlert } = require('./src/alerts');
 const path = require('path');
+const PDFDocument = require('pdfkit');
+const ExcelJS = require('exceljs');
 
 (async () => {
   await db.query(`CREATE TABLE IF NOT EXISTS purchase_conditions (
@@ -42,6 +44,18 @@ const path = require('path');
     qty INTEGER NOT NULL,
     lot_id INTEGER,
     movement_id INTEGER
+  )`);
+  await db.query(`CREATE TABLE IF NOT EXISTS report_views (
+    id SERIAL PRIMARY KEY,
+    type TEXT NOT NULL,
+    name TEXT NOT NULL,
+    filters JSONB DEFAULT '{}'::jsonb,
+    created_at TIMESTAMPTZ DEFAULT now()
+  )`);
+  await db.query(`CREATE TABLE IF NOT EXISTS report_schedules (
+    id SERIAL PRIMARY KEY,
+    type TEXT NOT NULL,
+    run_at TIMESTAMPTZ NOT NULL
   )`);
 })();
 
@@ -173,6 +187,109 @@ async function start(port = process.env.PORT || 3000) {
       logger.error('Failed to load dashboard KPIs', err);
       res.status(500).json({ error: 'Failed to load dashboard data' });
     }
+  });
+
+  app.get('/reports/:type', async (req, res) => {
+    const { type } = req.params;
+    const { date, warehouse, category: _category, format } = req.query;
+    try {
+      let rows = [];
+      if (type === 'inventory') {
+        const params = [];
+        const conditions = [];
+        if (date) {
+          params.push(date);
+          conditions.push(`moved_at::date = $${params.length}`);
+        }
+        if (warehouse) {
+          params.push(warehouse);
+          conditions.push(`warehouse_id = $${params.length}`);
+        }
+        const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
+        const result = await db.query(
+          `SELECT item_id, SUM(quantity) AS quantity FROM stock_movements ${where} GROUP BY item_id ORDER BY item_id`,
+          params
+        );
+        rows = result.rows;
+      } else if (type === 'sales') {
+        const params = [];
+        const conditions = ["type = 'sale'"];
+        if (date) {
+          params.push(date);
+          conditions.push(`created_at::date = $${params.length}`);
+        }
+        const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
+        const result = await db.query(
+          `SELECT id, status, created_at FROM documents ${where} ORDER BY id`,
+          params
+        );
+        rows = result.rows;
+      } else {
+        return res.status(400).json({ error: 'Unknown report type' });
+      }
+
+      if (format === 'pdf') {
+        const doc = new PDFDocument();
+        const chunks = [];
+        doc.on('data', (c) => chunks.push(c));
+        doc.on('end', () => {
+          res.type('application/pdf');
+          res.send(Buffer.concat(chunks));
+        });
+        doc.text(`Report ${type}`);
+        rows.forEach((r) => doc.text(JSON.stringify(r)));
+        doc.end();
+        return;
+      }
+      if (format === 'xlsx') {
+        const wb = new ExcelJS.Workbook();
+        const ws = wb.addWorksheet('Report');
+        if (rows.length) {
+          ws.addRow(Object.keys(rows[0]));
+          rows.forEach((r) => ws.addRow(Object.values(r)));
+        }
+        const buffer = await wb.xlsx.writeBuffer();
+        res.type('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        res.send(Buffer.from(buffer));
+        return;
+      }
+
+      res.json({ rows });
+    } catch (err) {
+      logger.error('Failed to load report', err);
+      res.status(500).json({ error: 'Failed to load report' });
+    }
+  });
+
+  app.get('/reports/:type/views', async (req, res) => {
+    const { type } = req.params;
+    const result = await db.query(
+      'SELECT id, name, filters FROM report_views WHERE type=$1 ORDER BY id',
+      [type]
+    );
+    res.json(result.rows);
+  });
+
+  app.post('/reports/:type/views', async (req, res) => {
+    const { type } = req.params;
+    const { name, filters = {} } = req.body;
+    if (!name) return res.status(400).json({ error: 'Name required' });
+    await db.query(
+      'INSERT INTO report_views(type, name, filters) VALUES($1,$2,$3::jsonb)',
+      [type, name, JSON.stringify(filters)]
+    );
+    res.status(201).json({ status: 'ok' });
+  });
+
+  app.post('/reports/:type/schedule', async (req, res) => {
+    const { type } = req.params;
+    const { run_at } = req.body;
+    if (!run_at) return res.status(400).json({ error: 'run_at required' });
+    await db.query(
+      'INSERT INTO report_schedules(type, run_at) VALUES($1,$2)',
+      [type, run_at]
+    );
+    res.status(201).json({ status: 'scheduled' });
   });
 
   // Alerts endpoint

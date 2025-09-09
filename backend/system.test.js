@@ -40,6 +40,9 @@ test('import log endpoints work', async () => {
   const resFile = await request(server).get(`/imports/${id}/file`);
   expect(resFile.status).toBe(200);
   expect(resFile.body.content).toBeDefined();
+
+  const resReport = await request(server).get(`/imports/${id}/report`);
+  expect(resReport.status).toBe(200);
 });
 
 test('dry run does not store import and templates can be saved', async () => {

@@ -22,7 +22,7 @@ test('items import validates uom and code and allows saving templates', async ()
   expect(resDry.body.log).toEqual(
     expect.arrayContaining([
       expect.objectContaining({ line: 2, error: false }),
-      expect.objectContaining({ line: 3, error: true }),
+      expect.objectContaining({ line: 3, error: true, row: expect.any(Object) }),
     ])
   );
 

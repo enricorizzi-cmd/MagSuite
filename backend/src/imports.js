@@ -108,7 +108,8 @@ async function handleImport(type, file, mapping, dryRun = false) {
         }
       }
       if (errors.length) {
-        log.push({ line, message: errors.join('; '), error: true });
+        // include the raw row data so the caller can preview and fix it
+        log.push({ line, message: errors.join('; '), error: true, row });
         return;
       }
       log.push({ line, message: `Imported ${row.name}`, error: false });
@@ -199,6 +200,37 @@ router.get('/imports/:id/file', async (req, res) => {
   const row = result.rows[0];
   if (!row) return res.status(404).end();
   res.json({ filename: row.filename, content: row.file ? row.file.toString('base64') : null });
+});
+
+router.get('/imports/:id/report', async (req, res) => {
+  const id = Number(req.params.id);
+  const result = await db.query('SELECT log FROM import_logs WHERE id=$1', [id]);
+  const row = result.rows[0];
+  if (!row) return res.status(404).end();
+  const log = row.log || [];
+  const errors = log.filter((l) => l.error && l.row);
+  if (!errors.length) return res.status(200).send('');
+  const headerSet = new Set();
+  errors.forEach((e) => {
+    Object.keys(e.row || {}).forEach((k) => headerSet.add(k));
+  });
+  const headers = Array.from(headerSet);
+  const csvLines = [];
+  const escape = (val) => {
+    const s = String(val ?? '');
+    return s.includes(',') || s.includes('"') || s.includes('\n')
+      ? '"' + s.replace(/"/g, '""') + '"'
+      : s;
+  };
+  csvLines.push([...headers, 'error'].join(','));
+  errors.forEach((e) => {
+    const vals = headers.map((h) => escape(e.row[h]));
+    vals.push(escape(e.message));
+    csvLines.push(vals.join(','));
+  });
+  res.setHeader('Content-Type', 'text/csv');
+  res.setHeader('Content-Disposition', 'attachment; filename="import-errors.csv"');
+  res.send(csvLines.join('\n'));
 });
 
 router.get('/imports/templates/:type', async (req, res) => {

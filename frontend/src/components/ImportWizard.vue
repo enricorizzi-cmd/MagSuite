@@ -29,20 +29,33 @@
     </div>
     <div v-else-if="step === 'result'">
       <h3>Dry Run Result</h3>
-      <ul class="log">
-        <li v-for="line in log" :key="line.line" :class="{ error: line.error }">
-          {{ line.line }} - {{ line.message }}
-        </li>
-      </ul>
+      <table class="log-table" v-if="errorLog.length">
+        <thead>
+          <tr>
+            <th>Line</th>
+            <th>Reason</th>
+            <th>Record</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="line in errorLog" :key="line.line">
+            <td>{{ line.line }}</td>
+            <td>{{ line.message }}</td>
+            <td><pre>{{ JSON.stringify(line.row, null, 2) }}</pre></td>
+          </tr>
+        </tbody>
+      </table>
+      <p v-else>No errors found.</p>
+      <button @click="downloadReport" :disabled="!errorLog.length">Download Report</button>
       <button @click="confirmImport">Import</button>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, watch, onMounted } from 'vue';
+import { ref, computed } from 'vue';
 
-interface LogEntry { line: number; message: string; error: boolean }
+interface LogEntry { line: number; message: string; error: boolean; row?: Record<string, unknown> }
 interface Template { id: number; name: string; mapping: Record<string, string> }
 
 const props = defineProps<{ type: string }>();
@@ -56,6 +69,7 @@ const log = ref<LogEntry[]>([]);
 const templates = ref<Template[]>([]);
 const selectedTemplate = ref<string>('');
 const templateName = ref('');
+const errorLog = computed(() => log.value.filter((l) => l.error));
 
 function onFile(e: Event) {
   const input = e.target as HTMLInputElement;
@@ -108,6 +122,7 @@ async function runDryRun() {
   const form = new FormData();
   form.append('file', file.value);
   form.append('mapping', JSON.stringify(mapping.value));
+  if (selectedTemplate.value) form.append('templateId', selectedTemplate.value);
   try {
     const res = await fetch(`/imports/${props.type}/dry-run`, { method: 'POST', body: form });
     if (res.ok) {
@@ -125,6 +140,7 @@ async function confirmImport() {
   const form = new FormData();
   form.append('file', file.value);
   form.append('mapping', JSON.stringify(mapping.value));
+  if (selectedTemplate.value) form.append('templateId', selectedTemplate.value);
   if (templateName.value) form.append('templateName', templateName.value);
   try {
     const res = await fetch(`/imports/${props.type}`, { method: 'POST', body: form });
@@ -136,6 +152,35 @@ async function confirmImport() {
     console.error('Import failed', err);
   }
 }
+
+function downloadReport() {
+  if (!errorLog.value.length) return;
+  const headerSet = new Set<string>();
+  errorLog.value.forEach((e) => {
+    Object.keys(e.row || {}).forEach((k) => headerSet.add(k));
+  });
+  const headers = Array.from(headerSet);
+  const lines: string[] = [];
+  const escape = (v: unknown) => {
+    const s = String(v ?? '');
+    return s.includes(',') || s.includes('"') || s.includes('\n')
+      ? '"' + s.replace(/"/g, '""') + '"'
+      : s;
+  };
+  lines.push([...headers, 'error'].join(','));
+  errorLog.value.forEach((e) => {
+    const vals = headers.map((h) => escape((e.row || {})[h]));
+    vals.push(escape(e.message));
+    lines.push(vals.join(','));
+  });
+  const blob = new Blob([lines.join('\n')], { type: 'text/csv' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'import-errors.csv';
+  a.click();
+  URL.revokeObjectURL(url);
+}
 </script>
 
 <style scoped>
@@ -146,12 +191,18 @@ async function confirmImport() {
 .map-row {
   margin-bottom: 0.5rem;
 }
-.log {
-  list-style: none;
-  padding: 0;
+.log-table {
+  width: 100%;
+  border-collapse: collapse;
 }
-.log li.error {
-  color: red;
+.log-table th,
+.log-table td {
+  border: 1px solid #ccc;
+  padding: 0.25rem;
+}
+pre {
+  white-space: pre-wrap;
+  margin: 0;
 }
 .template-tools {
   margin: 1rem 0;

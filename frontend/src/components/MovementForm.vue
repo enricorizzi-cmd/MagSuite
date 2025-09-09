@@ -2,6 +2,10 @@
   <div class="movement-form">
     <h2>{{ type }} {{ documentId ?? '' }}</h2>
     <p>Status: {{ status }}</p>
+    <div class="causal">
+      <label>Causale</label>
+      <input v-model="causal" />
+    </div>
     <div class="scanner">
       <input ref="scanInput" v-model="scanCode" @keyup.enter="handleScan" @blur="focusInput" />
       <span v-if="flash" class="flash"></span>
@@ -25,7 +29,9 @@
       </tbody>
     </table>
     <button @click="save">Save</button>
-    <button v-if="documentId" @click="confirm">Confirm</button>
+    <button v-if="documentId && status !== 'cancelled'" @click="confirm">Confirm</button>
+    <button v-if="documentId && status !== 'cancelled'" @click="cancel">Cancel</button>
+    <button v-if="documentId" @click="printDoc">Print</button>
   </div>
 </template>
 
@@ -53,6 +59,7 @@ const documentId = ref<number | null>(null);
 const scanCode = ref('');
 const scanInput = ref<HTMLInputElement | null>(null);
 const flash = ref(false);
+const causal = ref('');
 let beep: HTMLAudioElement;
 
 onMounted(() => {
@@ -75,6 +82,7 @@ async function fetchDocument() {
       documentId.value = data.id;
       lines.value = data.lines && data.lines.length ? data.lines : [];
       status.value = data.status || 'in_transito';
+      causal.value = data.causal || '';
     }
   } catch (err) {
     console.error('Failed to load document', err);
@@ -137,6 +145,7 @@ async function save() {
   const payload = {
     type,
     status: 'in_transito',
+    causal: causal.value || null,
     lines: lines.value
   };
   try {
@@ -172,11 +181,34 @@ async function confirm() {
     console.error('Failed to confirm movement', err);
   }
 }
+
+async function cancel() {
+  if (!documentId.value) return;
+  try {
+    const res = await fetch(`/documents/${documentId.value}/cancel`, {
+      method: 'POST'
+    });
+    if (res.ok) {
+      const data = await res.json();
+      status.value = data.status || 'cancelled';
+    }
+  } catch (err) {
+    console.error('Failed to cancel movement', err);
+  }
+}
+
+function printDoc() {
+  if (!documentId.value) return;
+  window.open(`/documents/${documentId.value}/print`, '_blank');
+}
 </script>
 
 <style scoped>
 .movement-form {
   padding: 1rem;
+}
+.causal {
+  margin-bottom: 1rem;
 }
 .scanner {
   margin-bottom: 1rem;

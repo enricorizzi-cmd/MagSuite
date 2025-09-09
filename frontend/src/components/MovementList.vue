@@ -1,17 +1,30 @@
 <template>
   <div class="movement-list">
-    <button @click="createMovement">Create {{ type }}</button>
+    <div class="filters">
+      <input v-model="filters.causal" placeholder="Causale" />
+      <input type="date" v-model="filters.from" />
+      <input type="date" v-model="filters.to" />
+      <input v-model="filters.item" placeholder="Articolo" />
+      <button @click="fetchMovements">Filter</button>
+      <button @click="createMovement">Create {{ type }}</button>
+    </div>
     <table v-if="movements.length">
       <thead>
         <tr>
           <th>ID</th>
           <th>Status</th>
+          <th>Causale</th>
+          <th>Date</th>
+          <th>Article</th>
         </tr>
       </thead>
       <tbody>
         <tr v-for="m in movements" :key="m.id" @click="openMovement(m)">
           <td>{{ m.id }}</td>
           <td>{{ m.status }}</td>
+          <td>{{ m.causal || '-' }}</td>
+          <td>{{ formatDate(m.created_at) }}</td>
+          <td>{{ m.lines && m.lines[0] ? m.lines[0].barcode : '' }}</td>
         </tr>
       </tbody>
     </table>
@@ -34,10 +47,16 @@ const router = useRouter();
 const type = route.params.type as string;
 
 const movements = ref<Movement[]>([]);
+const filters = ref({ causal: '', from: '', to: '', item: '' });
 
 async function fetchMovements() {
   try {
-    const res = await fetch(`/documents?type=${type}`);
+    const params = new URLSearchParams({ type });
+    if (filters.value.causal) params.append('causal', filters.value.causal);
+    if (filters.value.from) params.append('from', filters.value.from);
+    if (filters.value.to) params.append('to', filters.value.to);
+    if (filters.value.item) params.append('item', filters.value.item);
+    const res = await fetch(`/documents?${params.toString()}`);
     if (res.ok) {
       const data = await res.json();
       movements.value = Array.isArray(data) ? data : data.items || [];
@@ -56,11 +75,27 @@ function createMovement() {
 }
 
 onMounted(fetchMovements);
+
+function formatDate(d?: string) {
+  if (!d) return '';
+  try {
+    return new Date(d).toLocaleDateString();
+  } catch (err) {
+    return '';
+  }
+}
 </script>
 
 <style scoped>
 .movement-list {
   padding: 1rem;
+}
+.filters {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  align-items: center;
+  margin-bottom: 1rem;
 }
 table {
   margin-top: 1rem;

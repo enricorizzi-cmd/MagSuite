@@ -1,4 +1,5 @@
 const express = require('express');
+const PDFDocument = require('pdfkit');
 const db = require('./db');
 
 const router = express.Router();
@@ -8,6 +9,8 @@ const ready = (async () => {
     id SERIAL PRIMARY KEY,
     type TEXT NOT NULL,
     status TEXT NOT NULL DEFAULT 'draft',
+    causal TEXT,
+    created_at TIMESTAMPTZ DEFAULT now(),
     lines JSONB DEFAULT '[]'
   )`);
   await db.query(`CREATE TABLE IF NOT EXISTS warehouses (
@@ -40,14 +43,34 @@ const ready = (async () => {
 })();
 
 router.get('/', async (req, res) => {
-  const { type } = req.query;
+  const { type, causal, from, to, item } = req.query;
   const limit = Math.min(parseInt(req.query.limit) || 10, 100);
   const offset = parseInt(req.query.offset) || 0;
   let query = 'SELECT * FROM documents';
   const params = [];
+  const conditions = [];
   if (type) {
     params.push(type);
-    query += ` WHERE type = $${params.length}`;
+    conditions.push(`type = $${params.length}`);
+  }
+  if (causal) {
+    params.push(causal);
+    conditions.push(`causal = $${params.length}`);
+  }
+  if (from) {
+    params.push(from);
+    conditions.push(`created_at >= $${params.length}`);
+  }
+  if (to) {
+    params.push(to);
+    conditions.push(`created_at <= $${params.length}`);
+  }
+  if (item) {
+    params.push(`%${item}%`);
+    conditions.push(`lines::text ILIKE $${params.length}`);
+  }
+  if (conditions.length) {
+    query += ' WHERE ' + conditions.join(' AND ');
   }
   params.push(limit, offset);
   query += ` ORDER BY id LIMIT $${params.length - 1} OFFSET $${params.length}`;
@@ -56,13 +79,13 @@ router.get('/', async (req, res) => {
 });
 
 router.post('/', async (req, res) => {
-  const { type, lines = [] } = req.body;
+  const { type, lines = [], causal = null } = req.body;
   if (!type || typeof type !== 'string') {
     return res.status(400).json({ error: 'Type required' });
   }
   const result = await db.query(
-    'INSERT INTO documents(type, lines) VALUES($1, $2::jsonb) RETURNING *',
-    [type, JSON.stringify(lines)]
+    'INSERT INTO documents(type, causal, lines) VALUES($1, $2, $3::jsonb) RETURNING *',
+    [type, causal, JSON.stringify(lines)]
   );
   res.status(201).json(result.rows[0]);
 });
@@ -127,6 +150,39 @@ router.post('/:id/confirm', async (req, res) => {
     id,
   ]);
   res.json({ status: 'confirmed' });
+});
+
+router.post('/:id/cancel', async (req, res) => {
+  const id = Number(req.params.id);
+  const result = await db.query(
+    'UPDATE documents SET status=$1 WHERE id=$2 RETURNING status',
+    ['cancelled', id]
+  );
+  const row = result.rows[0];
+  if (!row) return res.status(404).end();
+  res.json({ status: row.status });
+});
+
+router.get('/:id/print', async (req, res) => {
+  const id = Number(req.params.id);
+  const result = await db.query('SELECT * FROM documents WHERE id=$1', [id]);
+  const doc = result.rows[0];
+  if (!doc) return res.status(404).end();
+  const pdf = new PDFDocument();
+  res.setHeader('Content-Type', 'application/pdf');
+  pdf.pipe(res);
+  pdf.text(`Document ${doc.id} (${doc.type})`);
+  if (doc.causal) pdf.text(`Causale: ${doc.causal}`);
+  pdf.text(`Status: ${doc.status}`);
+  if (doc.created_at) pdf.text(`Date: ${doc.created_at}`);
+  const lines = Array.isArray(doc.lines) ? doc.lines : [];
+  for (const l of lines) {
+    const parts = [l.barcode];
+    if (l.lot) parts.push(`Lot: ${l.lot}`);
+    if (l.serial) parts.push(`Serial: ${l.serial}`);
+    pdf.text(parts.filter(Boolean).join(' '));
+  }
+  pdf.end();
 });
 
 async function selectNextBatch(item_id, warehouse_id) {

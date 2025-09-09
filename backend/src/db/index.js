@@ -40,7 +40,7 @@ async function query(text, params) {
   if (companyId) {
     const client = await pool.connect();
     try {
-      await client.query('set local app.current_company_id = $1', [companyId]);
+      await client.query(`set app.current_company_id = ${companyId}`);
       return await client.query(text, params);
     } finally {
       client.release();

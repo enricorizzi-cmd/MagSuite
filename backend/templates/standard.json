@@ -1,0 +1,9 @@
+{
+  "width": 300,
+  "height": 150,
+  "logo": { "path": "public/logo.png", "x": 10, "y": 10, "width": 50 },
+  "fields": [
+    { "type": "barcode", "key": "code", "symbology": "code128", "x": 10, "y": 60, "width": 200, "height": 50 },
+    { "type": "text", "key": "text", "x": 10, "y": 120, "fontSize": 12 }
+  ]
+}

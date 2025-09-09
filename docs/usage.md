@@ -81,8 +81,25 @@ curl -F file=@docs/sample_inventory.csv http://localhost:3000/imports/items
 
 ## Label API
 
-Generate a PDF label using a template:
+Generate a PDF label using a template and select the barcode type:
 
 ```bash
-curl "http://localhost:3000/labels/standard?text=Widget" -o label.pdf
+curl "http://localhost:3000/labels/standard?code=123456789012&type=ean13&format=pdf&text=Widget" \
+  | jq -r '.content' | base64 -d > label.pdf
+```
+
+Generate a batch of labels in a single PDF:
+
+```bash
+curl -X POST http://localhost:3000/labels/standard/batch \
+  -H "Content-Type: application/json" \
+  -d '{"format":"pdf","items":[{"code":"123456789012","type":"code128","text":"A"},{"code":"987654321098","type":"qrcode","text":"B"}]}' \
+  | jq -r '.content' | base64 -d > labels.pdf
+```
+
+Request a PNG label:
+
+```bash
+curl "http://localhost:3000/labels/standard?code=123456789012&type=qrcode&format=png" \
+  | jq -r '.content' | base64 -d > label.png
 ```

@@ -9,6 +9,8 @@ const inventories = require('./src/inventories');
 const labels = require('./src/labels');
 const imports = require('./src/imports');
 const storage = require('./src/storage');
+const sequences = require('./src/sequences');
+const causals = require('./src/causals');
 const db = require('./src/db');
 const { calculateReorderPoint, calculateOrderQuantity } = require('./src/mrp');
 const { sendPdf } = require('./src/mail');
@@ -57,6 +59,8 @@ async function start(port = process.env.PORT || 3000) {
   app.use(authenticateToken);
   app.use('/items', items.router);
   app.use('/documents', documents.router);
+  app.use('/sequences', sequences.router);
+  app.use('/causals', causals.router);
   app.use('/', inventories.router);
   app.use('/', labels.router);
   app.use('/', imports.router);

@@ -21,7 +21,7 @@ const pool = new Pool({
 });
 
 async function run() {
-  const dir = path.join(__dirname, '..', '..', 'supabase', 'migrations');
+  const dir = path.join(__dirname, '..', 'supabase', 'migrations');
   const files = fs.readdirSync(dir).filter(f => f.endsWith('.sql')).sort();
   for (const file of files) {
     const sql = fs.readFileSync(path.join(dir, file), 'utf8');

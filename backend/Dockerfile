@@ -10,6 +10,7 @@ WORKDIR /app
 COPY backend/package*.json ./
 RUN npm install --production
 COPY backend .
+COPY supabase/migrations ./supabase/migrations
 RUN chmod +x start.sh
 COPY --from=frontend-build /frontend/dist/ ./public/
 EXPOSE 3000

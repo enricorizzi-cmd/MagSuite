@@ -109,7 +109,11 @@ router.post('/imports/:type/dry-run', uploadMiddleware, async (req, res) => {
     if (tpl.rows[0]) mapping = tpl.rows[0].mapping || {};
   }
   if (req.body.mapping) {
-    try { mapping = JSON.parse(req.body.mapping); } catch (e) {}
+    try {
+      mapping = JSON.parse(req.body.mapping);
+    } catch (e) {
+      /* ignore */
+    }
   }
   try {
     const result = await handleImport(type, req.file, mapping, true);
@@ -128,7 +132,11 @@ router.post('/imports/:type', uploadMiddleware, async (req, res) => {
     if (tpl.rows[0]) mapping = tpl.rows[0].mapping || {};
   }
   if (req.body.mapping) {
-    try { mapping = JSON.parse(req.body.mapping); } catch (e) {}
+    try {
+      mapping = JSON.parse(req.body.mapping);
+    } catch (e) {
+      /* ignore */
+    }
   }
   try {
     const result = await handleImport(type, req.file, mapping, false);

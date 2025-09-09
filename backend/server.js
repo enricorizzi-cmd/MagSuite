@@ -23,16 +23,25 @@ const { sendHealthAlert } = require('./src/alerts');
 const path = require('path');
 
 (async () => {
+  await db.query(`CREATE TABLE IF NOT EXISTS purchase_conditions (
+    id SERIAL PRIMARY KEY,
+    name TEXT NOT NULL,
+    terms TEXT
+  )`);
   await db.query(`CREATE TABLE IF NOT EXISTS purchase_orders (
     id SERIAL PRIMARY KEY,
     supplier TEXT,
+    status TEXT NOT NULL DEFAULT 'draft',
+    condition_id INTEGER REFERENCES purchase_conditions(id),
     created_at TIMESTAMP DEFAULT NOW()
   )`);
   await db.query(`CREATE TABLE IF NOT EXISTS purchase_order_lines (
     id SERIAL PRIMARY KEY,
     po_id INTEGER REFERENCES purchase_orders(id) ON DELETE CASCADE,
     item TEXT NOT NULL,
-    qty INTEGER NOT NULL
+    qty INTEGER NOT NULL,
+    lot_id INTEGER,
+    movement_id INTEGER
   )`);
 })();
 
@@ -79,6 +88,8 @@ async function start(port = process.env.PORT || 3000) {
   let nextSupplierId = 1;
   const customers = [];
   let nextCustomerId = 1;
+  const warehouses = [];
+  let nextWarehouseId = 1;
   // Simple in-memory store for users
   const userSettings = [];
   let nextUserId = 1;
@@ -168,7 +179,7 @@ async function start(port = process.env.PORT || 3000) {
     const po = poRes.rows[0];
     if (!po) return res.status(404).end();
     const linesRes = await db.query(
-      'SELECT item, qty FROM purchase_order_lines WHERE po_id=$1',
+      'SELECT id, item, qty, lot_id, movement_id FROM purchase_order_lines WHERE po_id=$1',
       [id]
     );
     po.lines = linesRes.rows;
@@ -180,8 +191,8 @@ async function start(port = process.env.PORT || 3000) {
       { item: req.body.item, qty: req.body.qty },
     ];
     const poRes = await db.query(
-      'INSERT INTO purchase_orders(supplier) VALUES($1) RETURNING id',
-      [req.body.supplier || null]
+      'INSERT INTO purchase_orders(supplier, status, condition_id) VALUES($1,$2,$3) RETURNING id',
+      [req.body.supplier || null, 'draft', req.body.condition_id || null]
     );
     const poId = poRes.rows[0].id;
 
@@ -189,11 +200,11 @@ async function start(port = process.env.PORT || 3000) {
       const placeholders = [];
       const values = [];
       lines.forEach((line, i) => {
-        placeholders.push(`($${i * 3 + 1}, $${i * 3 + 2}, $${i * 3 + 3})`);
-        values.push(poId, line.item, line.qty);
+        placeholders.push(`($${i * 5 + 1}, $${i * 5 + 2}, $${i * 5 + 3}, $${i * 5 + 4}, $${i * 5 + 5})`);
+        values.push(poId, line.item, line.qty, line.lot_id || null, line.movement_id || null);
       });
       await db.query(
-        `INSERT INTO purchase_order_lines(po_id, item, qty) VALUES ${placeholders.join(',')}`,
+        `INSERT INTO purchase_order_lines(po_id, item, qty, lot_id, movement_id) VALUES ${placeholders.join(',')}`,
         values
       );
     }
@@ -204,6 +215,35 @@ async function start(port = process.env.PORT || 3000) {
     }
 
     res.status(201).json({ id: poId });
+  });
+
+  app.patch('/purchase-orders/:id/status', async (req, res) => {
+    const id = Number(req.params.id);
+    const { status } = req.body;
+    const statuses = ['draft', 'confirmed', 'receiving', 'closed'];
+    if (!statuses.includes(status)) {
+      return res.status(400).json({ error: 'Invalid status' });
+    }
+    const result = await db.query(
+      'UPDATE purchase_orders SET status=$1 WHERE id=$2 RETURNING status',
+      [status, id]
+    );
+    const row = result.rows[0];
+    if (!row) return res.status(404).end();
+    res.json({ status: row.status });
+  });
+
+  app.patch('/purchase-orders/:poId/lines/:lineId', async (req, res) => {
+    const poId = Number(req.params.poId);
+    const lineId = Number(req.params.lineId);
+    const { lot_id = null, movement_id = null } = req.body;
+    const result = await db.query(
+      'UPDATE purchase_order_lines SET lot_id=$1, movement_id=$2 WHERE id=$3 AND po_id=$4 RETURNING *',
+      [lot_id, movement_id, lineId, poId]
+    );
+    const row = result.rows[0];
+    if (!row) return res.status(404).end();
+    res.json(row);
   });
 
   // Inventory APIs
@@ -235,10 +275,60 @@ async function start(port = process.env.PORT || 3000) {
     res.json(sup);
   });
 
+  app.delete('/suppliers/:id', (req, res) => {
+    const id = Number(req.params.id);
+    if (Number.isNaN(id)) return res.status(400).json({ error: 'Invalid id' });
+    const idx = suppliers.findIndex((s) => s.id === id);
+    if (idx === -1) return res.status(404).end();
+    suppliers.splice(idx, 1);
+    res.status(204).end();
+  });
+
   app.get('/suppliers/export', (req, res) => {
     const lines = ['id,name'];
     suppliers.forEach((s) => lines.push(`${s.id},${s.name}`));
     res.type('text/csv').send(lines.join('\n'));
+  });
+
+  // Purchase conditions APIs
+  app.get('/purchase-conditions', async (req, res) => {
+    const result = await db.query('SELECT * FROM purchase_conditions ORDER BY id');
+    res.json({ items: result.rows });
+  });
+
+  app.get('/purchase-conditions/:id', async (req, res) => {
+    const id = Number(req.params.id);
+    const result = await db.query('SELECT * FROM purchase_conditions WHERE id=$1', [id]);
+    const row = result.rows[0];
+    if (!row) return res.status(404).end();
+    res.json(row);
+  });
+
+  app.post('/purchase-conditions', async (req, res) => {
+    const { name, terms } = req.body;
+    const result = await db.query(
+      'INSERT INTO purchase_conditions(name, terms) VALUES($1,$2) RETURNING *',
+      [name || '', terms || null]
+    );
+    res.status(201).json(result.rows[0]);
+  });
+
+  app.put('/purchase-conditions/:id', async (req, res) => {
+    const id = Number(req.params.id);
+    const { name, terms } = req.body;
+    const result = await db.query(
+      'UPDATE purchase_conditions SET name=$1, terms=$2 WHERE id=$3 RETURNING *',
+      [name || '', terms || null, id]
+    );
+    const row = result.rows[0];
+    if (!row) return res.status(404).end();
+    res.json(row);
+  });
+
+  app.delete('/purchase-conditions/:id', async (req, res) => {
+    const id = Number(req.params.id);
+    await db.query('DELETE FROM purchase_conditions WHERE id=$1', [id]);
+    res.status(204).end();
   });
 
   // Customer APIs

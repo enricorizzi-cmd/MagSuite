@@ -18,15 +18,15 @@
       </tbody>
     </table>
 
-    <button @click="confirmPo" :disabled="po.status === 'confirmed'">
-      Confirm &amp; Send
+    <button v-if="nextStatus" @click="advanceStatus">
+      {{ nextLabel }}
     </button>
   </div>
   <p v-else>Loading...</p>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, computed } from 'vue';
 import { useRoute } from 'vue-router';
 
 interface PurchaseOrder {
@@ -37,6 +37,24 @@ interface PurchaseOrder {
 
 const route = useRoute();
 const po = ref<PurchaseOrder | null>(null);
+const statuses = ['draft', 'confirmed', 'receiving', 'closed'];
+
+const nextStatus = computed(() => {
+  if (!po.value) return null;
+  const idx = statuses.indexOf(po.value.status);
+  if (idx === -1 || idx === statuses.length - 1) return null;
+  return statuses[idx + 1];
+});
+
+const nextLabel = computed(() => {
+  if (!nextStatus.value) return '';
+  const labels: Record<string, string> = {
+    confirmed: 'Confirm',
+    receiving: 'Receive',
+    closed: 'Close',
+  };
+  return labels[nextStatus.value] || '';
+});
 
 async function fetchPo() {
   try {
@@ -49,20 +67,20 @@ async function fetchPo() {
   }
 }
 
-async function confirmPo() {
-  if (!po.value) return;
+async function advanceStatus() {
+  if (!po.value || !nextStatus.value) return;
   try {
-    const res = await fetch(`/documents/${po.value.id}/confirm`, {
-      method: 'POST',
+    const res = await fetch(`/purchase-orders/${po.value.id}/status`, {
+      method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({})
+      body: JSON.stringify({ status: nextStatus.value })
     });
     if (res.ok) {
       const data = await res.json();
       po.value.status = data.status;
     }
   } catch (err) {
-    console.error('Failed to confirm purchase order', err);
+    console.error('Failed to update purchase order status', err);
   }
 }
 

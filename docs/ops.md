@@ -46,7 +46,14 @@ psql -U postgres -d magsuite < backup.sql
 
 Attachments are encrypted at rest with the key specified in
 `FILE_ENCRYPTION_KEY`. Ensure the same key is configured before restoring
-files. To extract a manual archive:
+files. The key must be provided in Base64 format. You can generate a random
+32-byte Base64 key with:
+
+```bash
+openssl rand -base64 32
+```
+
+To extract a manual archive:
 
 ```bash
 tar -xzf uploads.tgz -C uploads/

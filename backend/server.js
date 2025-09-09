@@ -5,6 +5,7 @@ const {
 } = require('./src/auth');
 const items = require('./src/items');
 const documents = require('./src/documents');
+const lots = require('./src/lots');
 const inventories = require('./src/inventories');
 const labels = require('./src/labels');
 const imports = require('./src/imports');
@@ -62,6 +63,7 @@ async function start(port = process.env.PORT || 3000) {
   app.use(authenticateToken);
   app.use('/items', items.router);
   app.use('/documents', documents.router);
+  app.use('/lots', lots.router);
   app.use('/sequences', sequences.router);
   app.use('/causals', causals.router);
   app.use('/', inventories.router);

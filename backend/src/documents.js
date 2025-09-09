@@ -22,7 +22,7 @@ const ready = (async () => {
     item_id INT REFERENCES items(id),
     lot TEXT NOT NULL,
     expiry DATE,
-    blocked BOOLEAN DEFAULT false
+    status TEXT NOT NULL DEFAULT 'active'
   )`);
   await db.query(`CREATE TABLE IF NOT EXISTS serials (
     id SERIAL PRIMARY KEY,
@@ -42,8 +42,12 @@ const ready = (async () => {
     expiry DATE,
     moved_at TIMESTAMPTZ DEFAULT now()
   )`);
-  await db.query('ALTER TABLE lots ADD COLUMN IF NOT EXISTS blocked BOOLEAN DEFAULT false');
-  await db.query('ALTER TABLE serials ADD COLUMN IF NOT EXISTS blocked BOOLEAN DEFAULT false');
+  await db.query(
+    "ALTER TABLE lots ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'active'"
+  );
+  await db.query(
+    'ALTER TABLE serials ADD COLUMN IF NOT EXISTS blocked BOOLEAN DEFAULT false'
+  );
 })();
 
 router.get('/', async (req, res) => {
@@ -138,11 +142,11 @@ router.post('/:id/confirm', async (req, res) => {
     }
     let exp = expiry;
     if (lot_id) {
-      const lotRes = await db.query('SELECT expiry, blocked FROM lots WHERE id=$1', [
+      const lotRes = await db.query('SELECT expiry, status FROM lots WHERE id=$1', [
         lot_id,
       ]);
       const lot = lotRes.rows[0];
-      if (lot?.blocked) {
+      if (lot?.status === 'blocked' || lot?.status === 'disposed') {
         return res.status(409).json({ error: 'Lot blocked' });
       }
       if (lot?.expiry && new Date(lot.expiry) < new Date()) {

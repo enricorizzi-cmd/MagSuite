@@ -133,8 +133,8 @@ test('blocks movements on expired or blocked lots', async () => {
     [itemId, 'EXP', '2020-01-01']
   );
   const blockedLot = await db.query(
-    "INSERT INTO lots(item_id, lot, expiry, blocked) VALUES($1,$2,$3,$4) RETURNING id",
-    [itemId, 'BLK', '2030-01-01', true]
+    "INSERT INTO lots(item_id, lot, expiry, status) VALUES($1,$2,$3,$4) RETURNING id",
+    [itemId, 'BLK', '2030-01-01', 'blocked']
   );
   // expired lot
   let doc = await request(server)

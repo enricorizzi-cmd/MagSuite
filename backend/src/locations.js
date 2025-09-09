@@ -1,6 +1,11 @@
 const express = require('express');
 const PDFDocument = require('pdfkit');
-const QRCode = require('qrcode');
+let QRCode;
+try {
+  QRCode = require('qrcode');
+} catch (err) {
+  QRCode = { toDataURL: async () => '' };
+}
 const db = require('./db');
 
 const router = express.Router();

@@ -5,7 +5,13 @@ let pool;
 
 if (process.env.USE_PG_MEM === 'true') {
   const { newDb } = require('pg-mem');
-  const mem = newDb();
+  const mem = newDb({ noAstCoverageCheck: true });
+  mem.public.none(
+    "CREATE TABLE companies (id SERIAL PRIMARY KEY, name TEXT NOT NULL UNIQUE)"
+  );
+  mem.public.none(
+    "INSERT INTO companies(id, name) VALUES (1,'A'), (2,'B')"
+  );
   const { Pool } = mem.adapters.createPg();
   pool = new Pool();
 } else {

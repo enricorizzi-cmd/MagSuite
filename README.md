@@ -206,6 +206,10 @@ Contributions are welcome! Please follow the basics below and see the [full guid
 2. Commit changes with clear messages.
 3. Open a pull request.
 
+## Team Guide
+
+For details on the branching policy, environments and CI/CD workflow, see the [team guide](docs/team-guide.md).
+
 ## License
 
 MagSuite is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.

@@ -16,6 +16,7 @@ const warehousesRouter = require('./src/warehouses');
 const locationsRouter = require('./src/locations');
 const transfersRouter = require('./src/transfers');
 const logsRouter = require('./src/logs');
+const operations = require('./src/operations');
 const db = require('./src/db');
 const { calculateReorderPoint, calculateOrderQuantity } = require('./src/mrp');
 const { sendPdf } = require('./src/mail');
@@ -94,6 +95,7 @@ async function start(port = process.env.PORT || 3000) {
   app.use('/', labels.router);
   app.use('/', imports.router);
   app.use('/', storage.router);
+  app.use('/', operations.router);
   app.use('/warehouses', warehousesRouter.router);
   app.use('/', locationsRouter.router);
   app.use('/transfers', transfersRouter.router);

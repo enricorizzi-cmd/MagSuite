@@ -156,15 +156,59 @@ async function start(port = process.env.PORT || 3000) {
   });
 
   // MRP and Purchase Order APIs
+  const mrpItems = [
+    {
+      item: 'item-active',
+      avg_demand: 10,
+      lead_time: 2,
+      safety_stock: 5,
+      active: true,
+      supplier: 'Supplier A',
+      current_stock: 0,
+    },
+    {
+      item: 'item-inactive',
+      avg_demand: 8,
+      lead_time: 1,
+      safety_stock: 2,
+      active: false,
+      supplier: 'Supplier B',
+      current_stock: 0,
+    },
+    {
+      item: 'item-nosupplier',
+      avg_demand: 5,
+      lead_time: 3,
+      safety_stock: 1,
+      active: true,
+      supplier: null,
+      current_stock: 0,
+    },
+  ];
+
   app.get('/mrp/suggestions', (req, res) => {
-    // In a real system these would come from inventory and demand data.
-    const avgDemand = 5;
-    const leadTime = 2;
-    const rop = calculateReorderPoint(avgDemand, leadTime);
-    const suggestedQty = calculateOrderQuantity(avgDemand, leadTime, 0);
-    res.json([
-      { item: 'demo-item', rop, avg_demand: avgDemand, suggested_qty: suggestedQty },
-    ]);
+    const suggestions = mrpItems
+      .filter((i) => i.active && i.supplier)
+      .map((i) => {
+        const rop = calculateReorderPoint(
+          i.avg_demand,
+          i.lead_time,
+          i.safety_stock
+        );
+        const suggestedQty = calculateOrderQuantity(
+          i.avg_demand,
+          i.lead_time,
+          i.current_stock,
+          i.safety_stock
+        );
+        return {
+          item: i.item,
+          rop,
+          avg_demand: i.avg_demand,
+          suggested_qty: suggestedQty,
+        };
+      });
+    res.json(suggestions);
   });
 
   app.get('/purchase-orders', async (req, res) => {

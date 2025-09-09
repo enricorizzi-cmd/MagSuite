@@ -3,25 +3,28 @@
     <table v-if="suggestions.length">
       <thead>
         <tr>
+          <th>Select</th>
           <th>Item</th>
           <th>ROP</th>
           <th>Avg Demand</th>
           <th>Suggested Qty</th>
-          <th></th>
         </tr>
       </thead>
       <tbody>
         <tr v-for="s in suggestions" :key="s.item">
+          <td>
+            <input type="checkbox" v-model="selected" :value="s.item" />
+          </td>
           <td>{{ s.item }}</td>
           <td>{{ s.rop }}</td>
           <td>{{ s.avg_demand }}</td>
           <td>{{ s.suggested_qty }}</td>
-          <td>
-            <button @click="generatePo(s)">Generate PO</button>
-          </td>
         </tr>
       </tbody>
     </table>
+    <button v-if="suggestions.length" :disabled="!selected.length" @click="generateSelectedPo">
+      Generate PO
+    </button>
     <p v-else>No suggestions found.</p>
   </div>
 </template>
@@ -38,6 +41,7 @@ interface Suggestion {
 }
 
 const suggestions = ref<Suggestion[]>([]);
+const selected = ref<string[]>([]);
 const router = useRouter();
 
 async function fetchSuggestions() {
@@ -51,12 +55,16 @@ async function fetchSuggestions() {
   }
 }
 
-async function generatePo(s: Suggestion) {
+async function generateSelectedPo() {
+  const lines = suggestions.value
+    .filter((s) => selected.value.includes(s.item))
+    .map((s) => ({ item: s.item, qty: s.suggested_qty }));
+  if (!lines.length) return;
   try {
     const res = await fetch('/po', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ item: s.item, qty: s.suggested_qty })
+      body: JSON.stringify({ lines })
     });
     if (res.ok) {
       const data = await res.json();

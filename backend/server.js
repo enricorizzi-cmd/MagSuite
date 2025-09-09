@@ -8,6 +8,7 @@ const documents = require('./src/documents');
 const inventories = require('./src/inventories');
 const labels = require('./src/labels');
 const imports = require('./src/imports');
+const storage = require('./src/storage');
 const db = require('./src/db');
 const { calculateReorderPoint, calculateOrderQuantity } = require('./src/mrp');
 const { sendPdf } = require('./src/mail');
@@ -59,6 +60,7 @@ async function start(port = process.env.PORT || 3000) {
   app.use('/', inventories.router);
   app.use('/', labels.router);
   app.use('/', imports.router);
+  app.use('/', storage.router);
 
   // Suppliers and customers
   const suppliers = [];

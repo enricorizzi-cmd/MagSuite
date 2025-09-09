@@ -26,3 +26,7 @@ Thumbs.db
 
 # Certificates
 prod-ca-2021.crt
+
+# Uploaded files
+uploads/
+backend/uploads/

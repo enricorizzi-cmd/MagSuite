@@ -4,7 +4,10 @@ This document outlines day-to-day maintenance tasks for MagSuite.
 
 ## Backup
 
-### Database
+Daily backups are scheduled automatically and generate one dump per
+tenant under `backend/backups/<company_id>/<YYYY-MM-DD>.dump`.
+
+### Manual Database Backup
 
 Create a dump of the PostgreSQL database:
 
@@ -24,11 +27,26 @@ tar -czf uploads.tgz uploads/
 
 ### Database
 
+For a tenant-specific restore:
+
+1. Locate the dump in `backend/backups/<company_id>/<YYYY-MM-DD>.dump`.
+2. Restore using the tenant context:
+
+```bash
+PGOPTIONS="-c app.current_company_id=<company_id>" pg_restore --no-owner -d magsuite < dumpfile
+```
+
+To restore a full database dump:
+
 ```bash
 psql -U postgres -d magsuite < backup.sql
 ```
 
 ### File Storage
+
+Attachments are encrypted at rest with the key specified in
+`FILE_ENCRYPTION_KEY`. Ensure the same key is configured before restoring
+files. To extract a manual archive:
 
 ```bash
 tar -xzf uploads.tgz -C uploads/

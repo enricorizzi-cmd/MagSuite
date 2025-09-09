@@ -2,6 +2,7 @@ const express = require('express');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
+const crypto = require('crypto');
 
 const router = express.Router();
 
@@ -23,7 +24,19 @@ const storage = multer.diskStorage({
 
 const upload = multer({ storage });
 
+const ENCRYPTION_KEY = process.env.FILE_ENCRYPTION_KEY
+  ? Buffer.from(process.env.FILE_ENCRYPTION_KEY, 'base64')
+  : crypto.createHash('sha256').update('default_file_encryption_key').digest();
+const IV_LENGTH = 12;
+
 router.post('/storage/upload', upload.single('file'), (req, res) => {
+  const filePath = req.file.path;
+  const data = fs.readFileSync(filePath);
+  const iv = crypto.randomBytes(IV_LENGTH);
+  const cipher = crypto.createCipheriv('aes-256-gcm', ENCRYPTION_KEY, iv);
+  const encrypted = Buffer.concat([cipher.update(data), cipher.final()]);
+  const tag = cipher.getAuthTag();
+  fs.writeFileSync(filePath, Buffer.concat([iv, tag, encrypted]));
   res.status(201).json({ filename: req.file.filename });
 });
 
@@ -33,7 +46,21 @@ router.get('/storage/:filename', (req, res) => {
   const filePath = path.join(UPLOAD_ROOT, String(companyId), filename);
   fs.readFile(filePath, (err, data) => {
     if (err) return res.status(404).end();
-    res.json({ filename, content: data.toString('base64') });
+    try {
+      const iv = data.slice(0, IV_LENGTH);
+      const tag = data.slice(IV_LENGTH, IV_LENGTH + 16);
+      const text = data.slice(IV_LENGTH + 16);
+      const decipher = crypto.createDecipheriv(
+        'aes-256-gcm',
+        ENCRYPTION_KEY,
+        iv
+      );
+      decipher.setAuthTag(tag);
+      const decrypted = Buffer.concat([decipher.update(text), decipher.final()]);
+      res.json({ filename, content: decrypted.toString('base64') });
+    } catch (e) {
+      res.status(500).end();
+    }
   });
 });
 

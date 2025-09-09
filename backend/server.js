@@ -18,6 +18,8 @@ const transfersRouter = require('./src/transfers');
 const logsRouter = require('./src/logs');
 const operations = require('./src/operations');
 const db = require('./src/db');
+const { runTenantBackups } = require('./src/backup');
+const cron = require('node-cron');
 const { calculateReorderPoint, calculateOrderQuantity } = require('./src/mrp');
 const { sendPdf } = require('./src/mail');
 const logger = require('./src/logger');
@@ -195,7 +197,7 @@ async function start(port = process.env.PORT || 3000) {
 
   app.get('/reports/:type', async (req, res) => {
     const { type } = req.params;
-    const { date, warehouse, category: _category, format } = req.query;
+    const { date, warehouse, format } = req.query;
     try {
       let rows = [];
       if (type === 'inventory') {
@@ -690,6 +692,12 @@ async function start(port = process.env.PORT || 3000) {
 
   const server = app.listen(port, () => {
     logger.info(`Server listening on port ${port}`);
+  });
+
+  cron.schedule('0 2 * * *', () => {
+    runTenantBackups().catch((err) =>
+      logger.error('Scheduled backup failed', err)
+    );
   });
 
   return server;

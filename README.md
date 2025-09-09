@@ -87,6 +87,9 @@ The backend relies on a few variables at runtime:
 - `DATABASE_URL` – PostgreSQL connection string
 - `ACCESS_SECRET` – secret used to sign access tokens (required)
 - `REFRESH_SECRET` – secret used to sign refresh tokens (required)
+- `API_KEY` – API key used for external integrations (required)
+- `SSO_SECRET` – secret used to validate SSO tokens (required)
+- `FILE_ENCRYPTION_KEY` – key used to encrypt stored files (required)
 - `ALERT_EMAIL` – destination for alert notifications (optional)
 - `BATCH_STRATEGY` – `FIFO` (default) or `FEFO` for batch handling (optional)
 - `DB_CA_PATH` – path to the CA certificate used to verify the database TLS connection
@@ -98,6 +101,9 @@ On Render, add them via **Environment → Add Environment Variable**:
 DATABASE_URL=postgres://user:pass@db:5432/magsuite
 ACCESS_SECRET=replace-me
 REFRESH_SECRET=replace-me-too
+API_KEY=replace-me-api-key
+SSO_SECRET=replace-me-sso-secret
+FILE_ENCRYPTION_KEY=replace-me-file-key
 ALERT_EMAIL=alerts@example.com
 BATCH_STRATEGY=FIFO
 DB_CA_PATH=/etc/secrets/supabase-ca.crt
@@ -117,6 +123,9 @@ cat <<'EOF' > .env
 DATABASE_URL=postgres://postgres:postgres@localhost:5432/magsuite
 ACCESS_SECRET=dev-access-secret
 REFRESH_SECRET=dev-refresh-secret
+API_KEY=dev-api-key
+SSO_SECRET=dev-sso-secret
+FILE_ENCRYPTION_KEY=dev-file-key
 ALERT_EMAIL=alerts@example.com
 BATCH_STRATEGY=FIFO
 # Uncomment if you have a custom CA certificate locally
@@ -171,7 +180,7 @@ cd ../frontend && npm run dev
 Deploying on [Render](https://render.com) requires the following configuration:
 
 - **Dockerfile path:** `backend/Dockerfile` (with the repository root as the build context)
-- **Environment variables:** `DATABASE_URL`, `ACCESS_SECRET`, `REFRESH_SECRET`, `ALERT_EMAIL` (optional), `BATCH_STRATEGY` (optional), `DB_CA_PATH`, and optionally `NODE_EXTRA_CA_CERTS`
+- **Environment variables:** `DATABASE_URL`, `ACCESS_SECRET`, `REFRESH_SECRET`, `API_KEY`, `SSO_SECRET`, `FILE_ENCRYPTION_KEY`, `ALERT_EMAIL` (optional), `BATCH_STRATEGY` (optional), `DB_CA_PATH`, and optionally `NODE_EXTRA_CA_CERTS`
 - **Secret file:** Optionally provide a `supabase-ca.crt` and mount it at `/etc/secrets/supabase-ca.crt` (referenced by `DB_CA_PATH`)
 
 ## Usage

@@ -1,4 +1,4 @@
-create table lots (
+CREATE TABLE IF NOT EXISTS lots (
   id serial primary key,
   item_id integer references items(id),
   lot text not null,
@@ -6,7 +6,7 @@ create table lots (
   blocked boolean default false
 );
 
-create table serials (
+CREATE TABLE IF NOT EXISTS serials (
   id serial primary key,
   item_id integer references items(id),
   serial text not null,
@@ -14,7 +14,7 @@ create table serials (
   blocked boolean default false
 );
 
-create table stock_movements (
+CREATE TABLE IF NOT EXISTS stock_movements (
   id serial primary key,
   document_id integer references documents(id),
   item_id integer references items(id),

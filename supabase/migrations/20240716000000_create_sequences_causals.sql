@@ -1,4 +1,4 @@
-create table sequences (
+CREATE TABLE IF NOT EXISTS sequences (
   id serial primary key,
   name text not null,
   prefix text default '',
@@ -6,7 +6,7 @@ create table sequences (
   company_id integer references companies(id)
 );
 
-create table causals (
+CREATE TABLE IF NOT EXISTS causals (
   id serial primary key,
   code text not null,
   description text,

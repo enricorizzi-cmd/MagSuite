@@ -1,4 +1,4 @@
-create table partners (
+CREATE TABLE IF NOT EXISTS partners (
   id serial primary key,
   company_id integer references companies(id),
   type text not null check (type in ('customer','supplier')),
@@ -8,7 +8,7 @@ create table partners (
   unique(company_id, name)
 );
 
-create table addresses (
+CREATE TABLE IF NOT EXISTS addresses (
   id serial primary key,
   partner_id integer references partners(id) on delete cascade,
   type text default 'primary',

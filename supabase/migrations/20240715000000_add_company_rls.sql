@@ -1,4 +1,4 @@
-create table companies (
+CREATE TABLE IF NOT EXISTS companies (
   id serial primary key,
   name text not null unique
 );

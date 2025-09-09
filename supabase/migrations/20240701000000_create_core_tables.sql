@@ -1,9 +1,9 @@
-create table warehouses (
+CREATE TABLE IF NOT EXISTS warehouses (
   id serial primary key,
   name text not null unique
 );
 
-create table items (
+CREATE TABLE IF NOT EXISTS items (
   id serial primary key,
   name text not null,
   sku text not null unique,
@@ -13,21 +13,21 @@ create table items (
   mrp numeric
 );
 
-create table documents (
+CREATE TABLE IF NOT EXISTS documents (
   id serial primary key,
   type text not null,
   status text default 'draft',
   created_at timestamptz default now()
 );
 
-create table document_lines (
+CREATE TABLE IF NOT EXISTS document_lines (
   id serial primary key,
   document_id integer references documents(id) on delete cascade,
   item_id integer references items(id),
   quantity numeric not null
 );
 
-create table movements (
+CREATE TABLE IF NOT EXISTS movements (
   id serial primary key,
   document_id integer references documents(id),
   item_id integer references items(id),

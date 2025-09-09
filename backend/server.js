@@ -293,7 +293,11 @@ async function start(port = process.env.PORT || 3000) {
   // Inventory APIs
   // Supplier APIs
   app.get('/suppliers', (req, res) => {
-    res.json({ items: suppliers });
+    const limit = Math.min(parseInt(req.query.limit) || suppliers.length, 100);
+    const page = Math.max(parseInt(req.query.page) || 1, 1);
+    const offset = (page - 1) * limit;
+    const items = suppliers.slice(offset, offset + limit);
+    res.json({ items, total: suppliers.length });
   });
 
   app.get('/suppliers/:id', (req, res) => {
@@ -328,10 +332,34 @@ async function start(port = process.env.PORT || 3000) {
     res.status(204).end();
   });
 
-  app.get('/suppliers/export', (req, res) => {
-    const lines = ['id,name'];
-    suppliers.forEach((s) => lines.push(`${s.id},${s.name}`));
-    res.type('text/csv').send(lines.join('\n'));
+  app.get('/suppliers/export', async (req, res) => {
+    const allowed = ['id', 'name'];
+    let columns = req.query.columns
+      ? req.query.columns
+          .split(',')
+          .map((c) => c.trim())
+          .filter((c) => allowed.includes(c))
+      : allowed;
+    if (columns.length === 0) columns = allowed;
+    const format = (req.query.format || 'csv').toLowerCase();
+    if (format === 'xlsx') {
+      const ExcelJS = require('exceljs');
+      const wb = new ExcelJS.Workbook();
+      const ws = wb.addWorksheet('Suppliers');
+      ws.addRow(columns);
+      suppliers.forEach((s) => ws.addRow(columns.map((c) => s[c])));
+      res.type(
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+      );
+      const buffer = await wb.xlsx.writeBuffer();
+      res.send(Buffer.from(buffer));
+    } else {
+      const lines = [columns.join(',')];
+      suppliers.forEach((s) =>
+        lines.push(columns.map((c) => s[c]).join(','))
+      );
+      res.type('text/csv').send(lines.join('\n'));
+    }
   });
 
   // Purchase conditions APIs
@@ -377,7 +405,11 @@ async function start(port = process.env.PORT || 3000) {
 
   // Customer APIs
   app.get('/customers', (req, res) => {
-    res.json({ items: customers });
+    const limit = Math.min(parseInt(req.query.limit) || customers.length, 100);
+    const page = Math.max(parseInt(req.query.page) || 1, 1);
+    const offset = (page - 1) * limit;
+    const items = customers.slice(offset, offset + limit);
+    res.json({ items, total: customers.length });
   });
 
   app.get('/customers/:id', (req, res) => {
@@ -403,10 +435,34 @@ async function start(port = process.env.PORT || 3000) {
     res.json(cust);
   });
 
-  app.get('/customers/export', (req, res) => {
-    const lines = ['id,name'];
-    customers.forEach((c) => lines.push(`${c.id},${c.name}`));
-    res.type('text/csv').send(lines.join('\n'));
+  app.get('/customers/export', async (req, res) => {
+    const allowed = ['id', 'name'];
+    let columns = req.query.columns
+      ? req.query.columns
+          .split(',')
+          .map((c) => c.trim())
+          .filter((c) => allowed.includes(c))
+      : allowed;
+    if (columns.length === 0) columns = allowed;
+    const format = (req.query.format || 'csv').toLowerCase();
+    if (format === 'xlsx') {
+      const ExcelJS = require('exceljs');
+      const wb = new ExcelJS.Workbook();
+      const ws = wb.addWorksheet('Customers');
+      ws.addRow(columns);
+      customers.forEach((c) => ws.addRow(columns.map((col) => c[col])));
+      res.type(
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+      );
+      const buffer = await wb.xlsx.writeBuffer();
+      res.send(Buffer.from(buffer));
+    } else {
+      const lines = [columns.join(',')];
+      customers.forEach((c) =>
+        lines.push(columns.map((col) => c[col]).join(','))
+      );
+      res.type('text/csv').send(lines.join('\n'));
+    }
   });
   // Warehouse APIs
   app.get('/warehouses', (req, res) => {

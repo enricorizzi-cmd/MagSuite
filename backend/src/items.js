@@ -15,12 +15,50 @@ const router = express.Router();
 
 router.get('/', async (req, res) => {
   const limit = Math.min(parseInt(req.query.limit) || 10, 100);
-  const offset = parseInt(req.query.offset) || 0;
+  const page = Math.max(parseInt(req.query.page) || 1, 1);
+  const offset = (page - 1) * limit;
   const result = await db.query(
     'SELECT id, name, sku, lotti, seriali FROM items ORDER BY id LIMIT $1 OFFSET $2',
     [limit, offset]
   );
-  res.json({ items: result.rows });
+  const totalRes = await db.query('SELECT COUNT(*) FROM items');
+  res.json({ items: result.rows, total: parseInt(totalRes.rows[0].count, 10) });
+});
+
+router.get('/export', async (req, res) => {
+  const allowed = ['id', 'name', 'sku', 'lotti', 'seriali'];
+  let columns = req.query.columns
+    ? req.query.columns
+        .split(',')
+        .map((c) => c.trim())
+        .filter((c) => allowed.includes(c))
+    : allowed;
+  if (columns.length === 0) columns = allowed;
+  const format = (req.query.format || 'csv').toLowerCase();
+  const result = await db.query(
+    `SELECT ${columns.join(', ')} FROM items ORDER BY id`
+  );
+
+  if (format === 'xlsx') {
+    const ExcelJS = require('exceljs');
+    const wb = new ExcelJS.Workbook();
+    const ws = wb.addWorksheet('Items');
+    ws.addRow(columns);
+    result.rows.forEach((row) => {
+      ws.addRow(columns.map((c) => row[c]));
+    });
+    res.type(
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    );
+    const buffer = await wb.xlsx.writeBuffer();
+    res.send(Buffer.from(buffer));
+  } else {
+    const lines = [columns.join(',')];
+    result.rows.forEach((row) => {
+      lines.push(columns.map((c) => row[c]).join(','));
+    });
+    res.type('text/csv').send(lines.join('\n'));
+  }
 });
 
 router.post('/', async (req, res) => {

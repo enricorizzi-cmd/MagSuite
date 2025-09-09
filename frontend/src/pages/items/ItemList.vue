@@ -20,7 +20,16 @@
       </label>
       <button @click="fetchItems">Filter</button>
       <button @click="createItem">Create</button>
-      <button @click="exportCSV">Export CSV</button>
+      <select v-model="exportFormat">
+        <option value="csv">CSV</option>
+        <option value="xlsx">XLSX</option>
+      </select>
+      <select multiple v-model="selectedColumns">
+        <option v-for="col in allColumns" :key="col" :value="col">
+          {{ col }}
+        </option>
+      </select>
+      <button @click="exportData">Export</button>
       <label class="import-csv">
         Import CSV
         <input type="file" accept=".csv" @change="importCSV" hidden />
@@ -91,6 +100,9 @@ const filters = ref({
 
 const categories = ref<string[]>([]);
 const brands = ref<string[]>([]);
+const allColumns = ['id', 'name', 'category', 'brand', 'lotti', 'seriali'];
+const selectedColumns = ref<string[]>([...allColumns]);
+const exportFormat = ref('csv');
 
 const totalPages = computed(() =>
   Math.max(1, Math.ceil(total.value / pageSize.value))
@@ -167,13 +179,15 @@ async function importCSV(e: Event) {
   }
 }
 
-function exportCSV() {
+function exportData() {
   const params = new URLSearchParams();
   if (filters.value.text) params.set('text', filters.value.text);
   if (filters.value.category) params.set('category', filters.value.category);
   if (filters.value.brand) params.set('brand', filters.value.brand);
   if (filters.value.lotti) params.set('lotti', 'true');
   if (filters.value.seriali) params.set('seriali', 'true');
+  params.set('columns', selectedColumns.value.join(','));
+  params.set('format', exportFormat.value);
   window.open(`/items/export?${params.toString()}`, '_blank');
 }
 

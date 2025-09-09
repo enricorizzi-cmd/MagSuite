@@ -2,7 +2,16 @@
   <div class="customer-list">
     <section class="actions">
       <button @click="createCustomer">Create</button>
-      <button @click="exportCSV">Export CSV</button>
+      <select v-model="exportFormat">
+        <option value="csv">CSV</option>
+        <option value="xlsx">XLSX</option>
+      </select>
+      <select multiple v-model="selectedColumns">
+        <option v-for="col in allColumns" :key="col" :value="col">
+          {{ col }}
+        </option>
+      </select>
+      <button @click="exportData">Export</button>
       <button @click="showImport = true">Import CSV</button>
     </section>
     <ImportWizard v-if="showImport" type="customers" @close="showImport = false" @done="fetchCustomers" />
@@ -33,6 +42,9 @@ interface Customer { id: number | string; name: string }
 const router = useRouter();
 const customers = ref<Customer[]>([]);
 const showImport = ref(false);
+const allColumns = ['id', 'name'];
+const selectedColumns = ref<string[]>([...allColumns]);
+const exportFormat = ref('csv');
 
 async function fetchCustomers() {
   try {
@@ -54,8 +66,11 @@ function editCustomer(c: Customer) {
   router.push(`/customers/${c.id}`);
 }
 
-function exportCSV() {
-  window.open('/customers/export', '_blank');
+function exportData() {
+  const params = new URLSearchParams();
+  params.set('columns', selectedColumns.value.join(','));
+  params.set('format', exportFormat.value);
+  window.open(`/customers/export?${params.toString()}`, '_blank');
 }
 
 onMounted(fetchCustomers);

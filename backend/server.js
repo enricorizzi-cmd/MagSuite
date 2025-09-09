@@ -17,6 +17,9 @@ const locationsRouter = require('./src/locations');
 const transfersRouter = require('./src/transfers');
 const logsRouter = require('./src/logs');
 const operations = require('./src/operations');
+const customersRouter = require('./src/customers');
+const suppliersRouter = require('./src/suppliers');
+const usersRouter = require('./src/users');
 const db = require('./src/db');
 const { runTenantBackups } = require('./src/backup');
 const cron = require('node-cron');
@@ -102,17 +105,9 @@ async function start(port = process.env.PORT || 3000) {
   app.use('/', locationsRouter.router);
   app.use('/transfers', transfersRouter.router);
   app.use('/logs', logsRouter.router);
-
-  // Suppliers and customers
-  const suppliers = [];
-  let nextSupplierId = 1;
-  const customers = [];
-  let nextCustomerId = 1;
-  const warehouses = [];
-  let nextWarehouseId = 1;
-  // Simple in-memory store for users
-  const userSettings = [];
-  let nextUserId = 1;
+  app.use('/customers', customersRouter.router);
+  app.use('/suppliers', suppliersRouter.router);
+  app.use('/users', usersRouter.router);
 
   const jobQueue = [];
   const { version } = require('./package.json');
@@ -474,75 +469,6 @@ async function start(port = process.env.PORT || 3000) {
 
   // Inventory APIs
   // Supplier APIs
-  app.get('/suppliers', (req, res) => {
-    const limit = Math.min(parseInt(req.query.limit) || suppliers.length, 100);
-    const page = Math.max(parseInt(req.query.page) || 1, 1);
-    const offset = (page - 1) * limit;
-    const items = suppliers.slice(offset, offset + limit);
-    res.json({ items, total: suppliers.length });
-  });
-
-  app.get('/suppliers/:id', (req, res) => {
-    const id = Number(req.params.id);
-    if (Number.isNaN(id)) return res.status(400).json({ error: 'Invalid id' });
-    const sup = suppliers.find((s) => s.id === id);
-    if (!sup) return res.status(404).end();
-    res.json(sup);
-  });
-
-  app.post('/suppliers', (req, res) => {
-    const sup = { id: nextSupplierId++, name: req.body.name || '' };
-    suppliers.push(sup);
-    res.status(201).json(sup);
-  });
-
-  app.put('/suppliers/:id', (req, res) => {
-    const id = Number(req.params.id);
-    if (Number.isNaN(id)) return res.status(400).json({ error: 'Invalid id' });
-    const sup = suppliers.find((s) => s.id === id);
-    if (!sup) return res.status(404).end();
-    Object.assign(sup, req.body);
-    res.json(sup);
-  });
-
-  app.delete('/suppliers/:id', (req, res) => {
-    const id = Number(req.params.id);
-    if (Number.isNaN(id)) return res.status(400).json({ error: 'Invalid id' });
-    const idx = suppliers.findIndex((s) => s.id === id);
-    if (idx === -1) return res.status(404).end();
-    suppliers.splice(idx, 1);
-    res.status(204).end();
-  });
-
-  app.get('/suppliers/export', async (req, res) => {
-    const allowed = ['id', 'name'];
-    let columns = req.query.columns
-      ? req.query.columns
-          .split(',')
-          .map((c) => c.trim())
-          .filter((c) => allowed.includes(c))
-      : allowed;
-    if (columns.length === 0) columns = allowed;
-    const format = (req.query.format || 'csv').toLowerCase();
-    if (format === 'xlsx') {
-      const ExcelJS = require('exceljs');
-      const wb = new ExcelJS.Workbook();
-      const ws = wb.addWorksheet('Suppliers');
-      ws.addRow(columns);
-      suppliers.forEach((s) => ws.addRow(columns.map((c) => s[c])));
-      res.type(
-        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-      );
-      const buffer = await wb.xlsx.writeBuffer();
-      res.send(Buffer.from(buffer));
-    } else {
-      const lines = [columns.join(',')];
-      suppliers.forEach((s) =>
-        lines.push(columns.map((c) => s[c]).join(','))
-      );
-      res.type('text/csv').send(lines.join('\n'));
-    }
-  });
 
   // Purchase conditions APIs
   app.get('/purchase-conditions', async (req, res) => {
@@ -586,110 +512,6 @@ async function start(port = process.env.PORT || 3000) {
   });
 
   // Customer APIs
-  app.get('/customers', (req, res) => {
-    const limit = Math.min(parseInt(req.query.limit) || customers.length, 100);
-    const page = Math.max(parseInt(req.query.page) || 1, 1);
-    const offset = (page - 1) * limit;
-    const items = customers.slice(offset, offset + limit);
-    res.json({ items, total: customers.length });
-  });
-
-  app.get('/customers/:id', (req, res) => {
-    const id = Number(req.params.id);
-    if (Number.isNaN(id)) return res.status(400).json({ error: 'Invalid id' });
-    const cust = customers.find((c) => c.id === id);
-    if (!cust) return res.status(404).end();
-    res.json(cust);
-  });
-
-  app.post('/customers', (req, res) => {
-    const cust = { id: nextCustomerId++, name: req.body.name || '' };
-    customers.push(cust);
-    res.status(201).json(cust);
-  });
-
-  app.put('/customers/:id', (req, res) => {
-    const id = Number(req.params.id);
-    if (Number.isNaN(id)) return res.status(400).json({ error: 'Invalid id' });
-    const cust = customers.find((c) => c.id === id);
-    if (!cust) return res.status(404).end();
-    Object.assign(cust, req.body);
-    res.json(cust);
-  });
-
-  app.get('/customers/export', async (req, res) => {
-    const allowed = ['id', 'name'];
-    let columns = req.query.columns
-      ? req.query.columns
-          .split(',')
-          .map((c) => c.trim())
-          .filter((c) => allowed.includes(c))
-      : allowed;
-    if (columns.length === 0) columns = allowed;
-    const format = (req.query.format || 'csv').toLowerCase();
-    if (format === 'xlsx') {
-      const ExcelJS = require('exceljs');
-      const wb = new ExcelJS.Workbook();
-      const ws = wb.addWorksheet('Customers');
-      ws.addRow(columns);
-      customers.forEach((c) => ws.addRow(columns.map((col) => c[col])));
-      res.type(
-        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-      );
-      const buffer = await wb.xlsx.writeBuffer();
-      res.send(Buffer.from(buffer));
-    } else {
-      const lines = [columns.join(',')];
-      customers.forEach((c) =>
-        lines.push(columns.map((col) => c[col]).join(','))
-      );
-      res.type('text/csv').send(lines.join('\n'));
-    }
-  });
-  // Warehouse APIs
-  app.get('/warehouses', (req, res) => {
-    res.json({ warehouses });
-  });
-
-  app.post('/warehouses', (req, res) => {
-    const w = { id: nextWarehouseId++, name: req.body.name || '' };
-    warehouses.push(w);
-    res.status(201).json(w);
-  });
-
-  app.put('/warehouses/:id', (req, res) => {
-    const id = Number(req.params.id);
-    if (Number.isNaN(id)) return res.status(400).json({ error: 'Invalid id' });
-    const w = warehouses.find((w) => w.id === id);
-    if (!w) return res.status(404).end();
-    Object.assign(w, req.body);
-    res.json(w);
-  });
-
-  // User management APIs
-  app.get('/users', (req, res) => {
-    res.json({ users: userSettings });
-  });
-
-  app.post('/users', (req, res) => {
-    const u = {
-      id: nextUserId++,
-      name: req.body.name || '',
-      role: req.body.role || 'user',
-      warehouseId: req.body.warehouseId || null,
-    };
-    userSettings.push(u);
-    res.status(201).json(u);
-  });
-
-  app.put('/users/:id', (req, res) => {
-    const id = Number(req.params.id);
-    if (Number.isNaN(id)) return res.status(400).json({ error: 'Invalid id' });
-    const u = userSettings.find((u) => u.id === id);
-    if (!u) return res.status(404).end();
-    Object.assign(u, req.body);
-    res.json(u);
-  });
   app.get('/*splat', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
   });

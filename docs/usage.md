@@ -63,8 +63,12 @@ print(app.total_quantity())
 
 ## Import API
 
-The backend accepts CSV or XLSX files with `name` and `quantity` columns:
-Each row must include the `name`, `warehouse`, `lot` and `quantity` fields:
+The backend accepts CSV or XLSX files with `name` and `quantity` columns.
+Each row must include the `name`, `warehouse`, `lot` and `quantity` fields.
+When importing items you can provide optional `uom` and `code` columns.
+The `uom` value must be one of `pcs`, `kg` or `lb` and `code` must be
+alphanumeric. Validation errors are reported in the import log and the
+mapping can be customised via saved templates.
 
 ```csv
 name,warehouse,lot,quantity

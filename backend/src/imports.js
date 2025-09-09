@@ -8,6 +8,19 @@ const db = require('./db');
 const router = express.Router();
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+
+// Default header mappings per import "type"
+const DEFAULT_MAPPINGS = {
+  items: {
+    name: 'name',
+    code: 'code',
+    uom: 'uom',
+  },
+};
+
+// Validation helpers for specific fields
+const ALLOWED_UOMS = new Set(['pcs', 'kg', 'lb']);
+const CODE_REGEX = /^[A-Za-z0-9-]+$/;
 const storage = multer.diskStorage({
   destination: os.tmpdir(),
   filename: (req, file, cb) => cb(null, file.originalname),
@@ -43,7 +56,7 @@ function uploadMiddleware(req, res, next) {
   )`);
 })();
 
-async function parseBuffer(buffer, mapping = {}) {
+async function parseBuffer(buffer, mapping = {}, type = null) {
   const workbook = new ExcelJS.Workbook();
   await workbook.xlsx.load(buffer);
   const worksheet = workbook.worksheets[0];
@@ -57,7 +70,12 @@ async function parseBuffer(buffer, mapping = {}) {
     } else {
       const obj = {};
       headers.forEach((header, i) => {
-        const key = mapping[header] || header;
+        const norm = (header || '').toLowerCase();
+        const key =
+          mapping[header] ||
+          mapping[norm] ||
+          (DEFAULT_MAPPINGS[type] && DEFAULT_MAPPINGS[type][norm]) ||
+          header;
         obj[key] = values[i + 1] || '';
       });
       rows.push(obj);
@@ -74,13 +92,23 @@ async function handleImport(type, file, mapping, dryRun = false) {
   }
   const buffer = await fs.readFile(filePath);
   try {
-    const rows = await parseBuffer(buffer, mapping);
+    const rows = await parseBuffer(buffer, mapping, type);
     const log = [];
     let count = 0;
     rows.forEach((row, idx) => {
       const line = idx + 2;
-      if (!row.name) {
-        log.push({ line, message: 'Missing name', error: true });
+      const errors = [];
+      if (!row.name) errors.push('Missing name');
+      if (type === 'items') {
+        if (row.uom && !ALLOWED_UOMS.has(String(row.uom).toLowerCase())) {
+          errors.push(`Invalid UoM ${row.uom}`);
+        }
+        if (row.code && !CODE_REGEX.test(String(row.code))) {
+          errors.push(`Invalid code ${row.code}`);
+        }
+      }
+      if (errors.length) {
+        log.push({ line, message: errors.join('; '), error: true });
         return;
       }
       log.push({ line, message: `Imported ${row.name}`, error: false });

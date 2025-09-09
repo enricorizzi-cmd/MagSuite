@@ -1,5 +1,6 @@
 const express = require('express');
 const db = require('./db');
+const audit = require('./audit');
 
 const router = express.Router();
 
@@ -76,7 +77,9 @@ router.post('/', async (req, res) => {
     'INSERT INTO items(name, sku, lotti, seriali) VALUES($1,$2,$3,$4) RETURNING id, name, sku, lotti, seriali',
     [name, sku, lotti, seriali]
   );
-  res.status(201).json(result.rows[0]);
+  const item = result.rows[0];
+  audit.logAction(req.user.id, 'create_item', { item });
+  res.status(201).json(item);
 });
 
 router.get('/:id', async (req, res) => {
@@ -97,6 +100,11 @@ router.put('/:id', async (req, res) => {
     return res.status(400).json({ error: 'Invalid id' });
   }
   const { name, sku, lotti, seriali } = req.body;
+  const oldRes = await db.query('SELECT id, name, sku, lotti, seriali FROM items WHERE id=$1', [id]);
+  if (oldRes.rows.length === 0) {
+    return res.status(404).json({ error: 'Not found' });
+  }
+  const oldItem = oldRes.rows[0];
   const fields = [];
   const values = [];
   if (name !== undefined) {
@@ -139,7 +147,15 @@ router.put('/:id', async (req, res) => {
   if (result.rows.length === 0) {
     return res.status(404).json({ error: 'Not found' });
   }
-  res.json(result.rows[0]);
+  const newItem = result.rows[0];
+  const diff = {};
+  Object.keys(newItem).forEach((key) => {
+    if (newItem[key] !== oldItem[key]) {
+      diff[key] = { old: oldItem[key], new: newItem[key] };
+    }
+  });
+  audit.logAction(req.user.id, 'update_item', { id, diff });
+  res.json(newItem);
 });
 
 router.delete('/:id', async (req, res) => {
@@ -147,10 +163,12 @@ router.delete('/:id', async (req, res) => {
   if (Number.isNaN(id)) {
     return res.status(400).json({ error: 'Invalid id' });
   }
-  const result = await db.query('DELETE FROM items WHERE id=$1', [id]);
-  if (result.rowCount === 0) {
+  const oldRes = await db.query('SELECT id, name, sku, lotti, seriali FROM items WHERE id=$1', [id]);
+  if (oldRes.rows.length === 0) {
     return res.status(404).json({ error: 'Not found' });
   }
+  await db.query('DELETE FROM items WHERE id=$1', [id]);
+  audit.logAction(req.user.id, 'delete_item', { item: oldRes.rows[0] });
   res.status(204).send();
 });
 

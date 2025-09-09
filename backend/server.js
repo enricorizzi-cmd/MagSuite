@@ -15,6 +15,7 @@ const causals = require('./src/causals');
 const warehousesRouter = require('./src/warehouses');
 const locationsRouter = require('./src/locations');
 const transfersRouter = require('./src/transfers');
+const logsRouter = require('./src/logs');
 const db = require('./src/db');
 const { calculateReorderPoint, calculateOrderQuantity } = require('./src/mrp');
 const { sendPdf } = require('./src/mail');
@@ -96,6 +97,7 @@ async function start(port = process.env.PORT || 3000) {
   app.use('/warehouses', warehousesRouter.router);
   app.use('/', locationsRouter.router);
   app.use('/transfers', transfersRouter.router);
+  app.use('/logs', logsRouter.router);
 
   // Suppliers and customers
   const suppliers = [];

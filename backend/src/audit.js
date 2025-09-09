@@ -11,7 +11,7 @@ function logAction(userId, action, details = {}) {
     action,
     ...details,
   };
-  fs.appendFile(logPath, JSON.stringify(entry) + '\n', () => {});
+  fs.appendFileSync(logPath, JSON.stringify(entry) + '\n');
 }
 
-module.exports = { logAction };
+module.exports = { logAction, logPath };

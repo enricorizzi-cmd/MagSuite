@@ -1,3 +1,4 @@
-name,quantity
-widget,10
-gadget,5
+name,warehouse,lot,quantity
+widget,A,L1,10
+widget,B,L1,2
+gadget,A,L2,3

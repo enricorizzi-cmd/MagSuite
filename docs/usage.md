@@ -47,6 +47,12 @@ Example output:
 Total quantity: 15
 ```
 
+Display row view filtered by name and export to CSV:
+
+```bash
+magsuite --inventory docs/sample_inventory.csv --filter-name widget --rows --export filtered.csv
+```
+
 ## Python API
 
 ```python
@@ -58,11 +64,13 @@ print(app.total_quantity())
 ## Import API
 
 The backend accepts CSV or XLSX files with `name` and `quantity` columns:
+Each row must include the `name`, `warehouse`, `lot` and `quantity` fields:
 
 ```csv
-name,quantity
-widget,10
-gadget,5
+name,warehouse,lot,quantity
+widget,A,L1,10
+widget,B,L1,2
+gadget,A,L2,3
 ```
 
 Upload a file and create a log entry:

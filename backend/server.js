@@ -11,6 +11,9 @@ const imports = require('./src/imports');
 const storage = require('./src/storage');
 const sequences = require('./src/sequences');
 const causals = require('./src/causals');
+const warehousesRouter = require('./src/warehouses');
+const locationsRouter = require('./src/locations');
+const transfersRouter = require('./src/transfers');
 const db = require('./src/db');
 const { calculateReorderPoint, calculateOrderQuantity } = require('./src/mrp');
 const { sendPdf } = require('./src/mail');
@@ -65,15 +68,16 @@ async function start(port = process.env.PORT || 3000) {
   app.use('/', labels.router);
   app.use('/', imports.router);
   app.use('/', storage.router);
+  app.use('/warehouses', warehousesRouter.router);
+  app.use('/', locationsRouter.router);
+  app.use('/transfers', transfersRouter.router);
 
   // Suppliers and customers
   const suppliers = [];
   let nextSupplierId = 1;
   const customers = [];
   let nextCustomerId = 1;
-  // Simple in-memory stores for warehouses and users
-  const warehouses = [];
-  let nextWarehouseId = 1;
+  // Simple in-memory store for users
   const userSettings = [];
   let nextUserId = 1;
 

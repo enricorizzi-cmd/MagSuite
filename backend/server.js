@@ -198,6 +198,8 @@ async function start(port = process.env.PORT || 3000) {
   app.get('/reports/:type', async (req, res) => {
     const { type } = req.params;
     const { date, warehouse, format } = req.query;
+    const limit = Math.min(parseInt(req.query.limit) || 100, 1000);
+    const offset = parseInt(req.query.offset) || 0;
     try {
       let rows = [];
       if (type === 'inventory') {
@@ -212,8 +214,9 @@ async function start(port = process.env.PORT || 3000) {
           conditions.push(`warehouse_id = $${params.length}`);
         }
         const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
+        params.push(limit, offset);
         const result = await db.query(
-          `SELECT item_id, SUM(quantity) AS quantity FROM stock_movements ${where} GROUP BY item_id ORDER BY item_id`,
+          `SELECT item_id, SUM(quantity) AS quantity FROM stock_movements ${where} GROUP BY item_id ORDER BY item_id LIMIT $${params.length-1} OFFSET $${params.length}`,
           params
         );
         rows = result.rows;
@@ -225,8 +228,9 @@ async function start(port = process.env.PORT || 3000) {
           conditions.push(`created_at::date = $${params.length}`);
         }
         const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
+        params.push(limit, offset);
         const result = await db.query(
-          `SELECT id, status, created_at FROM documents ${where} ORDER BY id`,
+          `SELECT id, status, created_at FROM documents ${where} ORDER BY id LIMIT $${params.length-1} OFFSET $${params.length}`,
           params
         );
         rows = result.rows;

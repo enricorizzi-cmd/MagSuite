@@ -76,12 +76,16 @@
           <tr>
             <th>Magazzino</th>
             <th>Quantità</th>
+            <th></th>
           </tr>
         </thead>
         <tbody>
           <tr v-for="s in stocks" :key="s.warehouse">
             <td>{{ s.warehouse }}</td>
             <td>{{ s.quantity }}</td>
+            <td>
+              <button @click="goToLotti(s.warehouse)">Vai a lotti</button>
+            </td>
           </tr>
         </tbody>
       </table>
@@ -191,6 +195,14 @@ async function loadStock() {
   }
 }
 
+function goToLotti(warehouse: string) {
+  router.push({
+    name: 'warehouse-stock',
+    params: { id: warehouse },
+    query: { sku: item.value.sku }
+  });
+}
+
 function addBarcode() {
   if (newBarcode.value) {
     barcodes.value.push(newBarcode.value);
@@ -260,6 +272,8 @@ async function saveSuppliers(itemId: string | number) {
     body: JSON.stringify(suppliers.value)
   });
 }
+
+defineExpose({ item, stocks, goToLotti });
 </script>
 
 <style scoped>

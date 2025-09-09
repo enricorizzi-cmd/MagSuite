@@ -26,7 +26,7 @@
           <th>Seriale</th>
           <th>Scadenza</th>
           <th>Quantità</th>
-          <th></th>
+          <th>Azioni</th>
         </tr>
       </thead>
       <tbody>
@@ -38,6 +38,7 @@
             <td>{{ entry.expiry || '-' }}</td>
             <td>{{ entry.quantity }}</td>
             <td>
+              <button @click="goToItem(entry.sku)">Vai ad articolo</button>
               <button @click="toggleMovements(entry)">
                 {{ entry.showMovements ? 'Nascondi' : 'Movimenti' }}
               </button>
@@ -71,7 +72,7 @@
 
 <script setup lang="ts">
 import { onMounted, ref } from 'vue';
-import { useRoute } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 
 interface Movement {
   id: number | string;
@@ -91,6 +92,7 @@ interface StockEntry {
 }
 
 const route = useRoute();
+const router = useRouter();
 const warehouseId = route.params.id as string;
 
 const stock = ref<StockEntry[]>([]);
@@ -146,9 +148,22 @@ async function toggleMovements(entry: StockEntry) {
   entry.showMovements = true;
 }
 
+function goToItem(sku: string) {
+  router.push({
+    name: 'item-detail',
+    params: { id: sku },
+    query: { warehouse: warehouseId }
+  });
+}
+
 onMounted(() => {
+  if (route.query.sku) {
+    filters.value.sku = String(route.query.sku);
+  }
   fetchStock();
 });
+
+defineExpose({ filters, goToItem });
 </script>
 
 <style scoped>

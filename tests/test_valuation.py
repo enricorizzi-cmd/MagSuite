@@ -24,6 +24,16 @@ def test_weighted_average():
     assert weighted_average(batches, 12) == pytest.approx(expected)
 
 
+def test_valuation_raises_on_insufficient_inventory():
+    batches = sample_batches()
+    with pytest.raises(ValueError):
+        fifo(batches, 100)
+    with pytest.raises(ValueError):
+        lifo(batches, 100)
+    with pytest.raises(ValueError):
+        weighted_average(batches, 100)
+
+
 def test_config():
     cfg = ValuationConfig(company_methods={"acme": "lifo"}, warehouse_methods={"A": "weighted_average"})
     assert cfg.get_method(company="acme", warehouse="B") == "lifo"

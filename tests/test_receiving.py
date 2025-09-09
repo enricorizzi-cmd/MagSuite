@@ -27,6 +27,15 @@ def test_create_receipt_updates_inventory():
     assert inventory[("widget", "A", "LOT1")] == 7
 
 
+def test_create_receipt_accumulates_inventory():
+    inventory = {}
+    line = POLine(1, "widget", 10, "A")
+    lot = assign_lot(line, "LOT1")
+    create_receipt(inventory, line, lot, 3)
+    create_receipt(inventory, line, lot, 2)
+    assert inventory[("widget", "A", "LOT1")] == 5
+
+
 def test_check_delivery_and_label():
     line = POLine(1, "widget", 10, "A")
     status_over = check_delivery(line, 12)

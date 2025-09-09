@@ -3,29 +3,38 @@ const { start } = require('./server');
 
 let server;
 let token;
+let token2;
 
 beforeAll(async () => {
   server = await start(0);
   const password = 'Str0ng!Pass1';
   await request(server)
     .post('/auth/register')
-    .send({ email: 'inv@example.com', password, company_id: 1 });
+    .send({ email: 'inv@example.com', password, company_id: 1, role: 'manager' });
   const login = await request(server)
     .post('/auth/login')
     .send({ email: 'inv@example.com', password });
   token = login.body.accessToken;
+
+  await request(server)
+    .post('/auth/register')
+    .send({ email: 'inv2@example.com', password, company_id: 1, role: 'manager' });
+  const login2 = await request(server)
+    .post('/auth/login')
+    .send({ email: 'inv2@example.com', password });
+  token2 = login2.body.accessToken;
 });
 
 afterAll((done) => {
   server.close(done);
 });
 
-test('inventory lifecycle blocks movements and generates report', async () => {
-  // create inventory
+test('inventory lifecycle requires approvals and computes differences', async () => {
+  // create inventory with scope
   let res = await request(server)
     .post('/inventories')
     .set('Authorization', `Bearer ${token}`)
-    .send({});
+    .send({ scope: [{ item_id: 1, expected: 10 }] });
   expect(res.status).toBe(201);
   const invId = res.body.id;
 
@@ -36,6 +45,14 @@ test('inventory lifecycle blocks movements and generates report', async () => {
     .send();
   expect(res.status).toBe(200);
   expect(res.body.status).toBe('frozen');
+
+  // submit counts and verify differences
+  res = await request(server)
+    .post(`/inventories/${invId}/counts`)
+    .set('Authorization', `Bearer ${token}`)
+    .send({ counts: [{ item_id: 1, count: 7 }] });
+  expect(res.status).toBe(200);
+  expect(res.body.differences[0].delta).toBe(-3);
 
   // create document
   res = await request(server)
@@ -50,6 +67,27 @@ test('inventory lifecycle blocks movements and generates report', async () => {
     .set('Authorization', `Bearer ${token}`)
     .send({ movements: [] });
   expect(res.status).toBe(409);
+
+  // first approval
+  res = await request(server)
+    .post(`/inventories/${invId}/approve`)
+    .set('Authorization', `Bearer ${token}`)
+    .send();
+  expect(res.status).toBe(200);
+
+  // closing now should fail due to missing second approval
+  res = await request(server)
+    .post(`/inventories/${invId}/close`)
+    .set('Authorization', `Bearer ${token}`)
+    .send();
+  expect(res.status).toBe(403);
+
+  // second approval
+  res = await request(server)
+    .post(`/inventories/${invId}/approve`)
+    .set('Authorization', `Bearer ${token2}`)
+    .send();
+  expect(res.status).toBe(200);
 
   // close inventory
   res = await request(server)

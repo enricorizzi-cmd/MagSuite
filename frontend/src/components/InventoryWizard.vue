@@ -11,16 +11,26 @@
 
     <div v-else-if="step === 'counting'">
       <p>Counting items...</p>
-      <button @click="nextStep">Next</button>
+      <button @click="submitCounts">Submit Counts</button>
     </div>
 
     <div v-else-if="step === 'differences'">
       <p>Review differences.</p>
+      <ul>
+        <li v-for="d in differences" :key="d.item_id">
+          Item {{ d.item_id }}: expected {{ d.expected }}, counted {{ d.counted }}
+          (delta {{ d.delta }})
+        </li>
+      </ul>
       <button @click="nextStep">Next</button>
     </div>
 
     <div v-else-if="step === 'closure'">
-      <button @click="closeInventory">Close Inventory</button>
+      <button @click="approve">Approve</button>
+      <button @click="closeInventory" :disabled="approvals.length < 2">
+        Close Inventory
+      </button>
+      <div>Approvals: {{ approvals.length }}/2</div>
       <div v-if="report">
         <a :href="reportUrl" target="_blank">View Report PDF</a>
       </div>
@@ -38,6 +48,8 @@ const id = route.params.id as string;
 const inventory = ref<any>({});
 const step = ref<'scope' | 'counting' | 'differences' | 'closure'>('scope');
 const report = ref('');
+const differences = ref<any[]>([]);
+const approvals = ref<number[]>([]);
 
 async function fetchInventory() {
   try {
@@ -68,6 +80,27 @@ async function freeze() {
   }
 }
 
+async function submitCounts() {
+  try {
+    const counts = inventory.value.scope?.map((s: any) => ({
+      item_id: s.item_id,
+      count: s.expected - 1,
+    })) || [];
+    const res = await fetch(`/inventories/${id}/counts`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ counts }),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      differences.value = data.differences;
+      step.value = 'differences';
+    }
+  } catch (err) {
+    console.error('Failed to submit counts', err);
+  }
+}
+
 async function closeInventory() {
   try {
     const res = await fetch(`/inventories/${id}/close`, { method: 'POST' });
@@ -78,6 +111,18 @@ async function closeInventory() {
     }
   } catch (err) {
     console.error('Failed to close inventory', err);
+  }
+}
+
+async function approve() {
+  try {
+    const res = await fetch(`/inventories/${id}/approve`, { method: 'POST' });
+    if (res.ok) {
+      const data = await res.json();
+      approvals.value = data.approvals;
+    }
+  } catch (err) {
+    console.error('Failed to approve inventory', err);
   }
 }
 

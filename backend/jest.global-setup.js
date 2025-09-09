@@ -1,15 +1,12 @@
-const { execSync } = require('child_process');
 const path = require('path');
-const { Pool } = require('pg');
+require('dotenv').config({ path: path.join(__dirname, '..', '.env.test') });
+const db = require('./src/db');
 
 module.exports = async () => {
-  require('dotenv').config({ path: path.join(__dirname, '..', '.env.test') });
-  execSync('node db/migrate.js', {
-    stdio: 'inherit',
-    cwd: __dirname,
-    env: process.env,
-  });
-  const pool = new Pool({ connectionString: process.env.DATABASE_URL });
-  await pool.query("INSERT INTO companies(name) VALUES('A'), ('B')");
-  await pool.end();
+  await db.query(
+    'CREATE TABLE IF NOT EXISTS companies (id SERIAL PRIMARY KEY, name TEXT NOT NULL UNIQUE)'
+  );
+  await db.query(
+    "INSERT INTO companies(name) VALUES('A'), ('B') ON CONFLICT (name) DO NOTHING"
+  );
 };

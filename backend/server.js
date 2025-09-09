@@ -113,11 +113,66 @@ async function start(port = process.env.PORT || 3000) {
   });
 
   // Dashboard reports
-  app.get('/reports/dashboard', (req, res) => {
-    res.json({
-      kpis: { inventory: 0, orders: 0 },
-      charts: { sales: [] },
-    });
+  app.get('/reports/dashboard', async (req, res) => {
+    try {
+      const { from, to, warehouse } = req.query;
+      const params = [];
+      const conditions = [];
+      if (from) {
+        params.push(from);
+        conditions.push(`moved_at >= $${params.length}`);
+      }
+      if (to) {
+        params.push(to);
+        conditions.push(`moved_at <= $${params.length}`);
+      }
+      if (warehouse) {
+        params.push(warehouse);
+        conditions.push(`warehouse_id = $${params.length}`);
+      }
+      const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
+
+      const totalStockRes = await db.query(
+        `SELECT COALESCE(SUM(quantity),0) AS total FROM stock_movements ${where}`,
+        params
+      );
+      const underStockRes = await db.query(
+        `SELECT COUNT(*) AS count FROM (
+           SELECT item_id, SUM(quantity) AS qty
+           FROM stock_movements ${where}
+           GROUP BY item_id
+           HAVING SUM(quantity) < 0
+         ) s`,
+        params
+      );
+
+      const orderParams = [];
+      const orderConditions = ["status != 'closed'", "created_at < NOW() - INTERVAL '7 days'"];
+      if (from) {
+        orderParams.push(from);
+        orderConditions.push(`created_at >= $${orderParams.length}`);
+      }
+      if (to) {
+        orderParams.push(to);
+        orderConditions.push(`created_at <= $${orderParams.length}`);
+      }
+      const overdueRes = await db.query(
+        `SELECT COUNT(*) AS count FROM purchase_orders WHERE ${orderConditions.join(' AND ')}`,
+        orderParams
+      );
+
+      res.json({
+        kpis: {
+          'Giacenza totale': Number(totalStockRes.rows[0].total),
+          'Sotto scorta': Number(underStockRes.rows[0].count),
+          'Ordini in ritardo': Number(overdueRes.rows[0].count),
+        },
+        charts: {},
+      });
+    } catch (err) {
+      logger.error('Failed to load dashboard KPIs', err);
+      res.status(500).json({ error: 'Failed to load dashboard data' });
+    }
   });
 
   // Alerts endpoint

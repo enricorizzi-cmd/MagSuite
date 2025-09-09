@@ -23,10 +23,17 @@ const pool = new Pool({
 async function run() {
   const dir = path.join(__dirname, '..', 'supabase', 'migrations');
   const files = fs.readdirSync(dir).filter(f => f.endsWith('.sql')).sort();
+  await pool.query('CREATE TABLE IF NOT EXISTS schema_migrations (filename text primary key)');
   for (const file of files) {
+    const { rows } = await pool.query('SELECT 1 FROM schema_migrations WHERE filename = $1', [file]);
+    if (rows.length > 0) {
+      console.log(`Skipping ${file}`);
+      continue;
+    }
     const sql = fs.readFileSync(path.join(dir, file), 'utf8');
     console.log(`Running ${file}`);
     await pool.query(sql);
+    await pool.query('INSERT INTO schema_migrations (filename) VALUES ($1)', [file]);
   }
   await pool.end();
 }

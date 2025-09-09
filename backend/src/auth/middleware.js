@@ -24,11 +24,18 @@ function authenticateToken(req, res, next) {
   }
 }
 
+function resolvePermissions(user) {
+  if (user.permissions && Object.keys(user.permissions).length) {
+    return user.permissions;
+  }
+  return rolePermissions[user.role] || {};
+}
+
 function rbac(module, action) {
   return (req, res, next) => {
     const user = req.user;
     if (!user) return res.sendStatus(401);
-    const perms = rolePermissions[user.role] || {};
+    const perms = resolvePermissions(user);
     const actions = perms[module] || perms['*'] || [];
     if (!actions.includes(action) && !actions.includes('*')) {
       return res.sendStatus(403);

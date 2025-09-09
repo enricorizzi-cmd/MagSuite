@@ -10,21 +10,22 @@ let token2;
 beforeAll(async () => {
   fs.rmSync(path.join(__dirname, '..', 'uploads'), { recursive: true, force: true });
   server = await start(0);
+  const password = 'Str0ng!Pass1';
   await request(server)
     .post('/auth/register')
-    .send({ email: 'c1@c1.com', password: 'pass', company_id: 1 });
+    .send({ email: 'c1@c1.com', password, company_id: 1 });
   await request(server)
     .post('/auth/register')
-    .send({ email: 'c2@c2.com', password: 'pass', company_id: 2 });
+    .send({ email: 'c2@c2.com', password, company_id: 2 });
   token1 = (
     await request(server)
       .post('/auth/login')
-      .send({ email: 'c1@c1.com', password: 'pass' })
+      .send({ email: 'c1@c1.com', password })
   ).body.accessToken;
   token2 = (
     await request(server)
       .post('/auth/login')
-      .send({ email: 'c2@c2.com', password: 'pass' })
+      .send({ email: 'c2@c2.com', password })
   ).body.accessToken;
 });
 

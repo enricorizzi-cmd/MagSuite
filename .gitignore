@@ -30,3 +30,7 @@ prod-ca-2021.crt
 # Uploaded files
 uploads/
 backend/uploads/
+
+# Audit logs
+backend/db/audit.log
+

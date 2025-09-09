@@ -10,12 +10,13 @@ let itemId;
 beforeAll(async () => {
   await ready;
   server = await start(0);
+  const password = 'Str0ng!Pass1';
   await request(server)
     .post('/auth/register')
-    .send({ email: 'move@example.com', password: 'pass', company_id: 1 });
+    .send({ email: 'move@example.com', password, company_id: 1 });
   const login = await request(server)
     .post('/auth/login')
-    .send({ email: 'move@example.com', password: 'pass' });
+    .send({ email: 'move@example.com', password });
   token = login.body.accessToken;
   const itemRes = await request(server)
     .post('/items')

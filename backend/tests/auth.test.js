@@ -13,7 +13,7 @@ afterAll((done) => {
 
 test('rejects invalid login', async () => {
   const email = 'fail@example.com';
-  const password = 'secret';
+  const password = 'Str0ng!Pass1';
 
   await request(server)
     .post('/auth/register')

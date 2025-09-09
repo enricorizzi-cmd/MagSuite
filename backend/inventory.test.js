@@ -6,12 +6,13 @@ let token;
 
 beforeAll(async () => {
   server = await start(0);
+  const password = 'Str0ng!Pass1';
   await request(server)
     .post('/auth/register')
-    .send({ email: 'inv@example.com', password: 'pass', company_id: 1 });
+    .send({ email: 'inv@example.com', password, company_id: 1 });
   const login = await request(server)
     .post('/auth/login')
-    .send({ email: 'inv@example.com', password: 'pass' });
+    .send({ email: 'inv@example.com', password });
   token = login.body.accessToken;
 });
 

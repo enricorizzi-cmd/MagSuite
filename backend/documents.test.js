@@ -9,12 +9,13 @@ let token;
 beforeAll(async () => {
   server = await start(0);
   await docsReady;
+  const password = 'Str0ng!Pass1';
   await request(server)
     .post('/auth/register')
-    .send({ email: 'user@example.com', password: 'pass', company_id: 1 });
+    .send({ email: 'user@example.com', password, company_id: 1 });
   const login = await request(server)
     .post('/auth/login')
-    .send({ email: 'user@example.com', password: 'pass' });
+    .send({ email: 'user@example.com', password });
   token = login.body.accessToken;
 });
 

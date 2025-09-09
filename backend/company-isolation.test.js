@@ -7,18 +7,19 @@ let token2;
 
 beforeAll(async () => {
   server = await start(0);
+  const password = 'Str0ng!Pass1';
   await request(server)
     .post('/auth/register')
-    .send({ email: 'a@a.com', password: 'pass', company_id: 1 });
+    .send({ email: 'a@a.com', password, company_id: 1 });
   await request(server)
     .post('/auth/register')
-    .send({ email: 'b@b.com', password: 'pass', company_id: 2 });
+    .send({ email: 'b@b.com', password, company_id: 2 });
   const login1 = await request(server)
     .post('/auth/login')
-    .send({ email: 'a@a.com', password: 'pass' });
+    .send({ email: 'a@a.com', password });
   const login2 = await request(server)
     .post('/auth/login')
-    .send({ email: 'b@b.com', password: 'pass' });
+    .send({ email: 'b@b.com', password });
   token1 = login1.body.accessToken;
   token2 = login2.body.accessToken;
 });

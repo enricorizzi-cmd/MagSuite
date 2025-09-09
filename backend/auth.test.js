@@ -1,5 +1,6 @@
 const request = require('supertest');
 const { start } = require('./server');
+const { generateMfaToken } = require('./src/auth/mfa');
 
 let server;
 
@@ -13,7 +14,7 @@ afterAll((done) => {
 
 test('register and login', async () => {
   const email = 'test@example.com';
-  const password = 'secret';
+  const password = 'Str0ng!Pass1';
 
   const register = await request(server)
     .post('/auth/register')
@@ -42,4 +43,50 @@ test('register and login', async () => {
     .post('/warehouse/1/inventory')
     .set('Authorization', `Bearer ${token}`);
   expect(forbidden.status).toBe(403);
+});
+
+test('custom permissions override role', async () => {
+  const email = 'perm@example.com';
+  const password = 'Str0ng!Pass1';
+  await request(server)
+    .post('/auth/register')
+    .send({
+      email,
+      password,
+      role: 'worker',
+      warehouse_id: 1,
+      company_id: 1,
+      permissions: { inventory: ['write'] },
+    })
+    .expect(201);
+  const login = await request(server)
+    .post('/auth/login')
+    .send({ email, password });
+  const token = login.body.accessToken;
+  const res = await request(server)
+    .post('/warehouse/1/inventory')
+    .set('Authorization', `Bearer ${token}`);
+  expect(res.status).toBe(201);
+});
+
+test('login requires mfa when enabled', async () => {
+  const email = 'mfa@example.com';
+  const password = 'Str0ng!Pass1';
+  await request(server)
+    .post('/auth/register')
+    .send({ email, password, role: 'worker', warehouse_id: 1, company_id: 1 })
+    .expect(201);
+  let login = await request(server).post('/auth/login').send({ email, password });
+  const token = login.body.accessToken;
+  const setup = await request(server)
+    .post('/auth/mfa/setup')
+    .set('Authorization', `Bearer ${token}`);
+  const secret = setup.body.secret;
+  login = await request(server).post('/auth/login').send({ email, password });
+  expect(login.status).toBe(401);
+  const mfaToken = generateMfaToken(secret);
+  login = await request(server)
+    .post('/auth/login')
+    .send({ email, password, mfaToken });
+  expect(login.status).toBe(200);
 });

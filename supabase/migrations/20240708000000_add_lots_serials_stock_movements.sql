@@ -2,14 +2,16 @@ create table lots (
   id serial primary key,
   item_id integer references items(id),
   lot text not null,
-  expiry date
+  expiry date,
+  blocked boolean default false
 );
 
 create table serials (
   id serial primary key,
   item_id integer references items(id),
   serial text not null,
-  expiry date
+  expiry date,
+  blocked boolean default false
 );
 
 create table stock_movements (

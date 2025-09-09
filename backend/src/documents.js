@@ -21,13 +21,15 @@ const ready = (async () => {
     id SERIAL PRIMARY KEY,
     item_id INT REFERENCES items(id),
     lot TEXT NOT NULL,
-    expiry DATE
+    expiry DATE,
+    blocked BOOLEAN DEFAULT false
   )`);
   await db.query(`CREATE TABLE IF NOT EXISTS serials (
     id SERIAL PRIMARY KEY,
     item_id INT REFERENCES items(id),
     serial TEXT NOT NULL,
-    expiry DATE
+    expiry DATE,
+    blocked BOOLEAN DEFAULT false
   )`);
   await db.query(`CREATE TABLE IF NOT EXISTS stock_movements (
     id SERIAL PRIMARY KEY,
@@ -40,6 +42,8 @@ const ready = (async () => {
     expiry DATE,
     moved_at TIMESTAMPTZ DEFAULT now()
   )`);
+  await db.query('ALTER TABLE lots ADD COLUMN IF NOT EXISTS blocked BOOLEAN DEFAULT false');
+  await db.query('ALTER TABLE serials ADD COLUMN IF NOT EXISTS blocked BOOLEAN DEFAULT false');
 })();
 
 router.get('/', async (req, res) => {
@@ -133,11 +137,56 @@ router.post('/:id/confirm', async (req, res) => {
       return res.status(400).json({ error: 'serial_id required' });
     }
     let exp = expiry;
-    if (!exp && lot_id) {
-      const lotRes = await db.query('SELECT expiry FROM lots WHERE id=$1', [
+    if (lot_id) {
+      const lotRes = await db.query('SELECT expiry, blocked FROM lots WHERE id=$1', [
         lot_id,
       ]);
-      exp = lotRes.rows[0] ? lotRes.rows[0].expiry : null;
+      const lot = lotRes.rows[0];
+      if (lot?.blocked) {
+        return res.status(409).json({ error: 'Lot blocked' });
+      }
+      if (lot?.expiry && new Date(lot.expiry) < new Date()) {
+        return res.status(409).json({ error: 'Lot expired' });
+      }
+      if (!exp) exp = lot ? lot.expiry : null;
+    }
+    if (serial_id) {
+      const serialRes = await db.query('SELECT expiry, blocked FROM serials WHERE id=$1', [
+        serial_id,
+      ]);
+      const serial = serialRes.rows[0];
+      if (serial?.blocked) {
+        return res.status(409).json({ error: 'Serial blocked' });
+      }
+      if (serial?.expiry && new Date(serial.expiry) < new Date()) {
+        return res.status(409).json({ error: 'Serial expired' });
+      }
+      if (!exp) exp = serial ? serial.expiry : null;
+    }
+
+    if (quantity < 0) {
+      const params = [item_id, warehouse_id];
+      let condition = 'item_id=$1 AND warehouse_id=$2';
+      if (lot_id) {
+        params.push(lot_id);
+        condition += ` AND lot_id=$${params.length}`;
+      } else {
+        condition += ' AND lot_id IS NULL';
+      }
+      if (serial_id) {
+        params.push(serial_id);
+        condition += ` AND serial_id=$${params.length}`;
+      } else {
+        condition += ' AND serial_id IS NULL';
+      }
+      const availRes = await db.query(
+        `SELECT COALESCE(SUM(quantity),0) AS qty FROM stock_movements WHERE ${condition}`,
+        params
+      );
+      const available = Number(availRes.rows[0].qty);
+      if (available + quantity < 0) {
+        return res.status(409).json({ error: 'Insufficient quantity' });
+      }
     }
     await db.query(
       `INSERT INTO stock_movements(document_id, item_id, warehouse_id, quantity, lot_id, serial_id, expiry)
@@ -186,7 +235,7 @@ router.get('/:id/print', async (req, res) => {
 });
 
 async function selectNextBatch(item_id, warehouse_id) {
-  const strategy = process.env.BATCH_STRATEGY === 'FEFO' ? 'FEFO' : 'FIFO';
+  const strategy = process.env.BATCH_STRATEGY === 'FIFO' ? 'FIFO' : 'FEFO';
   const result = await db.query(
     `SELECT lot_id, serial_id, expiry, qty, first_movement FROM (
        SELECT lot_id, serial_id, expiry, SUM(quantity) AS qty, MIN(moved_at) AS first_movement

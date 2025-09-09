@@ -1,25 +1,30 @@
 <template>
   <div class="item-list">
     <section class="filters">
-      <input v-model="filters.text" placeholder="Search..." @input="fetchItems" />
-      <select v-model="filters.category" @change="fetchItems">
+      <input v-model="filters.text" placeholder="Search..." />
+      <select v-model="filters.category">
         <option value="">All Categories</option>
         <option v-for="cat in categories" :key="cat" :value="cat">{{ cat }}</option>
       </select>
-      <select v-model="filters.brand" @change="fetchItems">
+      <select v-model="filters.brand">
         <option value="">All Brands</option>
         <option v-for="b in brands" :key="b" :value="b">{{ b }}</option>
       </select>
       <label>
-        <input type="checkbox" v-model="filters.lotti" @change="fetchItems" />
+        <input type="checkbox" v-model="filters.lotti" />
         Lotti
       </label>
       <label>
-        <input type="checkbox" v-model="filters.seriali" @change="fetchItems" />
+        <input type="checkbox" v-model="filters.seriali" />
         Seriali
       </label>
-      <button @click="fetchItems">Filter</button>
+      <select v-model="selectedFilterSet" @change="applySavedFilters">
+        <option value="">Load Filters</option>
+        <option v-for="sf in savedFilterSets" :key="sf.name" :value="sf.name">{{ sf.name }}</option>
+      </select>
+      <button @click="saveCurrentFilters">Save Filters</button>
       <button @click="createItem">Create</button>
+      <button @click="archiveSelected" :disabled="!selectedIds.length">Archive Selected</button>
       <select v-model="exportFormat">
         <option value="csv">CSV</option>
         <option value="xlsx">XLSX</option>
@@ -36,24 +41,31 @@
       </label>
     </section>
 
+    <p v-if="deadlineNotification" class="deadline-note">{{ deadlineNotification }}</p>
     <table>
       <thead>
         <tr>
+          <th><input type="checkbox" :checked="allSelected" @change="toggleSelectAll" /></th>
           <th>Name</th>
           <th>Category</th>
           <th>Brand</th>
           <th>Lotti</th>
           <th>Seriali</th>
+          <th>Deadline</th>
           <th>Actions</th>
         </tr>
       </thead>
       <tbody>
         <tr v-for="item in items" :key="item.id">
+          <td><input type="checkbox" v-model="selectedIds" :value="item.id" /></td>
           <td>{{ item.name }}</td>
           <td>{{ item.category }}</td>
           <td>{{ item.brand }}</td>
           <td>{{ item.lotti ? 'Yes' : 'No' }}</td>
           <td>{{ item.seriali ? 'Yes' : 'No' }}</td>
+          <td :class="{ expired: isExpired(item), soon: isExpiringSoon(item) }">
+            {{ formatDate(item.expiryDate) }}
+          </td>
           <td>
             <button @click="editItem(item)">Edit</button>
             <button @click="archiveItem(item)">Archive</button>
@@ -71,7 +83,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref, computed } from 'vue';
+import { onMounted, ref, computed, watch } from 'vue';
 import { useRouter } from 'vue-router';
 
 interface Item {
@@ -84,13 +96,26 @@ interface Item {
   [key: string]: any;
 }
 
+interface FilterOptions {
+  text: string;
+  category: string;
+  brand: string;
+  lotti: boolean;
+  seriali: boolean;
+}
+
+interface SavedFilterSet {
+  name: string;
+  filters: FilterOptions;
+}
+
 const items = ref<Item[]>([]);
 const router = useRouter();
 const total = ref(0);
 const page = ref(1);
 const pageSize = ref(10);
 
-const filters = ref({
+const filters = ref<FilterOptions>({
   text: '',
   category: '',
   brand: '',
@@ -98,11 +123,21 @@ const filters = ref({
   seriali: false
 });
 
+const savedFilterSets = ref<SavedFilterSet[]>([]);
+const selectedFilterSet = ref('');
+const selectedIds = ref<(number | string)[]>([]);
+
+const deadlineNotification = ref('');
+
 const categories = ref<string[]>([]);
 const brands = ref<string[]>([]);
 const allColumns = ['id', 'name', 'category', 'brand', 'lotti', 'seriali'];
 const selectedColumns = ref<string[]>([...allColumns]);
 const exportFormat = ref('csv');
+
+const allSelected = computed(() =>
+  items.value.length > 0 && selectedIds.value.length === items.value.length
+);
 
 const totalPages = computed(() =>
   Math.max(1, Math.ceil(total.value / pageSize.value))
@@ -131,6 +166,12 @@ async function fetchItems() {
       if (!brands.value.length) {
         const brs = Array.from(new Set(items.value.map(i => i.brand).filter(Boolean)));
         brands.value = brs as string[];
+      }
+      const soon = items.value.filter(isExpiringSoon);
+      if (soon.length) {
+        deadlineNotification.value = `Items expiring soon: ${soon.map(i => i.name).join(', ')}`;
+      } else {
+        deadlineNotification.value = '';
       }
     }
   } catch (err) {
@@ -191,7 +232,70 @@ function exportData() {
   window.open(`/items/export?${params.toString()}`, '_blank');
 }
 
+function saveCurrentFilters() {
+  const name = prompt('Filter set name?');
+  if (!name) return;
+  const existing = savedFilterSets.value.find(sf => sf.name === name);
+  if (existing) {
+    existing.filters = { ...filters.value };
+  } else {
+    savedFilterSets.value.push({ name, filters: { ...filters.value } });
+  }
+  localStorage.setItem('savedFilters', JSON.stringify(savedFilterSets.value));
+}
+
+function applySavedFilters() {
+  const selected = savedFilterSets.value.find(sf => sf.name === selectedFilterSet.value);
+  if (selected) {
+    filters.value = { ...selected.filters };
+  }
+}
+
+function loadSavedFilters() {
+  const raw = localStorage.getItem('savedFilters');
+  savedFilterSets.value = raw ? JSON.parse(raw) : [];
+}
+
+function toggleSelectAll(e: Event) {
+  const checked = (e.target as HTMLInputElement).checked;
+  selectedIds.value = checked ? items.value.map(i => i.id) : [];
+}
+
+async function archiveSelected() {
+  await Promise.all(
+    selectedIds.value.map(id => fetch(`/items/${id}/archive`, { method: 'POST' }))
+  );
+  selectedIds.value = [];
+  fetchItems();
+}
+
+function formatDate(date?: string) {
+  return date ? new Date(date).toLocaleDateString() : '';
+}
+
+function isExpired(item: Item) {
+  if (!item.expiryDate) return false;
+  return new Date(item.expiryDate) < new Date();
+}
+
+function isExpiringSoon(item: Item) {
+  if (!item.expiryDate) return false;
+  const dt = new Date(item.expiryDate).getTime();
+  const now = Date.now();
+  return dt >= now && dt <= now + 7 * 24 * 60 * 60 * 1000;
+}
+
+watch(
+  filters,
+  () => {
+    page.value = 1;
+    fetchItems();
+  },
+  { deep: true }
+);
+
 onMounted(() => {
+  loadSavedFilters();
   fetchItems();
 });
 </script>
@@ -229,5 +333,15 @@ td {
   display: flex;
   align-items: center;
   gap: 1rem;
+}
+.deadline-note {
+  margin-bottom: 0.5rem;
+  color: #d97706;
+}
+.expired {
+  color: red;
+}
+.soon {
+  color: orange;
 }
 </style>

@@ -3,11 +3,9 @@
     <section class="actions">
       <button @click="createSupplier">Create</button>
       <button @click="exportCSV">Export CSV</button>
-      <label class="import-csv">
-        Import CSV
-        <input type="file" accept=".csv" @change="importCSV" hidden />
-      </label>
+      <button @click="showImport = true">Import CSV</button>
     </section>
+    <ImportWizard v-if="showImport" type="suppliers" @close="showImport = false" @done="fetchSuppliers" />
     <table>
       <thead>
         <tr>
@@ -28,11 +26,13 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
+import ImportWizard from '../../components/ImportWizard.vue';
 
 interface Supplier { id: number | string; name: string }
 
 const router = useRouter();
 const suppliers = ref<Supplier[]>([]);
+const showImport = ref(false);
 
 async function fetchSuppliers() {
   try {
@@ -54,21 +54,6 @@ function editSupplier(s: Supplier) {
   router.push(`/suppliers/${s.id}`);
 }
 
-async function importCSV(e: Event) {
-  const input = e.target as HTMLInputElement;
-  if (!input.files?.length) return;
-  const form = new FormData();
-  form.append('file', input.files[0]);
-  try {
-    const res = await fetch('/imports/suppliers', { method: 'POST', body: form });
-    if (res.ok) fetchSuppliers();
-  } catch (err) {
-    console.error('Import failed', err);
-  } finally {
-    input.value = '';
-  }
-}
-
 function exportCSV() {
   window.open('/suppliers/export', '_blank');
 }
@@ -81,9 +66,6 @@ onMounted(fetchSuppliers);
   margin-bottom: 1rem;
   display: flex;
   gap: 0.5rem;
-}
-.import-csv {
-  display: inline-block;
 }
 </style>
 

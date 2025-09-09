@@ -34,9 +34,16 @@ function uploadMiddleware(req, res, next) {
     file BYTEA,
     created_at TIMESTAMP DEFAULT NOW()
   )`);
+  await db.query(`CREATE TABLE IF NOT EXISTS import_templates (
+    id SERIAL PRIMARY KEY,
+    type TEXT NOT NULL,
+    name TEXT NOT NULL,
+    mapping JSONB NOT NULL,
+    created_at TIMESTAMP DEFAULT NOW()
+  )`);
 })();
 
-async function parseBuffer(buffer) {
+async function parseBuffer(buffer, mapping = {}) {
   const workbook = new ExcelJS.Workbook();
   await workbook.xlsx.load(buffer);
   const worksheet = workbook.worksheets[0];
@@ -50,7 +57,8 @@ async function parseBuffer(buffer) {
     } else {
       const obj = {};
       headers.forEach((header, i) => {
-        obj[header] = values[i + 1] || '';
+        const key = mapping[header] || header;
+        obj[key] = values[i + 1] || '';
       });
       rows.push(obj);
     }
@@ -58,17 +66,15 @@ async function parseBuffer(buffer) {
   return rows;
 }
 
-router.post('/imports/:type', uploadMiddleware, async (req, res) => {
-  const { type } = req.params;
-  if (!req.file) return res.status(400).json({ error: 'No file' });
-  const { originalname, path: filePath, size } = req.file;
+async function handleImport(type, file, mapping, dryRun = false) {
+  const { originalname, path: filePath, size } = file;
   if (size > MAX_FILE_SIZE) {
     await fs.unlink(filePath).catch(() => {});
-    return res.status(413).json({ error: 'File too large' });
+    throw new Error('File too large');
   }
   const buffer = await fs.readFile(filePath);
   try {
-    const rows = await parseBuffer(buffer);
+    const rows = await parseBuffer(buffer, mapping);
     const log = [];
     let count = 0;
     rows.forEach((row, idx) => {
@@ -80,21 +86,61 @@ router.post('/imports/:type', uploadMiddleware, async (req, res) => {
       log.push({ line, message: `Imported ${row.name}`, error: false });
       count++;
     });
-    const result = await db.query(
-      `INSERT INTO import_logs(type, filename, count, log, file)
-       VALUES($1,$2,$3,$4::jsonb,$5) RETURNING id`,
-      [type, originalname, count, JSON.stringify(log), buffer]
-    );
-    res.json({ status: 'ok', count, id: result.rows[0].id });
-  } catch (err) {
-    await db.query(
-      `INSERT INTO import_logs(type, filename, count, log, file)
-       VALUES($1,$2,0,$3::jsonb,$4)`,
-      [type, originalname, JSON.stringify([{ line: 0, message: err.message, error: true }]), buffer]
-    );
-    res.status(400).json({ error: err.message });
+    if (!dryRun) {
+      const result = await db.query(
+        `INSERT INTO import_logs(type, filename, count, log, file)
+         VALUES($1,$2,$3,$4::jsonb,$5) RETURNING id`,
+        [type, originalname, count, JSON.stringify(log), buffer]
+      );
+      return { count, id: result.rows[0].id, log };
+    }
+    return { count, log };
   } finally {
     await fs.unlink(filePath).catch(() => {});
+  }
+}
+
+router.post('/imports/:type/dry-run', uploadMiddleware, async (req, res) => {
+  const { type } = req.params;
+  if (!req.file) return res.status(400).json({ error: 'No file' });
+  let mapping = {};
+  if (req.body.templateId) {
+    const tpl = await db.query('SELECT mapping FROM import_templates WHERE id=$1', [req.body.templateId]);
+    if (tpl.rows[0]) mapping = tpl.rows[0].mapping || {};
+  }
+  if (req.body.mapping) {
+    try { mapping = JSON.parse(req.body.mapping); } catch (e) {}
+  }
+  try {
+    const result = await handleImport(type, req.file, mapping, true);
+    res.json({ status: 'ok', count: result.count, log: result.log });
+  } catch (err) {
+    res.status(err.message === 'File too large' ? 413 : 400).json({ error: err.message });
+  }
+});
+
+router.post('/imports/:type', uploadMiddleware, async (req, res) => {
+  const { type } = req.params;
+  if (!req.file) return res.status(400).json({ error: 'No file' });
+  let mapping = {};
+  if (req.body.templateId) {
+    const tpl = await db.query('SELECT mapping FROM import_templates WHERE id=$1', [req.body.templateId]);
+    if (tpl.rows[0]) mapping = tpl.rows[0].mapping || {};
+  }
+  if (req.body.mapping) {
+    try { mapping = JSON.parse(req.body.mapping); } catch (e) {}
+  }
+  try {
+    const result = await handleImport(type, req.file, mapping, false);
+    if (req.body.templateName) {
+      await db.query(
+        `INSERT INTO import_templates(type, name, mapping) VALUES($1,$2,$3::jsonb)`,
+        [type, req.body.templateName, JSON.stringify(mapping)]
+      );
+    }
+    res.json({ status: 'ok', count: result.count, id: result.id });
+  } catch (err) {
+    res.status(err.message === 'File too large' ? 413 : 400).json({ error: err.message });
   }
 });
 
@@ -117,6 +163,23 @@ router.get('/imports/:id/file', async (req, res) => {
   const row = result.rows[0];
   if (!row) return res.status(404).end();
   res.json({ filename: row.filename, content: row.file ? row.file.toString('base64') : null });
+});
+
+router.get('/imports/templates/:type', async (req, res) => {
+  const { type } = req.params;
+  const result = await db.query('SELECT id, name, mapping FROM import_templates WHERE type=$1 ORDER BY id', [type]);
+  res.json(result.rows);
+});
+
+router.post('/imports/templates/:type', async (req, res) => {
+  const { type } = req.params;
+  const { name, mapping } = req.body;
+  if (!name || !mapping) return res.status(400).json({ error: 'Missing name or mapping' });
+  await db.query(
+    `INSERT INTO import_templates(type, name, mapping) VALUES($1,$2,$3::jsonb)`,
+    [type, name, JSON.stringify(mapping)]
+  );
+  res.status(201).json({ status: 'ok' });
 });
 
 module.exports = { router };

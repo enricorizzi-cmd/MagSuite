@@ -41,3 +41,27 @@ test('import log endpoints work', async () => {
   expect(resFile.status).toBe(200);
   expect(resFile.body.content).toBeDefined();
 });
+
+test('dry run does not store import and templates can be saved', async () => {
+  const csv = 'name\nBar\n';
+  const listBefore = await request(server).get('/system/imports');
+  const countBefore = listBefore.body.length;
+  const resDry = await request(server)
+    .post('/imports/suppliers/dry-run')
+    .attach('file', Buffer.from(csv), 'test.csv');
+  expect(resDry.status).toBe(200);
+  expect(Array.isArray(resDry.body.log)).toBe(true);
+  const listAfter = await request(server).get('/system/imports');
+  expect(listAfter.body.length).toBe(countBefore);
+
+  const mapping = { name: 'name' };
+  const resSave = await request(server)
+    .post('/imports/templates/suppliers')
+    .send({ name: 'tmpl', mapping });
+  expect(resSave.status).toBe(201);
+  const resTpl = await request(server).get('/imports/templates/suppliers');
+  expect(resTpl.status).toBe(200);
+  expect(resTpl.body).toEqual(
+    expect.arrayContaining([expect.objectContaining({ name: 'tmpl' })])
+  );
+});

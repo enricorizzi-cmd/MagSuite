@@ -10,6 +10,7 @@ WORKDIR /app
 COPY backend/package*.json ./
 RUN npm install --production
 COPY backend .
+RUN chmod +x start.sh
 COPY --from=frontend-build /frontend/dist/ ./public/
 EXPOSE 3000
-CMD ["node","server.js"]
+CMD ["./start.sh","node","server.js"]

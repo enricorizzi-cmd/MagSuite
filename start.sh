@@ -1,8 +1,8 @@
 #!/bin/bash
 set -e
 
-# start backend
-npm run start --prefix backend &
+# start backend with migrations
+./backend/start.sh node server.js &
 BACK_PID=$!
 
 # start frontend

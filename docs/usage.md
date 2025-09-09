@@ -1,6 +1,6 @@
 # Usage Guide
 
-This guide provides examples for using MagSuite.
+This guide provides examples for using MagSuite. For a company onboarding overview see [the onboarding manual](onboarding.md).
 
 ## End-user tutorial
 

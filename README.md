@@ -146,6 +146,9 @@ pnpm dev     # or npm run dev
 
 The frontend can be pointed at a different backend by setting `VITE_API_URL`.
 If omitted, API calls default to the same origin that serves the built app.
+To authenticate requests without a JWT, provide `VITE_API_KEY` and
+`VITE_COMPANY_ID`; these are sent as `x-api-key` and `x-company-id`
+headers on every request.
 
 ## Build
 

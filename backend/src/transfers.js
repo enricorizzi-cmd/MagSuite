@@ -11,12 +11,15 @@ const router = express.Router();
     dest_location_id INT REFERENCES locations(id),
     quantity NUMERIC NOT NULL,
     status TEXT DEFAULT 'draft',
-    document_id INT REFERENCES documents(id)
+    document_id INT REFERENCES documents(id),
+    company_id INTEGER NOT NULL DEFAULT current_setting('app.current_company_id')::int
   )`);
 })();
 
 router.get('/', async (req, res) => {
-  const result = await db.query('SELECT * FROM transfers ORDER BY id');
+  const result = await db.query(
+    "SELECT * FROM transfers WHERE company_id = current_setting('app.current_company_id')::int ORDER BY id"
+  );
   res.json({ items: result.rows });
 });
 
@@ -34,7 +37,10 @@ router.post('/', async (req, res) => {
 
 router.get('/:id', async (req, res) => {
   const id = Number(req.params.id);
-  const result = await db.query('SELECT * FROM transfers WHERE id=$1', [id]);
+  const result = await db.query(
+    "SELECT * FROM transfers WHERE id=$1 AND company_id = current_setting('app.current_company_id')::int",
+    [id]
+  );
   const tr = result.rows[0];
   if (!tr) return res.status(404).end();
   res.json(tr);
@@ -51,7 +57,7 @@ router.put('/:id', async (req, res) => {
   if (quantity !== undefined) { fields.push('quantity'); values.push(quantity); }
   if (!fields.length) return res.status(400).json({ error: 'No fields to update' });
   values.push(id);
-  const result = await db.query(`UPDATE transfers SET ${fields.map((f,i)=>`${f}=$${i+1}`).join(', ')} WHERE id=$${fields.length+1} RETURNING *`, values);
+  const result = await db.query(`UPDATE transfers SET ${fields.map((f,i)=>`${f}=$${i+1}`).join(', ')} WHERE id=$${fields.length+1} AND company_id = current_setting('app.current_company_id')::int RETURNING *`, values);
   const tr = result.rows[0];
   if (!tr) return res.status(404).end();
   res.json(tr);
@@ -59,7 +65,10 @@ router.put('/:id', async (req, res) => {
 
 router.post('/:id/confirm', async (req, res) => {
   const id = Number(req.params.id);
-  const trRes = await db.query('SELECT * FROM transfers WHERE id=$1', [id]);
+  const trRes = await db.query(
+    "SELECT * FROM transfers WHERE id=$1 AND company_id = current_setting('app.current_company_id')::int",
+    [id]
+  );
   const tr = trRes.rows[0];
   if (!tr) return res.status(404).end();
   if (tr.status !== 'draft') return res.status(400).json({ error: 'Already done' });

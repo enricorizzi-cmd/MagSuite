@@ -87,35 +87,31 @@ async function query(text, params) {
   const store = companyContext.getStore();
   const companyId = store && store.companyId;
   const sessionId = Symbol('session');
-  if (companyId) {
-    const client = await pool.connect();
-    try {
-      return await sessionContext.run(sessionId, async () => {
-        try {
+  const client = await pool.connect();
+  try {
+    return await sessionContext.run(sessionId, async () => {
+      try {
+        let cid = companyId;
+        // Fallback only when no request context is present (store is null) during tests
+        if (!store && usePgMem && !cid) {
+          cid = process.env.DEFAULT_COMPANY_ID || 1;
+        }
+        if (cid) {
           await client.query('select set_config($1, $2, true)', [
             'app.current_company_id',
-            String(companyId),
+            String(cid),
           ]);
-          return await client.query(text, params);
-        } finally {
-          if (usePgMem) {
-            settings.delete(sessionId);
-          }
         }
-      });
-    } finally {
-      client.release();
-    }
-  }
-  return sessionContext.run(sessionId, async () => {
-    try {
-      return await pool.query(text, params);
-    } finally {
-      if (usePgMem) {
-        settings.delete(sessionId);
+        return await client.query(text, params);
+      } finally {
+        if (usePgMem) {
+          settings.delete(sessionId);
+        }
       }
-    }
-  });
+    });
+  } finally {
+    client.release();
+  }
 }
 
 module.exports = { query, connect: () => pool.connect() };

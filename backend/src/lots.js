@@ -9,7 +9,8 @@ const ready = (async () => {
     item_id INT REFERENCES items(id),
     lot TEXT NOT NULL,
     expiry DATE,
-    status TEXT NOT NULL DEFAULT 'active'
+    status TEXT NOT NULL DEFAULT 'active',
+    company_id INTEGER NOT NULL DEFAULT current_setting('app.current_company_id')::int
   )`);
 })();
 
@@ -18,7 +19,7 @@ router.get('/expiring', async (req, res) => {
   const target = new Date();
   target.setDate(target.getDate() + days);
   const result = await db.query(
-    'SELECT * FROM lots WHERE expiry IS NOT NULL AND expiry <= $1 AND status <> $2 ORDER BY expiry',
+    "SELECT * FROM lots WHERE expiry IS NOT NULL AND expiry <= $1 AND status <> $2 AND company_id = current_setting('app.current_company_id')::int ORDER BY expiry",
     [target.toISOString().slice(0, 10), 'disposed']
   );
   res.json({ items: result.rows });
@@ -28,7 +29,7 @@ router.get('/', async (req, res) => {
   const limit = Math.min(parseInt(req.query.limit) || 10, 100);
   const offset = parseInt(req.query.offset) || 0;
   const result = await db.query(
-    'SELECT * FROM lots ORDER BY id LIMIT $1 OFFSET $2',
+    "SELECT * FROM lots WHERE company_id = current_setting('app.current_company_id')::int ORDER BY id LIMIT $1 OFFSET $2",
     [limit, offset]
   );
   res.json({ items: result.rows });
@@ -49,7 +50,7 @@ router.post('/', async (req, res) => {
 router.post('/:id/block', async (req, res) => {
   const id = Number(req.params.id);
   const result = await db.query(
-    'UPDATE lots SET status=$1 WHERE id=$2 RETURNING status',
+    "UPDATE lots SET status=$1 WHERE id=$2 AND company_id = current_setting('app.current_company_id')::int RETURNING status",
     ['blocked', id]
   );
   const row = result.rows[0];
@@ -60,7 +61,7 @@ router.post('/:id/block', async (req, res) => {
 router.post('/:id/unblock', async (req, res) => {
   const id = Number(req.params.id);
   const result = await db.query(
-    'UPDATE lots SET status=$1 WHERE id=$2 RETURNING status',
+    "UPDATE lots SET status=$1 WHERE id=$2 AND company_id = current_setting('app.current_company_id')::int RETURNING status",
     ['active', id]
   );
   const row = result.rows[0];
@@ -70,7 +71,10 @@ router.post('/:id/unblock', async (req, res) => {
 
 router.post('/:id/dispose', async (req, res) => {
   const id = Number(req.params.id);
-  const lotRes = await db.query('SELECT item_id, expiry, status FROM lots WHERE id=$1', [id]);
+  const lotRes = await db.query(
+    "SELECT item_id, expiry, status FROM lots WHERE id=$1 AND company_id = current_setting('app.current_company_id')::int",
+    [id]
+  );
   const lot = lotRes.rows[0];
   if (!lot) return res.status(404).end();
   if (lot.status === 'disposed') {
@@ -80,7 +84,7 @@ router.post('/:id/dispose', async (req, res) => {
     return res.status(409).json({ error: 'Lot not expired' });
   }
   const qtyRes = await db.query(
-    'SELECT warehouse_id, SUM(quantity) AS qty FROM stock_movements WHERE lot_id=$1 GROUP BY warehouse_id',
+    "SELECT warehouse_id, SUM(quantity) AS qty FROM stock_movements WHERE lot_id=$1 AND company_id = current_setting('app.current_company_id')::int GROUP BY warehouse_id",
     [id]
   );
   for (const row of qtyRes.rows) {

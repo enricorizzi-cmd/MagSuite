@@ -15,7 +15,8 @@ const router = express.Router();
     id SERIAL PRIMARY KEY,
     warehouse_id INT REFERENCES warehouses(id) ON DELETE CASCADE,
     name TEXT NOT NULL,
-    parent_id INT REFERENCES locations(id) ON DELETE CASCADE
+    parent_id INT REFERENCES locations(id) ON DELETE CASCADE,
+    company_id INTEGER NOT NULL DEFAULT current_setting('app.current_company_id')::int
   )`);
 })();
 
@@ -27,8 +28,14 @@ function buildTree(rows, parentId = null) {
 
 router.get('/warehouses/:warehouseId/locations', async (req, res) => {
   const warehouseId = Number(req.params.warehouseId);
+  // Ensure warehouse belongs to current company
+  const wh = await db.query(
+    "SELECT id FROM warehouses WHERE id=$1 AND company_id = current_setting('app.current_company_id')::int",
+    [warehouseId]
+  );
+  if (!wh.rows[0]) return res.status(404).end();
   const result = await db.query(
-    'SELECT id, name, parent_id FROM locations WHERE warehouse_id=$1 ORDER BY id',
+    "SELECT id, name, parent_id FROM locations WHERE warehouse_id=$1 AND company_id = current_setting('app.current_company_id')::int ORDER BY id",
     [warehouseId]
   );
   res.json({ items: buildTree(result.rows) });
@@ -40,6 +47,12 @@ router.post('/warehouses/:warehouseId/locations', async (req, res) => {
   if (!name || typeof name !== 'string') {
     return res.status(400).json({ error: 'Name required' });
   }
+  // Validate warehouse ownership
+  const wh = await db.query(
+    "SELECT id FROM warehouses WHERE id=$1 AND company_id = current_setting('app.current_company_id')::int",
+    [warehouseId]
+  );
+  if (!wh.rows[0]) return res.status(404).end();
   const result = await db.query(
     'INSERT INTO locations(warehouse_id, name, parent_id) VALUES($1,$2,$3) RETURNING id, name, parent_id',
     [warehouseId, name, parent_id]
@@ -49,7 +62,10 @@ router.post('/warehouses/:warehouseId/locations', async (req, res) => {
 
 router.get('/locations/:id', async (req, res) => {
   const id = Number(req.params.id);
-  const result = await db.query('SELECT id, warehouse_id, name, parent_id FROM locations WHERE id=$1', [id]);
+  const result = await db.query(
+    "SELECT id, warehouse_id, name, parent_id FROM locations WHERE id=$1 AND company_id = current_setting('app.current_company_id')::int",
+    [id]
+  );
   const loc = result.rows[0];
   if (!loc) return res.status(404).end();
   res.json(loc);
@@ -71,7 +87,7 @@ router.put('/locations/:id', async (req, res) => {
   }
   if (!fields.length) return res.status(400).json({ error: 'No fields to update' });
   values.push(id);
-  const result = await db.query(`UPDATE locations SET ${fields.map((f,i)=>`${f}=$${i+1}`).join(', ')} WHERE id=$${fields.length+1} RETURNING id, warehouse_id, name, parent_id`, values);
+  const result = await db.query(`UPDATE locations SET ${fields.map((f,i)=>`${f}=$${i+1}`).join(', ')} WHERE id=$${fields.length+1} AND company_id = current_setting('app.current_company_id')::int RETURNING id, warehouse_id, name, parent_id`, values);
   const loc = result.rows[0];
   if (!loc) return res.status(404).end();
   res.json(loc);
@@ -79,14 +95,20 @@ router.put('/locations/:id', async (req, res) => {
 
 router.delete('/locations/:id', async (req, res) => {
   const id = Number(req.params.id);
-  const result = await db.query('DELETE FROM locations WHERE id=$1', [id]);
+  const result = await db.query(
+    "DELETE FROM locations WHERE id=$1 AND company_id = current_setting('app.current_company_id')::int",
+    [id]
+  );
   if (result.rowCount === 0) return res.status(404).end();
   res.status(204).send();
 });
 
 router.get('/locations/:id/label', async (req, res) => {
   const id = Number(req.params.id);
-  const result = await db.query('SELECT id, name FROM locations WHERE id=$1', [id]);
+  const result = await db.query(
+    "SELECT id, name FROM locations WHERE id=$1 AND company_id = current_setting('app.current_company_id')::int",
+    [id]
+  );
   const loc = result.rows[0];
   if (!loc) return res.status(404).end();
   res.setHeader('Content-Type', 'application/pdf');

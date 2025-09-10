@@ -29,7 +29,12 @@ const upload = multer({ storage, limits: { fileSize: MAX_FILE_SIZE } });
 
 async function uploadMiddleware(req, res, next) {
   try {
-    await upload.single('file')(req, res);
+    await new Promise((resolve, reject) => {
+      upload.single('file')(req, res, (err) => {
+        if (err) reject(err);
+        else resolve();
+      });
+    });
     next();
   } catch (err) {
     if (err.code === 'LIMIT_FILE_SIZE') return res.status(413).json({ error: 'File too large' });
@@ -45,6 +50,7 @@ async function uploadMiddleware(req, res, next) {
     count INTEGER DEFAULT 0,
     log JSONB DEFAULT '[]',
     file BYTEA,
+    company_id INTEGER DEFAULT current_setting('app.current_company_id')::int,
     created_at TIMESTAMP DEFAULT NOW()
   )`);
   await db.query(`CREATE TABLE IF NOT EXISTS import_templates (
@@ -52,6 +58,7 @@ async function uploadMiddleware(req, res, next) {
     type TEXT NOT NULL,
     name TEXT NOT NULL,
     mapping JSONB NOT NULL,
+    company_id INTEGER DEFAULT current_setting('app.current_company_id')::int,
     created_at TIMESTAMP DEFAULT NOW()
   )`);
 })();
@@ -134,7 +141,10 @@ router.post('/imports/:type/dry-run', uploadMiddleware, async (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'No file' });
   let mapping = {};
   if (req.body.templateId) {
-    const tpl = await db.query('SELECT mapping FROM import_templates WHERE id=$1', [req.body.templateId]);
+    const tpl = await db.query(
+      'SELECT mapping FROM import_templates WHERE id=$1 AND company_id = current_setting(\'app.current_company_id\')::int',
+      [req.body.templateId]
+    );
     if (tpl.rows[0]) mapping = tpl.rows[0].mapping || {};
   }
   if (req.body.mapping) {
@@ -157,7 +167,10 @@ router.post('/imports/:type', uploadMiddleware, async (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'No file' });
   let mapping = {};
   if (req.body.templateId) {
-    const tpl = await db.query('SELECT mapping FROM import_templates WHERE id=$1', [req.body.templateId]);
+    const tpl = await db.query(
+      'SELECT mapping FROM import_templates WHERE id=$1 AND company_id = current_setting(\'app.current_company_id\')::int',
+      [req.body.templateId]
+    );
     if (tpl.rows[0]) mapping = tpl.rows[0].mapping || {};
   }
   if (req.body.mapping) {
@@ -182,13 +195,18 @@ router.post('/imports/:type', uploadMiddleware, async (req, res) => {
 });
 
 router.get('/system/imports', async (req, res) => {
-  const result = await db.query('SELECT id, type, count FROM import_logs ORDER BY id');
+  const result = await db.query(
+    `SELECT id, type, count FROM import_logs WHERE company_id = current_setting('app.current_company_id')::int ORDER BY id`
+  );
   res.json(result.rows);
 });
 
 router.get('/imports/:id/log', async (req, res) => {
   const id = Number(req.params.id);
-  const result = await db.query('SELECT log FROM import_logs WHERE id=$1', [id]);
+  const result = await db.query(
+    'SELECT log FROM import_logs WHERE id=$1 AND company_id = current_setting(\'app.current_company_id\')::int',
+    [id]
+  );
   const row = result.rows[0];
   if (!row) return res.status(404).end();
   res.json({ log: row.log || [] });
@@ -196,7 +214,10 @@ router.get('/imports/:id/log', async (req, res) => {
 
 router.get('/imports/:id/file', async (req, res) => {
   const id = Number(req.params.id);
-  const result = await db.query('SELECT filename, file FROM import_logs WHERE id=$1', [id]);
+  const result = await db.query(
+    'SELECT filename, file FROM import_logs WHERE id=$1 AND company_id = current_setting(\'app.current_company_id\')::int',
+    [id]
+  );
   const row = result.rows[0];
   if (!row) return res.status(404).end();
   res.json({ filename: row.filename, content: row.file ? row.file.toString('base64') : null });
@@ -204,7 +225,10 @@ router.get('/imports/:id/file', async (req, res) => {
 
 router.get('/imports/:id/report', async (req, res) => {
   const id = Number(req.params.id);
-  const result = await db.query('SELECT log FROM import_logs WHERE id=$1', [id]);
+  const result = await db.query(
+    'SELECT log FROM import_logs WHERE id=$1 AND company_id = current_setting(\'app.current_company_id\')::int',
+    [id]
+  );
   const row = result.rows[0];
   if (!row) return res.status(404).end();
   const log = row.log || [];
@@ -235,7 +259,10 @@ router.get('/imports/:id/report', async (req, res) => {
 
 router.get('/imports/templates/:type', async (req, res) => {
   const { type } = req.params;
-  const result = await db.query('SELECT id, name, mapping FROM import_templates WHERE type=$1 ORDER BY id', [type]);
+  const result = await db.query(
+    `SELECT id, name, mapping FROM import_templates WHERE type=$1 AND company_id = current_setting('app.current_company_id')::int ORDER BY id`,
+    [type]
+  );
   res.json(result.rows);
 });
 

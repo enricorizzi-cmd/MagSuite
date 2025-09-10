@@ -99,7 +99,6 @@ async function start(port = process.env.PORT || 3000) {
 
   // Public routes
   app.use('/auth', authRouter);
-  app.use('/', imports.router);
 
   const jobQueue = [];
   const { version } = require('./package.json');
@@ -119,6 +118,7 @@ async function start(port = process.env.PORT || 3000) {
 
   // Authenticated routes
   app.use(authenticateToken);
+  app.use('/', imports.router);
   app.use('/items', items.router);
   app.use('/documents', documents.router);
   app.use('/lots', lots.router);

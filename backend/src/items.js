@@ -37,10 +37,38 @@ const ready = (async () => {
   await db.query("ALTER TABLE items ADD COLUMN IF NOT EXISTS last_purchase_date DATE");
 })();
 
+// Saved item views per company
+const viewsReady = (async () => {
+  await db.query(`CREATE TABLE IF NOT EXISTS item_views (
+    id SERIAL PRIMARY KEY,
+    name TEXT NOT NULL,
+    filters JSONB NOT NULL DEFAULT '{}'::jsonb,
+    columns JSONB DEFAULT '[]'::jsonb,
+    company_id INTEGER NOT NULL DEFAULT current_setting('app.current_company_id')::int,
+    created_at TIMESTAMPTZ DEFAULT now()
+  )`);
+})();
+
 router.get('/', async (req, res) => {
   const limit = Math.min(parseInt(req.query.limit) || 10, 100);
   const page = Math.max(parseInt(req.query.page) || 1, 1);
   const offset = (page - 1) * limit;
+  const params = [];
+  const conditions = ["i.company_id = current_setting('app.current_company_id')::int"];
+  const { q, type, category, group: groupKey, class: classKey, supplier } = req.query;
+  if (q) {
+    params.push(`%${q}%`);
+    params.push(`%${q}%`);
+    params.push(`%${q}%`);
+    params.push(`%${q}%`);
+    conditions.push(`(i.name ILIKE $${params.length-3} OR i.sku ILIKE $${params.length-2} OR i.code ILIKE $${params.length-1} OR i.description ILIKE $${params.length})`);
+  }
+  if (type) { params.push(type); conditions.push(`i.type = $${params.length}`); }
+  if (category) { params.push(category); conditions.push(`i.category = $${params.length}`); }
+  if (groupKey) { params.push(groupKey); conditions.push(`i."group" = $${params.length}`); }
+  if (classKey) { params.push(classKey); conditions.push(`i.class = $${params.length}`); }
+  if (supplier) { params.push(supplier); conditions.push(`i.supplier = $${params.length}`); }
+  const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
   const result = await db.query(
     `SELECT i.id, i.name, i.sku, i.lotti, i.seriali,
             i.barcode, i.code, i.description, i.type, i.category, i."group", i.class,
@@ -55,12 +83,13 @@ router.get('/', async (req, res) => {
          WHERE ii.company_id = current_setting('app.current_company_id')::int
          GROUP BY sm.item_id
        ) s ON s.item_id = i.id
-      WHERE i.company_id = current_setting('app.current_company_id')::int
-      ORDER BY i.id LIMIT $1 OFFSET $2`,
-    [limit, offset]
+      ${where}
+      ORDER BY i.id LIMIT $${params.length + 1} OFFSET $${params.length + 2}`,
+    [...params, limit, offset]
   );
   const totalRes = await db.query(
-    `SELECT COUNT(*) FROM items WHERE company_id = current_setting('app.current_company_id')::int`
+    `SELECT COUNT(*) FROM items i ${where.replace('i.', '')}`,
+    params
   );
   res.json({ items: result.rows, total: parseInt(totalRes.rows[0].count, 10) });
 });
@@ -264,3 +293,106 @@ router.delete('/:id', async (req, res) => {
 });
 
 module.exports = { router, ready };
+
+// Views management
+router.get('/views', async (req, res) => {
+  await viewsReady;
+  const { rows } = await db.query(
+    `SELECT id, name, filters, columns FROM item_views WHERE company_id = current_setting('app.current_company_id')::int ORDER BY id`
+  );
+  res.json(rows);
+});
+
+router.post('/views', async (req, res) => {
+  await viewsReady;
+  const { name, filters = {}, columns = [] } = req.body || {};
+  if (!name) return res.status(400).json({ error: 'Name required' });
+  await db.query(
+    `INSERT INTO item_views(name, filters, columns) VALUES($1,$2::jsonb,$3::jsonb)`,
+    [name, JSON.stringify(filters), JSON.stringify(columns)]
+  );
+  res.status(201).json({ status: 'ok' });
+});
+
+router.delete('/views/:id', async (req, res) => {
+  await viewsReady;
+  const id = Number(req.params.id);
+  await db.query(
+    `DELETE FROM item_views WHERE id=$1 AND company_id = current_setting('app.current_company_id')::int`,
+    [id]
+  );
+  res.status(204).end();
+});
+
+// Export items
+router.get('/export', async (req, res) => {
+  const allowed = [
+    'id','name','sku','barcode','code','description','type','category','group','class','manufacturer','distributor','supplier','notes','size','color','purchase_price','avg_weighted_price','min_stock','rotation_index','quantity_on_hand','last_purchase_date'
+  ];
+  let columns = req.query.columns
+    ? String(req.query.columns)
+        .split(',')
+        .map((c) => c.trim())
+        .filter((c) => allowed.includes(c))
+    : allowed;
+  if (columns.length === 0) columns = allowed;
+  // reuse filters
+  req.query.limit = '10000';
+  req.query.page = '1';
+  const fakeReq = { query: req.query };
+  const fakeRes = { json: (data) => data };
+  // build filtered query again
+  const limit = 10000;
+  const offset = 0;
+  const params = [];
+  const conditions = ["i.company_id = current_setting('app.current_company_id')::int"];
+  const { q, type, category, group: groupKey, class: classKey, supplier } = req.query;
+  if (q) {
+    params.push(`%${q}%`);
+    params.push(`%${q}%`);
+    params.push(`%${q}%`);
+    params.push(`%${q}%`);
+    conditions.push(`(i.name ILIKE $${params.length-3} OR i.sku ILIKE $${params.length-2} OR i.code ILIKE $${params.length-1} OR i.description ILIKE $${params.length})`);
+  }
+  if (type) { params.push(type); conditions.push(`i.type = $${params.length}`); }
+  if (category) { params.push(category); conditions.push(`i.category = $${params.length}`); }
+  if (groupKey) { params.push(groupKey); conditions.push(`i."group" = $${params.length}`); }
+  if (classKey) { params.push(classKey); conditions.push(`i.class = $${params.length}`); }
+  if (supplier) { params.push(supplier); conditions.push(`i.supplier = $${params.length}`); }
+  const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
+  const result = await db.query(
+    `SELECT i.id, i.name, i.sku, i.barcode, i.code, i.description, i.type, i.category, i."group", i.class,
+            i.manufacturer, i.distributor, i.supplier, i.notes, i.size, i.color,
+            i.purchase_price, i.avg_weighted_price, i.min_stock, i.rotation_index, i.last_purchase_date,
+            COALESCE(s.qty, 0) AS quantity_on_hand
+       FROM items i
+       LEFT JOIN (
+         SELECT sm.item_id, SUM(sm.quantity) AS qty
+         FROM stock_movements sm
+         JOIN items ii ON ii.id = sm.item_id
+         WHERE ii.company_id = current_setting('app.current_company_id')::int
+         GROUP BY sm.item_id
+       ) s ON s.item_id = i.id
+      ${where}
+      ORDER BY i.id LIMIT $${params.length + 1} OFFSET $${params.length + 2}`,
+    [...params, limit, offset]
+  );
+  const format = (req.query.format || 'csv').toLowerCase();
+  if (format === 'xlsx') {
+    const ExcelJS = require('exceljs');
+    const wb = new ExcelJS.Workbook();
+    const ws = wb.addWorksheet('Items');
+    ws.addRow(columns);
+    result.rows.forEach((row) => {
+      ws.addRow(columns.map((c) => row[c]));
+    });
+    res.type('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    const buffer = await wb.xlsx.writeBuffer();
+    return res.send(Buffer.from(buffer));
+  }
+  const lines = [columns.join(',')];
+  result.rows.forEach((row) => {
+    lines.push(columns.map((c) => row[c]).join(','));
+  });
+  res.type('text/csv').send(lines.join('\n'));
+});

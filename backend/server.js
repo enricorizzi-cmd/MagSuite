@@ -20,6 +20,7 @@ const operations = require('./src/operations');
 const customersRouter = require('./src/customers');
 const suppliersRouter = require('./src/suppliers');
 const usersRouter = require('./src/users');
+const priceListsRouter = require('./src/priceLists');
 const db = require('./src/db');
 const { runTenantBackups } = require('./src/backup');
 const cron = require('node-cron');
@@ -28,8 +29,6 @@ const { sendPdf } = require('./src/mail');
 const logger = require('./src/logger');
 const { sendHealthAlert } = require('./src/alerts');
 const path = require('path');
-const PDFDocument = require('pdfkit');
-const ExcelJS = require('exceljs');
 
 (async () => {
   await db.query(`CREATE TABLE IF NOT EXISTS purchase_conditions (
@@ -83,6 +82,7 @@ async function start(port = process.env.PORT || 3000) {
     sequences.ready,
     causals.ready,
   ]);
+  // lazily-initialized modules do not block startup
 
   const app = express();
   app.use(express.json());
@@ -182,6 +182,7 @@ async function start(port = process.env.PORT || 3000) {
   app.use('/customers', customersRouter.router);
   app.use('/suppliers', suppliersRouter.router);
   app.use('/users', usersRouter.router);
+  app.use('/price-lists', priceListsRouter.router);
 
   // Dashboard reports
   app.get('/reports/dashboard', async (req, res) => {
@@ -291,6 +292,7 @@ async function start(port = process.env.PORT || 3000) {
       }
 
       if (format === 'pdf') {
+        const PDFDocument = require('pdfkit');
         const doc = new PDFDocument();
         const chunks = [];
         doc.on('data', (c) => chunks.push(c));
@@ -304,6 +306,7 @@ async function start(port = process.env.PORT || 3000) {
         return;
       }
       if (format === 'xlsx') {
+        const ExcelJS = require('exceljs');
         const wb = new ExcelJS.Workbook();
         const ws = wb.addWorksheet('Report');
         if (rows.length) {

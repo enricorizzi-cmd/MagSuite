@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory, RouteRecordRaw } from 'vue-router';
 import Login from './pages/auth/Login.vue';
+import Register from './pages/auth/Register.vue';
 import Dashboard from './pages/dashboard/Dashboard.vue';
 import Items from './pages/items/Items.vue';
 import ItemDetail from './pages/items/ItemDetail.vue';
@@ -29,6 +30,7 @@ import ImportLogList from './pages/system/ImportLogList.vue';
 const routes: Array<RouteRecordRaw> = [
   { path: '/', redirect: '/dashboard' },
   { path: '/login', name: 'login', component: Login },
+  { path: '/register', name: 'register', component: Register },
   {
     path: '/dashboard',
     name: 'dashboard',

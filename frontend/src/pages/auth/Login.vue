@@ -19,6 +19,7 @@
           <input v-model="mfaToken" class="w-full px-3 py-2 rounded border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800" />
         </div>
         <button class="btn-primary w-full" type="submit" :disabled="loading">Login</button>
+        <p class="text-sm">Non hai un account? <router-link class="link" to="/register">Registrati</router-link></p>
         <p class="text-sm text-red-600" v-if="error">{{ error }}</p>
       </form>
     </div>

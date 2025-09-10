@@ -529,10 +529,20 @@ async function start(port = process.env.PORT || 3000) {
     logger.info(`Server listening on port ${port}`);
   });
 
-  cron.schedule('0 2 * * *', () => {
+  // Schedule daily backups; keep a handle to stop during shutdown/tests
+  const backupJob = cron.schedule('0 2 * * *', () => {
     runTenantBackups().catch((err) =>
       logger.error('Scheduled backup failed', err)
     );
+  });
+
+  // Ensure background jobs are stopped when server is closed (avoid open handles in tests)
+  server.on('close', () => {
+    try {
+      backupJob.stop();
+    } catch (_) {
+      // ignore
+    }
   });
 
   return server;

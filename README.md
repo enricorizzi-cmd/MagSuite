@@ -58,8 +58,7 @@ supabase start   # start local services
 
 ## Node Dependencies
 
-Both the backend and frontend currently have no external Node.js packages.
-Dependencies will be listed in their respective `package.json` files as the project grows.
+Both the backend and frontend include dependencies managed via their own `package.json` files. Install with `npm ci` inside each folder. See `backend/package.json` and `frontend/package.json` for details.
 
 ## Installation
 
@@ -74,7 +73,7 @@ cd MagSuite
 
 ```bash
 cd backend
-npm install # installs dependencies from package.json (none currently)
+npm install # installs dependencies from package.json
 npm start
 # Optional: start local Supabase instance
 supabase start
@@ -114,7 +113,7 @@ NODE_EXTRA_CA_CERTS=/etc/secrets/supabase-ca.crt
 Store the CA certificate in your deployment platform's secret manager (e.g., GitHub
 Secrets) and write it to the location referenced by `DB_CA_PATH` at runtime.
 
-For local development, create a `.env` file inside `backend/` and run Node with the
+For local development, create a `.env` file inside `backend/` (or use a root `.env`) and run Node with the
 [`--env-file`](https://nodejs.org/api/cli.html#--env-file) flag:
 
 ```bash
@@ -132,6 +131,8 @@ BATCH_STRATEGY=FIFO
 # DB_CA_PATH=/path/to/ca.crt
 EOF
 node --env-file=.env server.js
+
+Important: never commit real secrets. `.env` files are ignored by Git and a `.env.example` is provided as a template.
 ```
 
 ### Frontend setup

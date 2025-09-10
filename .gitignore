@@ -1,36 +1,14 @@
-# Node
+.env
+backend/.env
+frontend/.env
+supabase-ca.crt
+*.log
 node_modules/
+frontend/node_modules/
+backend/node_modules/
 dist/
-
-# Python
-__pycache__/
-.venv/
-*.pyc
-*.pyo
-*.egg-info/
-
-# Vite build output
 frontend/dist/
-
-# Docker
-*.env
-!.env.test
-.docker/
-
-# OS and editor artifacts
-.DS_Store
-Thumbs.db
-.vscode/
-.idea/
-*.swp
-
-# Certificates
-prod-ca-2021.crt
-
-# Uploaded files
-uploads/
-backend/uploads/
-
-# Audit logs
-backend/db/audit.log
-
+coverage/
+backend/coverage/
+frontend/coverage/
+backups/

@@ -7,7 +7,6 @@ let server;
 let token1;
 let token2;
 let log1;
-let log2;
 
 beforeAll(async () => {
   server = await start(0);
@@ -30,11 +29,11 @@ beforeAll(async () => {
   const r1 = await db.query(
     "INSERT INTO import_logs(type, filename, count, log, file, company_id) VALUES('items','a',1,'[]',NULL,1) RETURNING id"
   );
-  const r2 = await db.query(
+  await db.query(
     "INSERT INTO import_logs(type, filename, count, log, file, company_id) VALUES('items','b',1,'[]',NULL,2) RETURNING id"
   );
   log1 = r1.rows[0].id;
-  log2 = r2.rows[0].id;
+  // r2 is inserted to ensure company 2 has its own logs; id unused
 });
 
 afterAll((done) => {

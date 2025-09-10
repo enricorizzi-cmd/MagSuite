@@ -16,6 +16,25 @@ const ready = (async () => {
     seriali BOOLEAN DEFAULT false,
     company_id INTEGER NOT NULL REFERENCES companies(id) DEFAULT current_setting('app.current_company_id')::int
   )`);
+  // Extend schema with additional business fields (idempotent)
+  await db.query("ALTER TABLE items ADD COLUMN IF NOT EXISTS barcode TEXT");
+  await db.query("ALTER TABLE items ADD COLUMN IF NOT EXISTS code TEXT");
+  await db.query("ALTER TABLE items ADD COLUMN IF NOT EXISTS description TEXT");
+  await db.query("ALTER TABLE items ADD COLUMN IF NOT EXISTS type TEXT");
+  await db.query("ALTER TABLE items ADD COLUMN IF NOT EXISTS category TEXT");
+  await db.query("ALTER TABLE items ADD COLUMN IF NOT EXISTS \"group\" TEXT");
+  await db.query("ALTER TABLE items ADD COLUMN IF NOT EXISTS class TEXT");
+  await db.query("ALTER TABLE items ADD COLUMN IF NOT EXISTS manufacturer TEXT");
+  await db.query("ALTER TABLE items ADD COLUMN IF NOT EXISTS distributor TEXT");
+  await db.query("ALTER TABLE items ADD COLUMN IF NOT EXISTS supplier TEXT");
+  await db.query("ALTER TABLE items ADD COLUMN IF NOT EXISTS notes TEXT");
+  await db.query("ALTER TABLE items ADD COLUMN IF NOT EXISTS size TEXT");
+  await db.query("ALTER TABLE items ADD COLUMN IF NOT EXISTS color TEXT");
+  await db.query("ALTER TABLE items ADD COLUMN IF NOT EXISTS purchase_price NUMERIC");
+  await db.query("ALTER TABLE items ADD COLUMN IF NOT EXISTS avg_weighted_price NUMERIC DEFAULT 0");
+  await db.query("ALTER TABLE items ADD COLUMN IF NOT EXISTS min_stock INTEGER DEFAULT 0");
+  await db.query("ALTER TABLE items ADD COLUMN IF NOT EXISTS rotation_index NUMERIC DEFAULT 0");
+  await db.query("ALTER TABLE items ADD COLUMN IF NOT EXISTS last_purchase_date DATE");
 })();
 
 router.get('/', async (req, res) => {
@@ -23,7 +42,21 @@ router.get('/', async (req, res) => {
   const page = Math.max(parseInt(req.query.page) || 1, 1);
   const offset = (page - 1) * limit;
   const result = await db.query(
-    `SELECT id, name, sku, lotti, seriali FROM items WHERE company_id = current_setting('app.current_company_id')::int ORDER BY id LIMIT $1 OFFSET $2`,
+    `SELECT i.id, i.name, i.sku, i.lotti, i.seriali,
+            i.barcode, i.code, i.description, i.type, i.category, i."group", i.class,
+            i.manufacturer, i.distributor, i.supplier, i.notes, i.size, i.color,
+            i.purchase_price, i.avg_weighted_price, i.min_stock, i.rotation_index, i.last_purchase_date,
+            COALESCE(s.qty, 0) AS quantity_on_hand
+       FROM items i
+       LEFT JOIN (
+         SELECT sm.item_id, SUM(sm.quantity) AS qty
+         FROM stock_movements sm
+         JOIN items ii ON ii.id = sm.item_id
+         WHERE ii.company_id = current_setting('app.current_company_id')::int
+         GROUP BY sm.item_id
+       ) s ON s.item_id = i.id
+      WHERE i.company_id = current_setting('app.current_company_id')::int
+      ORDER BY i.id LIMIT $1 OFFSET $2`,
     [limit, offset]
   );
   const totalRes = await db.query(
@@ -80,9 +113,30 @@ router.post('/', async (req, res) => {
   if (typeof lotti !== 'boolean' || typeof seriali !== 'boolean') {
     return res.status(400).json({ error: 'Invalid flags' });
   }
+  const allowed = [
+    'barcode','code','description','type','category','group','class','manufacturer','distributor','supplier','notes','size','color','purchase_price','avg_weighted_price','min_stock','rotation_index','last_purchase_date'
+  ];
+  const fields = ['name','sku','lotti','seriali'];
+  const values = [name, sku, lotti, seriali];
+  for (const key of allowed) {
+    if (req.body[key] !== undefined) {
+      if (
+        ['purchase_price','avg_weighted_price','rotation_index'].includes(key) &&
+        req.body[key] !== null && typeof req.body[key] !== 'number'
+      ) {
+        return res.status(400).json({ error: `Invalid ${key}` });
+      }
+      if (key === 'min_stock' && req.body[key] !== null && !Number.isInteger(req.body[key])) {
+        return res.status(400).json({ error: 'Invalid min_stock' });
+      }
+      fields.push(key === 'group' ? '"group"' : key);
+      values.push(req.body[key]);
+    }
+  }
+  const placeholders = fields.map((_, i) => `$${i + 1}`).join(', ');
   const result = await db.query(
-    'INSERT INTO items(name, sku, lotti, seriali) VALUES($1,$2,$3,$4) RETURNING id, name, sku, lotti, seriali',
-    [name, sku, lotti, seriali]
+    `INSERT INTO items(${fields.join(', ')}) VALUES(${placeholders}) RETURNING id, name, sku, lotti, seriali, barcode, code, description, type, category, "group", class, manufacturer, distributor, supplier, notes, size, color, purchase_price, avg_weighted_price, min_stock, rotation_index, last_purchase_date`,
+    values
   );
   const item = result.rows[0];
   audit.logAction(req.user.id, 'create_item', { item });
@@ -147,6 +201,24 @@ router.put('/:id', async (req, res) => {
     }
     fields.push('seriali');
     values.push(seriali);
+  }
+  const extraAllowed = [
+    'barcode','code','description','type','category','group','class','manufacturer','distributor','supplier','notes','size','color','purchase_price','avg_weighted_price','min_stock','rotation_index','last_purchase_date'
+  ];
+  for (const key of extraAllowed) {
+    if (req.body[key] !== undefined) {
+      if (
+        ['purchase_price','avg_weighted_price','rotation_index'].includes(key) &&
+        req.body[key] !== null && typeof req.body[key] !== 'number'
+      ) {
+        return res.status(400).json({ error: `Invalid ${key}` });
+      }
+      if (key === 'min_stock' && req.body[key] !== null && !Number.isInteger(req.body[key])) {
+        return res.status(400).json({ error: 'Invalid min_stock' });
+      }
+      fields.push(key === 'group' ? '"group"' : key);
+      values.push(req.body[key]);
+    }
   }
   if (fields.length === 0) {
     return res.status(400).json({ error: 'No fields to update' });

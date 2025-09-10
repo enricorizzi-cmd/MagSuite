@@ -8,13 +8,14 @@ const router = express.Router();
     id SERIAL PRIMARY KEY,
     name TEXT NOT NULL,
     role TEXT NOT NULL DEFAULT 'user',
-    warehouse_id INTEGER REFERENCES warehouses(id)
+    warehouse_id INTEGER REFERENCES warehouses(id),
+    company_id INTEGER NOT NULL DEFAULT current_setting('app.current_company_id')::int
   )`);
 })();
 
 router.get('/', async (req, res) => {
   const result = await db.query(
-    'SELECT id, name, role, warehouse_id FROM user_settings ORDER BY id'
+    "SELECT id, name, role, warehouse_id FROM user_settings WHERE company_id = current_setting('app.current_company_id')::int ORDER BY id"
   );
   const users = result.rows.map((row) => ({
     id: row.id,
@@ -28,7 +29,7 @@ router.get('/', async (req, res) => {
 router.get('/:id', async (req, res) => {
   const id = Number(req.params.id);
   const result = await db.query(
-    'SELECT id, name, role, warehouse_id FROM user_settings WHERE id=$1',
+    "SELECT id, name, role, warehouse_id FROM user_settings WHERE id=$1 AND company_id = current_setting('app.current_company_id')::int",
     [id]
   );
   const user = result.rows[0];
@@ -66,7 +67,7 @@ router.put('/:id', async (req, res) => {
     return res.status(400).json({ error: 'Name required' });
   }
   const result = await db.query(
-    'UPDATE user_settings SET name=$1, role=$2, warehouse_id=$3 WHERE id=$4 RETURNING id, name, role, warehouse_id',
+    "UPDATE user_settings SET name=$1, role=$2, warehouse_id=$3 WHERE id=$4 AND company_id = current_setting('app.current_company_id')::int RETURNING id, name, role, warehouse_id",
     [name, role, warehouseId, id]
   );
   const user = result.rows[0];
@@ -81,7 +82,10 @@ router.put('/:id', async (req, res) => {
 
 router.delete('/:id', async (req, res) => {
   const id = Number(req.params.id);
-  const result = await db.query('DELETE FROM user_settings WHERE id=$1', [id]);
+  const result = await db.query(
+    "DELETE FROM user_settings WHERE id=$1 AND company_id = current_setting('app.current_company_id')::int",
+    [id]
+  );
   if (result.rowCount === 0) return res.status(404).end();
   res.status(204).send();
 });

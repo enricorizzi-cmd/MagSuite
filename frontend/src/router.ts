@@ -1,4 +1,5 @@
 import { createRouter, createWebHistory, RouteRecordRaw } from 'vue-router';
+import Login from './pages/auth/Login.vue';
 import Dashboard from './pages/dashboard/Dashboard.vue';
 import Items from './pages/items/Items.vue';
 import ItemDetail from './pages/items/ItemDetail.vue';
@@ -27,6 +28,7 @@ import ImportLogList from './pages/system/ImportLogList.vue';
 
 const routes: Array<RouteRecordRaw> = [
   { path: '/', redirect: '/dashboard' },
+  { path: '/login', name: 'login', component: Login },
   {
     path: '/dashboard',
     name: 'dashboard',
@@ -170,7 +172,19 @@ const routes: Array<RouteRecordRaw> = [
   }
 ];
 
-export default createRouter({
+const router = createRouter({
   history: createWebHistory(),
   routes
 });
+
+router.beforeEach((to, from, next) => {
+  if (to.path === '/login') return next();
+  const apiKey = (import.meta as any).env?.VITE_API_KEY;
+  const companyId = (import.meta as any).env?.VITE_COMPANY_ID;
+  if (apiKey && companyId) return next();
+  const token = localStorage.getItem('token');
+  if (!token) return next({ path: '/login', query: { redirect: to.fullPath } });
+  next();
+});
+
+export default router;

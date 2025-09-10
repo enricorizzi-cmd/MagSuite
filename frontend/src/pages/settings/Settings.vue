@@ -22,6 +22,7 @@ import SettingsMrp from './SettingsMrp.vue';
 import SettingsClassifiers from './SettingsClassifiers.vue';
 import SettingsNotifications from './SettingsNotifications.vue';
 import SettingsUsers from './SettingsUsers.vue';
+import SettingsItemsTable from './SettingsItemsTable.vue';
 
 const tabs = [
   { key: 'general', label: 'Generali', component: SettingsGeneral },
@@ -29,6 +30,7 @@ const tabs = [
   { key: 'mrp', label: 'MRP', component: SettingsMrp },
   { key: 'classifiers', label: 'Classificatori', component: SettingsClassifiers },
   { key: 'notifications', label: 'Notifiche', component: SettingsNotifications },
+  { key: 'itemsTable', label: 'Tabella Articoli', component: SettingsItemsTable },
   { key: 'users', label: 'Utenti & Permessi', component: SettingsUsers }
 ];
 

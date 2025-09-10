@@ -103,7 +103,54 @@ async function start(port = process.env.PORT || 3000) {
   const jobQueue = [];
   const { version } = require('./package.json');
   const itemBarcodes = {};
-  const settings = { defaultLabelTemplate: 'standard' };
+
+  // Company-level settings persisted in DB
+  await db.query(`CREATE TABLE IF NOT EXISTS company_settings (
+    company_id INTEGER PRIMARY KEY,
+    settings JSONB NOT NULL DEFAULT '{}'::jsonb
+  )`);
+
+  const defaultSettings = {
+    general: { companyName: '' },
+    classifiers: { defaultCategory: '' },
+    itemsTable: {
+      columns: [
+        'name','sku','code','description','barcode',
+        'type','category','group','class',
+        'manufacturer','distributor','supplier','notes',
+        'size','color','purchase_price','avg_weighted_price','min_stock','rotation_index',
+        'quantity_on_hand','last_purchase_date'
+      ],
+      aliases: {}
+    },
+    defaultLabelTemplate: 'standard'
+  };
+
+  async function getCompanySettings(companyId) {
+    const { rows } = await db.query('SELECT settings FROM company_settings WHERE company_id=$1', [companyId]);
+    if (!rows[0]) return defaultSettings;
+    const s = rows[0].settings || {};
+    return {
+      ...defaultSettings,
+      ...s,
+      itemsTable: { ...defaultSettings.itemsTable, ...(s.itemsTable || {}) },
+    };
+  }
+
+  async function saveCompanySettings(companyId, patch) {
+    const current = await getCompanySettings(companyId);
+    const next = {
+      ...current,
+      ...patch,
+      itemsTable: { ...current.itemsTable, ...(patch.itemsTable || {}) },
+    };
+    await db.query(
+      `INSERT INTO company_settings(company_id, settings) VALUES($1,$2::jsonb)
+       ON CONFLICT (company_id) DO UPDATE SET settings=EXCLUDED.settings` ,
+      [companyId, JSON.stringify(next)]
+    );
+    return next;
+  }
 
   app.get('/system/status', async (req, res) => {
     try {
@@ -313,14 +360,17 @@ async function start(port = process.env.PORT || 3000) {
     ]);
   });
 
-  // Settings APIs
-  app.get('/settings', (req, res) => {
-    res.json(settings);
+  // Settings APIs (per-company)
+  app.get('/settings', async (req, res) => {
+    const companyId = req.user.company_id;
+    const s = await getCompanySettings(companyId);
+    res.json(s);
   });
 
-  app.put('/settings', (req, res) => {
-    Object.assign(settings, req.body);
-    res.json(settings);
+  app.put('/settings', async (req, res) => {
+    const companyId = req.user.company_id;
+    const s = await saveCompanySettings(companyId, req.body || {});
+    res.json(s);
   });
 
   // Barcode APIs

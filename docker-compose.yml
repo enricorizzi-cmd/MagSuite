@@ -21,9 +21,15 @@ services:
       PGPASSWORD: postgres
       PGDATABASE: magsuite_test
       PGPORT: 5432
+      PGSSLMODE: disable
       DATABASE_URL: "postgres://postgres:postgres@postgres:5432/magsuite_test"
       ALERT_EMAIL: alerts@example.com
       SUPABASE_CA_CERT: ${SUPABASE_CA_CERT}
+      ACCESS_SECRET: dev-access-secret
+      REFRESH_SECRET: dev-refresh-secret
+      API_KEY: dev-api-key
+      SSO_SECRET: dev-sso-secret
+      FILE_ENCRYPTION_KEY: "UNy4xMqI+z6nKU+Evx74w8saB1ZaozdN0IUs6dD0Jt8="
     ports:
       - "3000:3000"
 

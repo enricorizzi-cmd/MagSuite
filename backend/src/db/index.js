@@ -55,7 +55,10 @@ async function query(text, params) {
   if (companyId) {
     const client = await pool.connect();
     try {
-      await client.query(`set app.current_company_id = ${companyId}`);
+      await client.query('select set_config($1, $2, true)', [
+        'app.current_company_id',
+        String(companyId),
+      ]);
       return await client.query(text, params);
     } finally {
       client.release();

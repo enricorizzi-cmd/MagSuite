@@ -17,11 +17,9 @@ const general = ref<{ companyName: string }>({ companyName: '' });
 
 onMounted(async () => {
   try {
-    const res = await fetch('/settings');
-    if (res.ok) {
-      const data = await res.json();
-      general.value = data.general || { companyName: '' };
-    }
+    const { default: api } = await import('../../services/api');
+    const { data } = await api.get('/settings');
+    general.value = data.general || { companyName: '' };
   } catch (err) {
     console.error('Failed to load settings', err);
   }
@@ -29,11 +27,8 @@ onMounted(async () => {
 
 async function save() {
   try {
-    await fetch('/settings', {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ general: general.value })
-    });
+    const { default: api } = await import('../../services/api');
+    await api.put('/settings', { general: general.value });
   } catch (err) {
     console.error('Failed to save settings', err);
   }

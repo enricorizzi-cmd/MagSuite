@@ -81,13 +81,11 @@ async function loadDashboard() {
     if (filters.value.from) params.set('from', filters.value.from);
     if (filters.value.to) params.set('to', filters.value.to);
     if (filters.value.warehouse) params.set('warehouse', String(filters.value.warehouse));
+    const { default: api } = await import('../../services/api');
     const url = `/reports/dashboard${params.toString() ? `?${params.toString()}` : ''}`;
-    const dashboardRes = await fetch(url);
-    if (dashboardRes.ok) {
-      const data = await dashboardRes.json();
-      kpis.value = data.kpis || {};
-      charts.value = data.charts || {};
-    }
+    const { data } = await api.get(url);
+    kpis.value = data.kpis || {};
+    charts.value = data.charts || {};
   } catch (err) {
     console.error('Failed to load dashboard data', err);
   }
@@ -95,10 +93,9 @@ async function loadDashboard() {
 
 async function loadAlerts() {
   try {
-    const alertsRes = await fetch('/alerts?status=open');
-    if (alertsRes.ok) {
-      alerts.value = await alertsRes.json();
-    }
+    const { default: api } = await import('../../services/api');
+    const { data } = await api.get('/alerts', { params: { status: 'open' } });
+    alerts.value = data || [];
   } catch (err) {
     console.error('Failed to load alerts', err);
   }
@@ -106,11 +103,9 @@ async function loadAlerts() {
 
 async function loadWarehouses() {
   try {
-    const res = await fetch('/warehouses');
-    if (res.ok) {
-      const data = await res.json();
-      warehouses.value = data.items || [];
-    }
+    const { default: api } = await import('../../services/api');
+    const { data } = await api.get('/warehouses');
+    warehouses.value = data.items || [];
   } catch (err) {
     console.error('Failed to load warehouses', err);
   }

@@ -34,11 +34,9 @@ const router = useRouter();
 
 async function fetchInventories() {
   try {
-    const res = await fetch('/inventories');
-    if (res.ok) {
-      const data = await res.json();
-      inventories.value = Array.isArray(data) ? data : data.items || [];
-    }
+    const { default: api } = await import('../services/api');
+    const { data } = await api.get('/inventories');
+    inventories.value = Array.isArray(data) ? data : data.items || [];
   } catch (err) {
     console.error('Failed to load inventories', err);
   }
@@ -50,15 +48,9 @@ function openInventory(inv: Inventory) {
 
 async function createInventory() {
   try {
-    const res = await fetch('/inventories', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({})
-    });
-    if (res.ok) {
-      const data = await res.json();
-      router.push(`/inventories/${data.id}`);
-    }
+    const { default: api } = await import('../services/api');
+    const { data } = await api.post('/inventories', {});
+    router.push(`/inventories/${data.id}`);
   } catch (err) {
     console.error('Failed to create inventory', err);
   }

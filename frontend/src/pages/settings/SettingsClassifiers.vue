@@ -17,11 +17,9 @@ const classifiers = ref<{ defaultCategory: string }>({ defaultCategory: '' });
 
 onMounted(async () => {
   try {
-    const res = await fetch('/settings');
-    if (res.ok) {
-      const data = await res.json();
-      classifiers.value = data.classifiers || { defaultCategory: '' };
-    }
+    const { default: api } = await import('../../services/api');
+    const { data } = await api.get('/settings');
+    classifiers.value = data.classifiers || { defaultCategory: '' };
   } catch (err) {
     console.error('Failed to load settings', err);
   }
@@ -29,11 +27,8 @@ onMounted(async () => {
 
 async function save() {
   try {
-    await fetch('/settings', {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ classifiers: classifiers.value })
-    });
+    const { default: api } = await import('../../services/api');
+    await api.put('/settings', { classifiers: classifiers.value });
   } catch (err) {
     console.error('Failed to save settings', err);
   }

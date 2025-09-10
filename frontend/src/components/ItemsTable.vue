@@ -66,8 +66,8 @@ function formatDate(v: any) {
 
 async function loadSettings() {
   try {
-    const res = await fetch('/settings');
-    const data: Settings = await res.json();
+    const { default: api } = await import('../services/api');
+    const { data } = await api.get('/settings');
     columns.value = data.itemsTable?.columns || [];
     aliases.value = data.itemsTable?.aliases || {};
   } catch (e) {
@@ -78,8 +78,8 @@ async function loadSettings() {
 
 async function loadItems() {
   try {
-    const res = await fetch('/items?limit=100');
-    const data = await res.json();
+    const { default: api } = await import('../services/api');
+    const { data } = await api.get('/items', { params: { limit: 100 } });
     rows.value = data.items || [];
     allRows.value = rows.value;
   } catch (e) {

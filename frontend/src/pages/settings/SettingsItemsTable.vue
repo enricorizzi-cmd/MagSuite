@@ -31,18 +31,15 @@ const columns = ref<string[]>([]);
 const aliases = ref<Record<string,string>>({});
 
 onMounted(async () => {
-  const res = await fetch('/settings');
-  const data = await res.json();
+  const { default: api } = await import('../../services/api');
+  const { data } = await api.get('/settings');
   columns.value = data.itemsTable?.columns || [];
   aliases.value = data.itemsTable?.aliases || {};
 });
 
 async function save() {
-  await fetch('/settings', {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ itemsTable: { columns: columns.value, aliases: aliases.value } })
-  });
+  const { default: api } = await import('../../services/api');
+  await api.put('/settings', { itemsTable: { columns: columns.value, aliases: aliases.value } });
 }
 </script>
 

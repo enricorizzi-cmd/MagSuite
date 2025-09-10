@@ -76,11 +76,9 @@ function warehouseName(id: any) {
 
 async function fetchUsers() {
   try {
-    const res = await fetch('/users');
-    if (res.ok) {
-      const data = await res.json();
-      users.value = data.users || data.items || [];
-    }
+    const { default: api } = await import('../../services/api');
+    const { data } = await api.get('/users');
+    users.value = data.users || data.items || [];
   } catch (err) {
     console.error('Failed to load users', err);
   }
@@ -88,11 +86,9 @@ async function fetchUsers() {
 
 async function fetchWarehouses() {
   try {
-    const res = await fetch('/warehouses');
-    if (res.ok) {
-      const data = await res.json();
-      warehouses.value = data.warehouses || data.items || [];
-    }
+    const { default: api } = await import('../../services/api');
+    const { data } = await api.get('/warehouses');
+    warehouses.value = data.warehouses || data.items || [];
   } catch (err) {
     console.error('Failed to load warehouses', err);
   }
@@ -116,15 +112,14 @@ async function saveUser() {
   const method = form.value.id ? 'PUT' : 'POST';
   const url = form.value.id ? `/users/${form.value.id}` : '/users';
   try {
-    const res = await fetch(url, {
-      method,
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(form.value)
-    });
-    if (res.ok) {
-      editing.value = false;
-      fetchUsers();
+    const { default: api } = await import('../../services/api');
+    if (method === 'PUT') {
+      await api.put(url, form.value);
+    } else {
+      await api.post(url, form.value);
     }
+    editing.value = false;
+    fetchUsers();
   } catch (err) {
     console.error('Failed to save user', err);
   }

@@ -24,6 +24,10 @@ const storage = multer.diskStorage({
 
 const upload = multer({ storage });
 
+const requireKeyInProd = process.env.NODE_ENV === 'production';
+if (requireKeyInProd && !process.env.FILE_ENCRYPTION_KEY) {
+  throw new Error('FILE_ENCRYPTION_KEY is required in production');
+}
 const ENCRYPTION_KEY = process.env.FILE_ENCRYPTION_KEY
   ? Buffer.from(process.env.FILE_ENCRYPTION_KEY, 'base64')
   : crypto.createHash('sha256').update('default_file_encryption_key').digest();

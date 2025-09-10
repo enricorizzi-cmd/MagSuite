@@ -21,7 +21,12 @@ const pool = new Pool({
 });
 
 async function run() {
-  const dir = path.join(__dirname, '..', 'supabase', 'migrations');
+  let dir = path.join(__dirname, '..', 'supabase', 'migrations');
+  if (!fs.existsSync(dir)) {
+    // Fallback when running locally from the repo root structure
+    const alt = path.join(__dirname, '..', '..', 'supabase', 'migrations');
+    if (fs.existsSync(alt)) dir = alt;
+  }
   const files = fs.readdirSync(dir).filter(f => f.endsWith('.sql')).sort();
   await pool.query('CREATE TABLE IF NOT EXISTS schema_migrations (filename text primary key)');
   for (const file of files) {

@@ -12,3 +12,5 @@ coverage/
 backend/coverage/
 frontend/coverage/
 backups/
+uploads/
+backend/db/*.log

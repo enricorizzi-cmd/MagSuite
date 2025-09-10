@@ -16,7 +16,12 @@ const rolePermissions = {
 function authenticateToken(req, res, next) {
   const apiKey = req.headers['x-api-key'];
   if (apiKey && process.env.API_KEY && apiKey === process.env.API_KEY) {
-    req.user = { role: 'api', company_id: Number(req.headers['x-company-id']) };
+    const companyIdHeader = req.headers['x-company-id'];
+    const companyId = Number(companyIdHeader);
+    if (!companyIdHeader || Number.isNaN(companyId)) {
+      return res.status(400).json({ error: 'x-company-id header required' });
+    }
+    req.user = { role: 'api', company_id: companyId };
     return companyContext.run({ companyId: req.user.company_id }, next);
   }
 

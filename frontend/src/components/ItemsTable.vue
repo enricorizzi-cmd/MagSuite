@@ -1,22 +1,31 @@
 <template>
-  <div class="items-table">
-    <table v-if="rows.length">
-      <thead>
-        <tr>
-          <th v-for="col in columns" :key="col">{{ header(col) }}</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr v-for="(r, idx) in rows" :key="idx">
-          <td v-for="col in columns" :key="col">
-            <span v-if="isMoney(col)">{{ formatMoney(r[col]) }}</span>
-            <span v-else-if="isDate(col)">{{ formatDate(r[col]) }}</span>
-            <span v-else>{{ r[col] }}</span>
-          </td>
-        </tr>
-      </tbody>
-    </table>
-    <p v-else>Nessun articolo trovato.</p>
+  <div class="container-page">
+    <div class="flex items-center justify-between mb-3">
+      <div class="flex items-center gap-2">
+        <input v-model.trim="q" placeholder="Cerca..." class="px-3 py-2 rounded border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800" />
+        <button class="btn-secondary" @click="fetchFiltered">Filtra</button>
+      </div>
+      <div class="text-sm text-slate-500" v-if="rows.length">{{ rows.length }} risultati</div>
+    </div>
+    <div class="card overflow-auto max-h-[70vh]">
+      <table v-if="rows.length" class="table-base">
+        <thead>
+          <tr>
+            <th v-for="col in columns" :key="col">{{ header(col) }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="(r, idx) in rows" :key="idx" class="odd:bg-white even:bg-slate-50/50 dark:odd:bg-slate-800 dark:even:bg-slate-800/60">
+            <td v-for="col in columns" :key="col">
+              <span v-if="isMoney(col)">{{ formatMoney(r[col]) }}</span>
+              <span v-else-if="isDate(col)">{{ formatDate(r[col]) }}</span>
+              <span v-else>{{ r[col] }}</span>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+      <div v-else class="p-6 text-slate-500">Nessun articolo trovato.</div>
+    </div>
   </div>
 </template>
 
@@ -30,6 +39,8 @@ interface Settings {
 const columns = ref<string[]>([]);
 const aliases = ref<Record<string,string>>({});
 const rows = ref<any[]>([]);
+const allRows = ref<any[]>([]);
+const q = ref('');
 
 function header(col: string) {
   return aliases.value[col] || col;
@@ -70,9 +81,18 @@ async function loadItems() {
     const res = await fetch('/items?limit=100');
     const data = await res.json();
     rows.value = data.items || [];
+    allRows.value = rows.value;
   } catch (e) {
     rows.value = [];
   }
+}
+
+function fetchFiltered() {
+  const term = q.value.toLowerCase();
+  if (!term) { rows.value = allRows.value; return; }
+  rows.value = allRows.value.filter((r:any) => {
+    return columns.value.some((c) => String(r[c] ?? '').toLowerCase().includes(term));
+  });
 }
 
 onMounted(async () => {
@@ -87,4 +107,3 @@ table { width: 100%; border-collapse: collapse; }
 th, td { border: 1px solid #ddd; padding: .4rem; text-align: left; }
 thead { background: #f7f7f7; }
 </style>
-

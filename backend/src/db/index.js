@@ -1,26 +1,44 @@
 const fs = require('fs');
+const { AsyncLocalStorage } = require('async_hooks');
 const companyContext = require('../companyContext');
 
 let pool;
+const usePgMem = process.env.USE_PG_MEM === 'true';
 
-if (process.env.USE_PG_MEM === 'true') {
+// Track session-specific settings when using pg-mem
+const sessionContext = new AsyncLocalStorage();
+const settings = new Map();
+
+if (usePgMem) {
   const { newDb } = require('pg-mem');
   const mem = newDb({ noAstCoverageCheck: true });
-  const settings = new Map();
-  mem.public.registerFunction({
+  const pg = mem.getSchema('pg_catalog');
+  pg.registerFunction({
     name: 'set_config',
     args: ['text', 'text', 'boolean'],
     returns: 'text',
+    impure: true,
     implementation: (key, value) => {
-      settings.set(key, value);
+      const id = sessionContext.getStore();
+      let map = settings.get(id);
+      if (!map) {
+        map = new Map();
+        settings.set(id, map);
+      }
+      map.set(key, value);
       return value;
     },
   });
-  mem.public.registerFunction({
+  pg.registerFunction({
     name: 'current_setting',
     args: ['text'],
     returns: 'text',
-    implementation: (key) => settings.get(key) || null,
+    impure: true,
+    implementation: (key) => {
+      const id = sessionContext.getStore();
+      const map = settings.get(id);
+      return (map && map.get(key)) || null;
+    },
   });
   mem.public.none(
     "CREATE TABLE companies (id SERIAL PRIMARY KEY, name TEXT NOT NULL UNIQUE)"
@@ -68,19 +86,36 @@ if (process.env.USE_PG_MEM === 'true') {
 async function query(text, params) {
   const store = companyContext.getStore();
   const companyId = store && store.companyId;
+  const sessionId = Symbol('session');
   if (companyId) {
     const client = await pool.connect();
     try {
-      await client.query('select set_config($1, $2, true)', [
-        'app.current_company_id',
-        String(companyId),
-      ]);
-      return await client.query(text, params);
+      return await sessionContext.run(sessionId, async () => {
+        try {
+          await client.query('select set_config($1, $2, true)', [
+            'app.current_company_id',
+            String(companyId),
+          ]);
+          return await client.query(text, params);
+        } finally {
+          if (usePgMem) {
+            settings.delete(sessionId);
+          }
+        }
+      });
     } finally {
       client.release();
     }
   }
-  return pool.query(text, params);
+  return sessionContext.run(sessionId, async () => {
+    try {
+      return await pool.query(text, params);
+    } finally {
+      if (usePgMem) {
+        settings.delete(sessionId);
+      }
+    }
+  });
 }
 
 module.exports = { query, connect: () => pool.connect() };

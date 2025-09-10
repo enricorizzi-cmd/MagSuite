@@ -10,7 +10,7 @@ beforeAll(async () => {
   const password = 'Str0ng!Pass1';
   const register = await request(server)
     .post('/auth/register')
-    .send({ email: 'log@example.com', password });
+    .send({ email: 'log@example.com', password, company_id: 1 });
   expect(register.status).toBe(201);
   userId = register.body.id;
   const login = await request(server)

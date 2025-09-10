@@ -14,7 +14,7 @@ const ready = (async () => {
     sku TEXT NOT NULL UNIQUE,
     lotti BOOLEAN DEFAULT false,
     seriali BOOLEAN DEFAULT false,
-    company_id INTEGER DEFAULT current_setting('app.current_company_id')::int
+    company_id INTEGER NOT NULL REFERENCES companies(id) DEFAULT current_setting('app.current_company_id')::int
   )`);
 })();
 

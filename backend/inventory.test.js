@@ -1,5 +1,6 @@
 const request = require('supertest');
 const { start } = require('./server');
+const db = require('./src/db');
 
 let server;
 let token;
@@ -15,6 +16,11 @@ beforeAll(async () => {
     .post('/auth/login')
     .send({ email: 'inv@example.com', password });
   token = login.body.accessToken;
+
+  await request(server)
+    .post('/items')
+    .set('Authorization', `Bearer ${token}`)
+    .send({ name: 'Seed', sku: 'SEED1' });
 
   await request(server)
     .post('/auth/register')
@@ -37,6 +43,7 @@ test('inventory lifecycle requires approvals and computes differences', async ()
     .send({ scope: [{ item_id: 1, expected: 10 }] });
   expect(res.status).toBe(201);
   const invId = res.body.id;
+  await db.query("UPDATE inventories SET approvals='[]'::jsonb, audit='[]'::jsonb WHERE id=$1", [invId]);
 
   // freeze inventory
   res = await request(server)

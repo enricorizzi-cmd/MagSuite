@@ -9,7 +9,7 @@ const ready = (async () => {
     name TEXT NOT NULL,
     prefix TEXT DEFAULT '',
     next_number INTEGER NOT NULL DEFAULT 1,
-    company_id INTEGER DEFAULT current_setting('app.current_company_id')::int REFERENCES companies(id)
+    company_id INTEGER NOT NULL REFERENCES companies(id) DEFAULT current_setting('app.current_company_id')::int
   )`);
 })();
 

@@ -142,6 +142,11 @@ pnpm install # or npm install (installs package.json dependencies)
 pnpm dev     # or npm run dev
 ```
 
+#### Environment variables
+
+The frontend can be pointed at a different backend by setting `VITE_API_URL`.
+If omitted, API calls default to the same origin that serves the built app.
+
 ## Build
 
 Create production-ready artifacts using Docker or Vite:
@@ -180,7 +185,7 @@ cd ../frontend && npm run dev
 Deploying on [Render](https://render.com) requires the following configuration:
 
 - **Dockerfile path:** `backend/Dockerfile` (with the repository root as the build context)
-- **Environment variables:** `DATABASE_URL`, `ACCESS_SECRET`, `REFRESH_SECRET`, `API_KEY`, `SSO_SECRET`, `FILE_ENCRYPTION_KEY`, `ALERT_EMAIL` (optional), `BATCH_STRATEGY` (optional), `DB_CA_PATH`, and optionally `NODE_EXTRA_CA_CERTS`
+- **Environment variables:** `DATABASE_URL`, `ACCESS_SECRET`, `REFRESH_SECRET`, `API_KEY`, `SSO_SECRET`, `FILE_ENCRYPTION_KEY`, `ALERT_EMAIL` (optional), `BATCH_STRATEGY` (optional), `DB_CA_PATH`, optionally `NODE_EXTRA_CA_CERTS`, and optionally `VITE_API_URL` for the frontend API base URL
 - **Secret file:** Optionally provide a `supabase-ca.crt` and mount it at `/etc/secrets/supabase-ca.crt` (referenced by `DB_CA_PATH`)
 
 ## Usage

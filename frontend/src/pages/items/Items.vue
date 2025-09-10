@@ -1,9 +1,12 @@
 <template>
-  <div class="items-page">
-    <h1>Items</h1>
-    <button @click="newItem">New Item</button>
+  <div class="container-page">
+    <div class="flex items-center justify-between mb-4">
+      <h1 class="text-2xl font-semibold">Articoli</h1>
+      <button class="btn-primary" @click="newItem">Nuovo Articolo</button>
+    </div>
     <ItemsTable />
   </div>
+  
 </template>
 
 <script setup lang="ts">
@@ -17,8 +20,4 @@ function newItem() {
 }
 </script>
 
-<style scoped>
-.items-page {
-  padding: 1rem;
-}
-</style>
+<style scoped></style>

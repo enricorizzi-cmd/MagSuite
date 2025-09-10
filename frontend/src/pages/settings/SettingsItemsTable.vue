@@ -1,18 +1,19 @@
 <template>
-  <div class="settings-items-table">
-    <h3>Colonne tabella articoli</h3>
-    <div class="columns">
-      <label v-for="col in allColumns" :key="col" class="col-item">
-        <input type="checkbox" :value="col" v-model="columns" />
-        <span>{{ col }}</span>
-        <input v-model="aliases[col]" placeholder="Alias (opzionale)" />
-      </label>
-    </div>
-    <div class="actions">
-      <button @click="save">Salva</button>
+  <div class="space-y-3">
+    <h3 class="text-lg font-semibold">Colonne tabella articoli</h3>
+    <div class="card p-4">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+        <label v-for="col in allColumns" :key="col" class="flex items-center gap-2">
+          <input type="checkbox" :value="col" v-model="columns" />
+          <span class="w-48 text-sm">{{ col }}</span>
+          <input class="flex-1 px-2 py-1 rounded border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800" v-model="aliases[col]" placeholder="Alias (opzionale)" />
+        </label>
+      </div>
+      <div class="mt-3">
+        <button class="btn-primary" @click="save">Salva</button>
+      </div>
     </div>
   </div>
-  
 </template>
 
 <script setup lang="ts">
@@ -45,9 +46,4 @@ async function save() {
 }
 </script>
 
-<style scoped>
-.columns { display: grid; grid-template-columns: repeat(2, 1fr); gap: .5rem; }
-.col-item { display: flex; gap: .5rem; align-items: center; }
-.actions { margin-top: 1rem; }
-</style>
-
+<style scoped></style>

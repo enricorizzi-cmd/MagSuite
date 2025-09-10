@@ -1,24 +1,28 @@
 <template>
-  <div class="login">
-    <h1>Accedi</h1>
-    <form @submit.prevent="login">
-      <label>
-        Email
-        <input v-model="email" type="email" required />
-      </label>
-      <label>
-        Password
-        <input v-model="password" type="password" required />
-      </label>
-      <label>
-        MFA Token (se richiesto)
-        <input v-model="mfaToken" />
-      </label>
-      <button type="submit" :disabled="loading">Login</button>
-      <p class="error" v-if="error">{{ error }}</p>
-    </form>
+  <div class="min-h-[calc(100vh-3.5rem)] flex items-center justify-center px-4">
+    <div class="card w-full max-w-md p-6">
+      <div class="flex items-center gap-2 mb-4">
+        <span class="inline-flex h-9 w-9 items-center justify-center rounded bg-brand text-white font-semibold">M</span>
+        <h1 class="text-xl font-semibold">Accedi</h1>
+      </div>
+      <form class="space-y-3" @submit.prevent="login">
+        <div>
+          <label class="block text-sm mb-1">Email</label>
+          <input v-model="email" type="email" required class="w-full px-3 py-2 rounded border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800" />
+        </div>
+        <div>
+          <label class="block text-sm mb-1">Password</label>
+          <input v-model="password" type="password" required class="w-full px-3 py-2 rounded border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800" />
+        </div>
+        <div>
+          <label class="block text-sm mb-1">MFA Token (se richiesto)</label>
+          <input v-model="mfaToken" class="w-full px-3 py-2 rounded border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800" />
+        </div>
+        <button class="btn-primary w-full" type="submit" :disabled="loading">Login</button>
+        <p class="text-sm text-red-600" v-if="error">{{ error }}</p>
+      </form>
+    </div>
   </div>
-  
 </template>
 
 <script setup lang="ts">
@@ -56,10 +60,4 @@ async function login() {
 }
 </script>
 
-<style scoped>
-.login { max-width: 360px; margin: 2rem auto; display: flex; flex-direction: column; gap: .75rem; }
-form { display: flex; flex-direction: column; gap: .5rem; }
-label { display: flex; flex-direction: column; gap: .25rem; }
-.error { color: #b00020; }
-</style>
-
+<style scoped></style>

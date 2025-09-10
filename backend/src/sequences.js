@@ -3,18 +3,20 @@ const db = require('./db');
 
 const router = express.Router();
 
-(async () => {
+const ready = (async () => {
   await db.query(`CREATE TABLE IF NOT EXISTS sequences (
     id SERIAL PRIMARY KEY,
     name TEXT NOT NULL,
     prefix TEXT DEFAULT '',
     next_number INTEGER NOT NULL DEFAULT 1,
-    company_id INTEGER REFERENCES companies(id)
+    company_id INTEGER DEFAULT current_setting('app.current_company_id')::int REFERENCES companies(id)
   )`);
 })();
 
 router.get('/', async (req, res) => {
-  const result = await db.query('SELECT * FROM sequences ORDER BY id');
+  const result = await db.query(
+    "SELECT * FROM sequences WHERE company_id = current_setting('app.current_company_id')::int ORDER BY id"
+  );
   res.json({ items: result.rows });
 });
 
@@ -32,7 +34,10 @@ router.post('/', async (req, res) => {
 
 router.get('/:id', async (req, res) => {
   const id = Number(req.params.id);
-  const result = await db.query('SELECT * FROM sequences WHERE id=$1', [id]);
+  const result = await db.query(
+    "SELECT * FROM sequences WHERE id=$1 AND company_id = current_setting('app.current_company_id')::int",
+    [id]
+  );
   const seq = result.rows[0];
   if (!seq) return res.status(404).end();
   res.json(seq);
@@ -60,8 +65,8 @@ router.put('/:id', async (req, res) => {
   }
   params.push(id);
   const result = await db.query(
-    `UPDATE sequences SET ${fields.join(', ')} WHERE id=$${params.length} RETURNING *`,
-    params
+    `UPDATE sequences SET ${fields.join(', ')} WHERE id=$${params.length} AND company_id = current_setting('app.current_company_id')::int RETURNING *`,
+    params,
   );
   if (!result.rows[0]) return res.status(404).end();
   res.json(result.rows[0]);
@@ -69,16 +74,22 @@ router.put('/:id', async (req, res) => {
 
 router.delete('/:id', async (req, res) => {
   const id = Number(req.params.id);
-  await db.query('DELETE FROM sequences WHERE id=$1', [id]);
+  await db.query(
+    "DELETE FROM sequences WHERE id=$1 AND company_id = current_setting('app.current_company_id')::int",
+    [id]
+  );
   res.status(204).end();
 });
 
 router.get('/:id/preview', async (req, res) => {
   const id = Number(req.params.id);
-  const result = await db.query('SELECT prefix, next_number FROM sequences WHERE id=$1', [id]);
+  const result = await db.query(
+    `SELECT prefix, next_number FROM sequences WHERE id=$1 AND company_id = current_setting('app.current_company_id')::int`,
+    [id]
+  );
   const seq = result.rows[0];
   if (!seq) return res.status(404).end();
   res.json({ preview: `${seq.prefix}${seq.next_number}` });
 });
 
-module.exports = { router };
+module.exports = { router, ready };

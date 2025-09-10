@@ -6,6 +6,22 @@ let pool;
 if (process.env.USE_PG_MEM === 'true') {
   const { newDb } = require('pg-mem');
   const mem = newDb({ noAstCoverageCheck: true });
+  const settings = new Map();
+  mem.public.registerFunction({
+    name: 'set_config',
+    args: ['text', 'text', 'boolean'],
+    returns: 'text',
+    implementation: (key, value) => {
+      settings.set(key, value);
+      return value;
+    },
+  });
+  mem.public.registerFunction({
+    name: 'current_setting',
+    args: ['text'],
+    returns: 'text',
+    implementation: (key) => settings.get(key) || null,
+  });
   mem.public.none(
     "CREATE TABLE companies (id SERIAL PRIMARY KEY, name TEXT NOT NULL UNIQUE)"
   );

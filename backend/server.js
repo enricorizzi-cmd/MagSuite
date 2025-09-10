@@ -76,6 +76,14 @@ async function start(port = process.env.PORT || 3000) {
       process.exit(1);
     });
 
+  // Ensure tables for modules are ready before registering routes
+  await Promise.all([
+    items.ready,
+    documents.ready,
+    sequences.ready,
+    causals.ready,
+  ]);
+
   const app = express();
   app.use(express.json());
   app.use((req, res, next) => {
@@ -89,30 +97,12 @@ async function start(port = process.env.PORT || 3000) {
     res.json({ status: 'ok' });
   });
 
+  // Public routes
   app.use('/auth', authRouter);
-  app.use(authenticateToken);
-  app.use('/items', items.router);
-  app.use('/documents', documents.router);
-  app.use('/lots', lots.router);
-  app.use('/sequences', sequences.router);
-  app.use('/causals', causals.router);
-  app.use('/', inventories.router);
-  app.use('/', labels.router);
   app.use('/', imports.router);
-  app.use('/', storage.router);
-  app.use('/', operations.router);
-  app.use('/warehouses', warehousesRouter.router);
-  app.use('/', locationsRouter.router);
-  app.use('/transfers', transfersRouter.router);
-  app.use('/logs', logsRouter.router);
-  app.use('/customers', customersRouter.router);
-  app.use('/suppliers', suppliersRouter.router);
-  app.use('/users', usersRouter.router);
 
   const jobQueue = [];
   const { version } = require('./package.json');
-
-  // Simple in-memory stores for barcodes and settings
   const itemBarcodes = {};
   const settings = { defaultLabelTemplate: 'standard' };
 
@@ -126,6 +116,25 @@ async function start(port = process.env.PORT || 3000) {
       res.status(500).json({ status: 'error', message: err.message });
     }
   });
+
+  // Authenticated routes
+  app.use(authenticateToken);
+  app.use('/items', items.router);
+  app.use('/documents', documents.router);
+  app.use('/lots', lots.router);
+  app.use('/sequences', sequences.router);
+  app.use('/causals', causals.router);
+  app.use('/', inventories.router);
+  app.use('/', labels.router);
+  app.use('/', storage.router);
+  app.use('/', operations.router);
+  app.use('/warehouses', warehousesRouter.router);
+  app.use('/', locationsRouter.router);
+  app.use('/transfers', transfersRouter.router);
+  app.use('/logs', logsRouter.router);
+  app.use('/customers', customersRouter.router);
+  app.use('/suppliers', suppliersRouter.router);
+  app.use('/users', usersRouter.router);
 
   // Dashboard reports
   app.get('/reports/dashboard', async (req, res) => {

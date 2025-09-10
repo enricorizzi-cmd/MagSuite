@@ -3,18 +3,21 @@ const db = require('./db');
 
 const router = express.Router();
 
-(async () => {
+// Create table with company isolation: default company_id to current tenant
+const ready = (async () => {
   await db.query(`CREATE TABLE IF NOT EXISTS causals (
     id SERIAL PRIMARY KEY,
     code TEXT NOT NULL,
     description TEXT,
     sign INTEGER NOT NULL DEFAULT 1,
-    company_id INTEGER REFERENCES companies(id)
+    company_id INTEGER DEFAULT current_setting('app.current_company_id')::int REFERENCES companies(id)
   )`);
 })();
 
 router.get('/', async (req, res) => {
-  const result = await db.query('SELECT * FROM causals ORDER BY id');
+  const result = await db.query(
+    "SELECT * FROM causals WHERE company_id = current_setting('app.current_company_id')::int ORDER BY id"
+  );
   res.json({ items: result.rows });
 });
 
@@ -32,7 +35,10 @@ router.post('/', async (req, res) => {
 
 router.get('/:id', async (req, res) => {
   const id = Number(req.params.id);
-  const result = await db.query('SELECT * FROM causals WHERE id=$1', [id]);
+  const result = await db.query(
+    "SELECT * FROM causals WHERE id=$1 AND company_id = current_setting('app.current_company_id')::int",
+    [id]
+  );
   const caus = result.rows[0];
   if (!caus) return res.status(404).end();
   res.json(caus);
@@ -60,7 +66,7 @@ router.put('/:id', async (req, res) => {
   }
   params.push(id);
   const result = await db.query(
-    `UPDATE causals SET ${fields.join(', ')} WHERE id=$${params.length} RETURNING *`,
+    `UPDATE causals SET ${fields.join(', ')} WHERE id=$${params.length} AND company_id = current_setting('app.current_company_id')::int RETURNING *`,
     params
   );
   if (!result.rows[0]) return res.status(404).end();
@@ -69,8 +75,11 @@ router.put('/:id', async (req, res) => {
 
 router.delete('/:id', async (req, res) => {
   const id = Number(req.params.id);
-  await db.query('DELETE FROM causals WHERE id=$1', [id]);
+  await db.query(
+    "DELETE FROM causals WHERE id=$1 AND company_id = current_setting('app.current_company_id')::int",
+    [id]
+  );
   res.status(204).end();
 });
 
-module.exports = { router };
+module.exports = { router, ready };

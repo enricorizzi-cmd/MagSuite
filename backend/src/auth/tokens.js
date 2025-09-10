@@ -15,6 +15,7 @@ function generateTokens(user) {
       role: user.role,
       warehouse_id: user.warehouse_id,
       company_id: user.company_id,
+      permissions: user.permissions,
     },
     ACCESS_SECRET,
     { expiresIn: '15m' }

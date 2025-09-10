@@ -4,13 +4,17 @@ const audit = require('./audit');
 
 const router = express.Router();
 
-(async () => {
+// Ensure table exists before handling requests. The company_id column
+// defaults to the value of the current company context so that items
+// are automatically scoped per tenant.
+const ready = (async () => {
   await db.query(`CREATE TABLE IF NOT EXISTS items (
     id SERIAL PRIMARY KEY,
     name TEXT NOT NULL,
     sku TEXT NOT NULL UNIQUE,
     lotti BOOLEAN DEFAULT false,
-    seriali BOOLEAN DEFAULT false
+    seriali BOOLEAN DEFAULT false,
+    company_id INTEGER DEFAULT current_setting('app.current_company_id')::int
   )`);
 })();
 
@@ -19,10 +23,12 @@ router.get('/', async (req, res) => {
   const page = Math.max(parseInt(req.query.page) || 1, 1);
   const offset = (page - 1) * limit;
   const result = await db.query(
-    'SELECT id, name, sku, lotti, seriali FROM items ORDER BY id LIMIT $1 OFFSET $2',
+    `SELECT id, name, sku, lotti, seriali FROM items WHERE company_id = current_setting('app.current_company_id')::int ORDER BY id LIMIT $1 OFFSET $2`,
     [limit, offset]
   );
-  const totalRes = await db.query('SELECT COUNT(*) FROM items');
+  const totalRes = await db.query(
+    `SELECT COUNT(*) FROM items WHERE company_id = current_setting('app.current_company_id')::int`
+  );
   res.json({ items: result.rows, total: parseInt(totalRes.rows[0].count, 10) });
 });
 
@@ -37,7 +43,7 @@ router.get('/export', async (req, res) => {
   if (columns.length === 0) columns = allowed;
   const format = (req.query.format || 'csv').toLowerCase();
   const result = await db.query(
-    `SELECT ${columns.join(', ')} FROM items ORDER BY id`
+    `SELECT ${columns.join(', ')} FROM items WHERE company_id = current_setting('app.current_company_id')::int ORDER BY id`
   );
 
   if (format === 'xlsx') {
@@ -63,12 +69,13 @@ router.get('/export', async (req, res) => {
 });
 
 router.post('/', async (req, res) => {
-  const { name, sku, lotti = false, seriali = false } = req.body;
+  let { name, sku, lotti = false, seriali = false } = req.body;
   if (!name || typeof name !== 'string') {
     return res.status(400).json({ error: 'Name required' });
   }
   if (!sku || typeof sku !== 'string') {
-    return res.status(400).json({ error: 'SKU required' });
+    // Auto-generate a SKU if not provided
+    sku = `SKU${Date.now()}`;
   }
   if (typeof lotti !== 'boolean' || typeof seriali !== 'boolean') {
     return res.status(400).json({ error: 'Invalid flags' });
@@ -87,7 +94,10 @@ router.get('/:id', async (req, res) => {
   if (Number.isNaN(id)) {
     return res.status(400).json({ error: 'Invalid id' });
   }
-  const result = await db.query('SELECT id, name, sku, lotti, seriali FROM items WHERE id=$1', [id]);
+  const result = await db.query(
+    `SELECT id, name, sku, lotti, seriali FROM items WHERE id=$1 AND company_id = current_setting('app.current_company_id')::int`,
+    [id]
+  );
   if (result.rows.length === 0) {
     return res.status(404).json({ error: 'Not found' });
   }
@@ -100,7 +110,10 @@ router.put('/:id', async (req, res) => {
     return res.status(400).json({ error: 'Invalid id' });
   }
   const { name, sku, lotti, seriali } = req.body;
-  const oldRes = await db.query('SELECT id, name, sku, lotti, seriali FROM items WHERE id=$1', [id]);
+  const oldRes = await db.query(
+    `SELECT id, name, sku, lotti, seriali FROM items WHERE id=$1 AND company_id = current_setting('app.current_company_id')::int`,
+    [id]
+  );
   if (oldRes.rows.length === 0) {
     return res.status(404).json({ error: 'Not found' });
   }
@@ -141,7 +154,7 @@ router.put('/:id', async (req, res) => {
   const setClause = fields.map((f, i) => `${f}=$${i + 1}`).join(', ');
   values.push(id);
   const result = await db.query(
-    `UPDATE items SET ${setClause} WHERE id=$${fields.length + 1} RETURNING id, name, sku, lotti, seriali`,
+    `UPDATE items SET ${setClause} WHERE id=$${fields.length + 1} AND company_id = current_setting('app.current_company_id')::int RETURNING id, name, sku, lotti, seriali`,
     values
   );
   if (result.rows.length === 0) {
@@ -163,13 +176,19 @@ router.delete('/:id', async (req, res) => {
   if (Number.isNaN(id)) {
     return res.status(400).json({ error: 'Invalid id' });
   }
-  const oldRes = await db.query('SELECT id, name, sku, lotti, seriali FROM items WHERE id=$1', [id]);
+  const oldRes = await db.query(
+    `SELECT id, name, sku, lotti, seriali FROM items WHERE id=$1 AND company_id = current_setting('app.current_company_id')::int`,
+    [id]
+  );
   if (oldRes.rows.length === 0) {
     return res.status(404).json({ error: 'Not found' });
   }
-  await db.query('DELETE FROM items WHERE id=$1', [id]);
+  await db.query(
+    `DELETE FROM items WHERE id=$1 AND company_id = current_setting('app.current_company_id')::int`,
+    [id]
+  );
   audit.logAction(req.user.id, 'delete_item', { item: oldRes.rows[0] });
   res.status(204).send();
 });
 
-module.exports = { router };
+module.exports = { router, ready };

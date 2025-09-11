@@ -15,17 +15,35 @@ import PianoFinanziario from './pages/direzione-amministrativa/PianoFinanziario.
 import Marginalita from './pages/direzione-amministrativa/Marginalita.vue';
 import FlussoDiCassa from './pages/direzione-amministrativa/FlussoDiCassa.vue';
 import Scadenzari from './pages/direzione-amministrativa/Scadenzari.vue';
+// Anagrafiche
+import Clienti from './pages/anagrafiche/Clienti.vue';
+import Fornitori from './pages/anagrafiche/Fornitori.vue';
+import Articoli from './pages/anagrafiche/Articoli.vue';
+import Operatori from './pages/anagrafiche/Operatori.vue';
+// Edilizia
+import SAL from './pages/edilizia/SAL.vue';
+import MaterialiCantiere from './pages/edilizia/MaterialiCantiere.vue';
+import ManodoperaCantiere from './pages/edilizia/ManodoperaCantiere.vue';
 
 const routes: Array<RouteRecordRaw> = [
   { path: '/', name: 'auth', component: Auth },
   { path: '/dashboard', name: 'dashboard', component: Dashboard },
   { path: '/all-settings', name: 'all-settings', component: AllSettings },
   { path: '/users', name: 'users', component: Users },
+  // Anagrafiche
+  { path: '/anagrafiche/clienti', name: 'clienti', component: Clienti },
+  { path: '/anagrafiche/fornitori', name: 'fornitori', component: Fornitori },
+  { path: '/anagrafiche/articoli', name: 'articoli', component: Articoli },
+  { path: '/anagrafiche/operatori', name: 'operatori', component: Operatori },
   // Logistica
   { path: '/logistica/giacenze', name: 'giacenze', component: Giacenze },
   { path: '/logistica/inventario', name: 'inventario', component: Inventario },
   { path: '/logistica/magazzini', name: 'magazzini', component: Magazzini },
   { path: '/logistica/movimenti', name: 'movimenti', component: Movimenti },
+  // Edilizia
+  { path: '/edilizia/sal', name: 'sal', component: SAL },
+  { path: '/edilizia/materiali-cantiere', name: 'materiali-cantiere', component: MaterialiCantiere },
+  { path: '/edilizia/manodopera-cantiere', name: 'manodopera-cantiere', component: ManodoperaCantiere },
   // Direzione commerciale (placeholder section)
   { path: '/direzione-commerciale/bpapp', name: 'bpapp', component: BPApp },
   // Direzione amministrativa

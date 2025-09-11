@@ -141,20 +141,24 @@ const router = useRouter();
 
 // Sections and tabs
 type Tab = { label: string; path: string };
-type Section = { key: 'home' | 'logistica' | 'commerciale' | 'amministrativa' | 'impostazioni'; label: string; base: string };
+type Section = { key: 'home' | 'anagrafiche' | 'logistica' | 'edilizia' | 'commerciale' | 'amministrativa' | 'impostazioni'; label: string; base: string };
 
 const role = ref<string>('');
 
 const sections = computed<Section[]>(() => [
   { key: 'home', label: 'Home', base: '/dashboard' },
+  { key: 'anagrafiche', label: 'Anagrafiche', base: '/anagrafiche/clienti' },
   { key: 'logistica', label: 'Logistica', base: '/logistica/giacenze' },
+  { key: 'edilizia', label: 'Edilizia', base: '/edilizia/sal' },
   { key: 'commerciale', label: 'Direzione commerciale', base: '/direzione-commerciale/bpapp' },
   { key: 'amministrativa', label: 'Direzione amministrativa', base: '/direzione-amministrativa/piano-finanziario' },
   { key: 'impostazioni', label: 'Impostazioni', base: role.value === 'super_admin' ? '/all-settings' : '/users' },
 ]);
 
 function sectionFromPath(path: string): Section['key'] {
+  if (path.startsWith('/anagrafiche')) return 'anagrafiche';
   if (path.startsWith('/logistica')) return 'logistica';
+  if (path.startsWith('/edilizia')) return 'edilizia';
   if (path.startsWith('/direzione-commerciale')) return 'commerciale';
   if (path.startsWith('/direzione-amministrativa')) return 'amministrativa';
   if (path === '/users' || path === '/all-settings') return 'impostazioni';
@@ -167,12 +171,25 @@ function tabsForSection(key: Section['key']): Tab[] {
   switch (key) {
     case 'home':
       return [{ label: 'Dashboard', path: '/dashboard' }];
+    case 'anagrafiche':
+      return [
+        { label: 'Clienti', path: '/anagrafiche/clienti' },
+        { label: 'Fornitori', path: '/anagrafiche/fornitori' },
+        { label: 'Articoli', path: '/anagrafiche/articoli' },
+        { label: 'Operatori', path: '/anagrafiche/operatori' },
+      ];
     case 'logistica':
       return [
         { label: 'Giacenze', path: '/logistica/giacenze' },
         { label: 'Inventario', path: '/logistica/inventario' },
         { label: 'Magazzini', path: '/logistica/magazzini' },
         { label: 'Movimenti', path: '/logistica/movimenti' },
+      ];
+    case 'edilizia':
+      return [
+        { label: 'SAL', path: '/edilizia/sal' },
+        { label: 'Materiali di cantiere', path: '/edilizia/materiali-cantiere' },
+        { label: 'Manodopera di cantiere', path: '/edilizia/manodopera-cantiere' },
       ];
     case 'commerciale':
       return [

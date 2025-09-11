@@ -7,6 +7,9 @@ module.exports = async () => {
     'CREATE TABLE IF NOT EXISTS companies (id SERIAL PRIMARY KEY, name TEXT NOT NULL UNIQUE)'
   );
   await db.query(
+    'CREATE UNIQUE INDEX IF NOT EXISTS companies_name_lower_idx ON companies (lower(name))'
+  );
+  await db.query(
     "INSERT INTO companies(name) VALUES('A'), ('B') ON CONFLICT (name) DO NOTHING"
   );
 };

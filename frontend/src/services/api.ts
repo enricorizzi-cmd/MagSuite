@@ -13,20 +13,28 @@ const api = axios.create({
 // Prefer a token from localStorage; fall back to API key headers
 // configured via VITE_API_KEY and VITE_COMPANY_ID.
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('token');
+  const lsToken = localStorage.getItem('token');
+  const ssToken = sessionStorage.getItem('token');
+  const token = lsToken || ssToken;
+  const selectedCompanyId = localStorage.getItem('companyId');
+
+  config.headers = config.headers ?? {};
+
   if (token) {
-    config.headers = config.headers ?? {};
-    config.headers.Authorization = `Bearer ${token}`;
-    return config;
+    (config.headers as any).Authorization = `Bearer ${token}`;
   }
 
-  const apiKey = import.meta.env.VITE_API_KEY;
-  const companyId = import.meta.env.VITE_COMPANY_ID;
+  if (selectedCompanyId) {
+    (config.headers as any)['x-company-id'] = selectedCompanyId;
+  }
 
-  if (apiKey && companyId) {
-    config.headers = config.headers ?? {};
-    config.headers['x-api-key'] = apiKey;
-    config.headers['x-company-id'] = companyId;
+  if (!token) {
+    const apiKey = (import.meta as any).env.VITE_API_KEY;
+    const companyId = (import.meta as any).env.VITE_COMPANY_ID;
+    if (apiKey && companyId) {
+      (config.headers as any)['x-api-key'] = apiKey;
+      (config.headers as any)['x-company-id'] = companyId;
+    }
   }
 
   return config;

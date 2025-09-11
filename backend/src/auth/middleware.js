@@ -1,8 +1,22 @@
 const { verifyAccessToken, verifySsoToken } = require('./tokens');
 const companyContext = require('../companyContext');
 
+// Expanded role map to support new roles while preserving compatibility
 const rolePermissions = {
+  // New roles
+  super_admin: { '*': ['*'] },
   admin: { '*': ['*'] },
+  standard: {
+    inventory: ['read'],
+    documents: ['read'],
+    items: ['read'],
+  },
+  view: {
+    inventory: ['read'],
+    documents: ['read'],
+    items: ['read'],
+  },
+  // Backward compatible legacy roles
   manager: {
     inventory: ['read', 'write'],
     orders: ['read'],
@@ -36,11 +50,24 @@ function authenticateToken(req, res, next) {
   }
 
   const header = req.headers['authorization'];
-  const token = header && header.split(' ')[1];
+  let token = header && header.split(' ')[1];
+  if (!token && req.query && req.query.access_token) {
+    token = String(req.query.access_token);
+  }
   if (!token) return res.sendStatus(401);
   try {
     req.user = verifyAccessToken(token);
-    companyContext.run({ companyId: req.user.company_id }, next);
+    // Allow super_admin to override company context via header
+    const headerCompany = req.headers['x-company-id'] || (req.query && req.query.company_id);
+    let companyId = req.user.company_id;
+    if (
+      headerCompany &&
+      (req.user.role === 'super_admin' || req.user.role === 'admin_global') &&
+      !Number.isNaN(Number(headerCompany))
+    ) {
+      companyId = Number(headerCompany);
+    }
+    companyContext.run({ companyId }, next);
   } catch {
     return res.sendStatus(401);
   }

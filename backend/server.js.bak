@@ -18,8 +18,7 @@ const transfersRouter = require('./src/transfers');
 const logsRouter = require('./src/logs');
 const operations = require('./src/operations');
 const customersRouter = require('./src/customers');
-
-const notificationsRouter = require('./src/notifications');
+const suppliersRouter = require('./src/suppliers');
 const usersRouter = require('./src/users');
 const priceListsRouter = require('./src/priceLists');
 const db = require('./src/db');
@@ -183,8 +182,7 @@ async function start(port = process.env.PORT || 3000) {
   app.use('/customers', customersRouter.router);
   app.use('/suppliers', suppliersRouter.router);
   app.use('/users', usersRouter.router);
-  
-  app.use('/notifications', notificationsRouter.router);
+  app.use('/price-lists', priceListsRouter.router);
 
   // Dashboard reports
   app.get('/reports/dashboard', async (req, res) => {
@@ -609,4 +607,3 @@ if (require.main === module) {
 }
 
 module.exports = { start };
-

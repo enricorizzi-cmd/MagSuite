@@ -8,7 +8,12 @@ if (!ACCESS_SECRET || !REFRESH_SECRET) {
   throw new Error('ACCESS_SECRET and REFRESH_SECRET environment variables are required');
 }
 
-function generateTokens(user) {
+// options: { remember?: boolean, accessTtl?: string, refreshTtl?: string }
+function generateTokens(user, options = {}) {
+  const accessTtl = options.accessTtl || '15m';
+  // Default refresh 7d; if remember me, extend to 60d
+  const refreshTtl = options.refreshTtl || (options.remember ? '60d' : '7d');
+
   const accessToken = jwt.sign(
     {
       id: user.id,
@@ -18,9 +23,9 @@ function generateTokens(user) {
       permissions: user.permissions,
     },
     ACCESS_SECRET,
-    { expiresIn: '15m' }
+    { expiresIn: accessTtl }
   );
-  const refreshToken = jwt.sign({ id: user.id }, REFRESH_SECRET, { expiresIn: '7d' });
+  const refreshToken = jwt.sign({ id: user.id }, REFRESH_SECRET, { expiresIn: refreshTtl });
   return { accessToken, refreshToken };
 }
 

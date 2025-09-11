@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div class="min-h-screen flex items-center justify-center px-4 py-8">
     <div class="w-full max-w-5xl grid grid-cols-1 md:grid-cols-2 gap-6">
       <!-- Welcome / Branding -->
@@ -36,19 +36,13 @@
             <label class="block text-sm mb-1">Password</label>
             <input v-model="password" type="password" required
                    class="w-full px-3 py-2 rounded-lg bg-white/10 border border-white/10 text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-fuchsia-500/60 focus:border-fuchsia-400/60"
-                   placeholder="••••••••" />
+                   placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢" />
           </div>
           <div>
             <label class="block text-sm mb-1">MFA Token (se richiesto)</label>
             <input v-model="mfaToken"
                    class="w-full px-3 py-2 rounded-lg bg-white/10 border border-white/10 text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-fuchsia-500/60 focus:border-fuchsia-400/60"
                    placeholder="000000" />
-          </div>
-          <div class="flex items-center justify-between text-sm">
-            <label class="inline-flex items-center gap-2 select-none">
-              <input type="checkbox" v-model="remember" class="h-4 w-4 rounded border-white/20 bg-white/10" />
-              <span class="text-slate-300">Rimani connesso</span>
-            </label>
           </div>
           <button class="btn-arcade w-full" type="submit" :disabled="loading">Entra</button>
           <p class="text-sm text-rose-400" v-if="error">{{ error }}</p>
@@ -60,19 +54,6 @@
             <input v-model="companyName" required
                    class="w-full px-3 py-2 rounded-lg bg-white/10 border border-white/10 text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-fuchsia-500/60 focus:border-fuchsia-400/60"
                    placeholder="La Mia Azienda Srl" />
-            <div class="mt-2 flex gap-4 text-sm text-slate-300">
-              <label class="inline-flex items-center gap-2">
-                <input type="radio" value="existing" v-model="companyMode" class="h-4 w-4" />
-                <span>Azienda esistente</span>
-              </label>
-              <label class="inline-flex items-center gap-2">
-                <input type="radio" value="new" v-model="companyMode" class="h-4 w-4" />
-                <span>Crea nuova azienda</span>
-              </label>
-            </div>
-            <p v-if="companyMode==='existing' && companyName && companyChecked && !companyExists" class="text-xs text-amber-400 mt-1">
-              Attenzione: azienda non esistente. Controlla il nome o seleziona "Crea nuova azienda".
-            </p>
           </div>
           <div>
             <label class="block text-sm mb-1">Email</label>
@@ -87,9 +68,7 @@
                    placeholder="Almeno 8 caratteri, simboli, numeri" />
             <p class="text-xs text-slate-400 mt-1">Maiuscole, minuscole, numero e simbolo.</p>
           </div>
-          <button class="btn-arcade w-full" type="submit" :disabled="loading || (companyMode==='existing' && companyName && companyChecked && !companyExists)">
-            {{ companyMode==='new' ? 'Crea azienda e account' : 'Crea account' }}
-          </button>
+          <button class="btn-arcade w-full" type="submit" :disabled="loading">Crea azienda e account</button>
           <p class="text-sm text-rose-400" v-if="error">{{ error }}</p>
         </form>
       </div>
@@ -98,7 +77,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watchEffect } from 'vue';
+import { ref, computed } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 
 const router = useRouter();
@@ -111,10 +90,6 @@ const mfaToken = ref('');
 const companyName = ref('');
 const loading = ref(false);
 const error = ref('');
-const remember = ref(true);
-const companyMode = ref<'existing' | 'new'>('existing');
-const companyExists = ref<boolean>(false);
-const companyChecked = ref<boolean>(false);
 
 const tabClass =
   'flex-1 text-center py-2 rounded-lg text-slate-300 hover:text-white transition';
@@ -126,14 +101,9 @@ async function login() {
   error.value = '';
   try {
     const { default: api } = await import('../../services/api');
-    const { data } = await api.post('/auth/login', { email: email.value, password: password.value, mfaToken: mfaToken.value || undefined, remember: remember.value });
+    const { data } = await api.post('/auth/login', { email: email.value, password: password.value, mfaToken: mfaToken.value || undefined });
     if (!data?.accessToken) throw new Error('Credenziali non valide');
-    if (remember.value) {
-      localStorage.setItem('token', data.accessToken);
-    } else {
-      sessionStorage.setItem('token', data.accessToken);
-      localStorage.removeItem('token');
-    }
+    localStorage.setItem('token', data.accessToken);
     const redirect = (route.query.redirect as string) || '/dashboard';
     router.push(redirect);
   } catch (e: any) {
@@ -152,7 +122,7 @@ async function register() {
       email: email.value,
       password: password.value,
       company_name: companyName.value,
-      company_mode: companyMode.value
+      role: 'admin'
     });
     if (res.status !== 201) throw new Error('Registrazione non riuscita');
     const loginRes = await api.post('/auth/login', { email: email.value, password: password.value });
@@ -166,22 +136,6 @@ async function register() {
     loading.value = false;
   }
 }
-
-// Validate company existence in 'existing' mode
-watchEffect(async () => {
-  const name = companyName.value.trim();
-  companyChecked.value = false;
-  if (!name || companyMode.value !== 'existing') return;
-  try {
-    const { default: api } = await import('../../services/api');
-    const { data } = await api.get('/auth/company-exists', { params: { name } });
-    companyExists.value = !!data?.exists;
-  } catch {
-    companyExists.value = false;
-  } finally {
-    companyChecked.value = true;
-  }
-});
 </script>
 
 <style scoped>
@@ -202,3 +156,4 @@ watchEffect(async () => {
   filter: brightness(1.08);
 }
 </style>
+

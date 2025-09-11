@@ -15,7 +15,7 @@ const router = createRouter({
 
 router.beforeEach((to, from, next) => {
   if (to.path === '/') return next();
-  const token = localStorage.getItem('token');
+  const token = localStorage.getItem('token') || sessionStorage.getItem('token');
   if (!token) return next({ path: '/', query: { redirect: to.fullPath } });
   next();
 });

@@ -12,7 +12,7 @@
         :fields="[
           { key: 'email', label: 'Email', type: 'string' },
           { key: 'name', label: 'Nome', type: 'string' },
-          { key: 'role', label: 'Ruolo', type: 'string' },
+          { key: 'role', label: 'Ruolo', type: 'enum', options: ['super_admin','admin','standard','manager','worker'] },
           { key: 'status', label: 'Stato', type: 'enum', options: ['active','pending','suspended'] },
           { key: 'last_login', label: 'Ultimo login', type: 'string' }
         ]"
@@ -62,7 +62,7 @@
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label class="block text-xs text-slate-400 mb-1">Ruolo</label>
-              <select v-model="form.role" class="w-full bg-white/10 border border-white/10 rounded-lg px-3 py-2 text-sm">
+              <select v-model="form.role" class="w-full bg-white/10 border border-white/10 rounded-lg px-3 py-2 text-sm text-slate-200">
                 <option value="super_admin">super_admin</option>
                 <option value="admin">admin</option>
                 <option value="standard">standard</option>
@@ -72,14 +72,14 @@
             </div>
             <div>
               <label class="block text-xs text-slate-400 mb-1">Azienda</label>
-              <select v-model.number="form.company_id" class="w-full bg-white/10 border border-white/10 rounded-lg px-3 py-2 text-sm">
+              <select v-model.number="form.company_id" class="w-full bg-white/10 border border-white/10 rounded-lg px-3 py-2 text-sm text-slate-200">
                 <option v-for="c in companies" :key="c.id" :value="c.id">{{ c.name }}</option>
               </select>
             </div>
           </div>
           <div>
             <label class="block text-xs text-slate-400 mb-1">Stato</label>
-            <select v-model="form.status" class="w-full bg-white/10 border border-white/10 rounded-lg px-3 py-2 text-sm">
+            <select v-model="form.status" class="w-full bg-white/10 border border-white/10 rounded-lg px-3 py-2 text-sm text-slate-200">
               <option value="active">attivo</option>
               <option value="pending">in attivazione</option>
               <option value="suspended">sospeso</option>

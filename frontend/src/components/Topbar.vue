@@ -1,5 +1,6 @@
 ﻿<template>
   <header class="sticky top-0 z-40 backdrop-blur bg-black/20 border-b border-white/10">
+    <!-- Top row: brand + sections + actions -->
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-14 flex items-center justify-between gap-4 overflow-x-hidden">
       <!-- Left: Logo + Menu (mobile) -->
       <div class="flex items-center gap-2 sm:gap-3">
@@ -12,12 +13,16 @@
         <span class="hidden sm:inline text-sm font-semibold tracking-wide">MagSuite</span>
       </div>
 
-      <!-- Center: Tabs (desktop) -->
+      <!-- Center: Sections (desktop) -->
       <nav class="hidden md:flex items-center gap-2 text-sm">
-        <RouterLink v-for="t in tabs" :key="t.path" :to="t.path"
+        <RouterLink
+          v-for="s in sections"
+          :key="s.key"
+          :to="s.base"
           class="px-3 py-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-white/10"
-          :class="{ 'bg-white/10 text-white': isActive(t.path) }">
-          {{ t.label }}
+          :class="{ 'bg-white/10 text-white': currentSection === s.key }"
+        >
+          {{ s.label }}
         </RouterLink>
       </nav>
 
@@ -75,6 +80,21 @@
       </div>
     </div>
 
+    <!-- Second row: Tabs (desktop) -->
+    <div class="hidden md:block border-t border-white/10">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-10 flex items-center gap-2 overflow-x-auto">
+        <RouterLink
+          v-for="t in sectionTabs"
+          :key="t.path"
+          :to="t.path"
+          class="px-3 py-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-white/10 whitespace-nowrap"
+          :class="{ 'bg-white/10 text-white': isActive(t.path) }"
+        >
+          {{ t.label }}
+        </RouterLink>
+      </div>
+    </div>
+
     <!-- Mobile drawer -->
     <transition name="fade">
       <div v-if="isMenuOpen" class="fixed inset-0 z-50 bg-black/60 backdrop-blur-[1px]" @click="isMenuOpen=false"></div>
@@ -90,12 +110,20 @@
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-6 h-6"><path d="M6 18L18 6M6 6l12 12"/></svg>
           </button>
         </div>
-        <nav class="grid gap-1">
-          <RouterLink v-for="t in tabs" :key="t.path" :to="t.path" @click="isMenuOpen=false"
-            class="px-3 py-2 rounded-lg text-slate-300 hover:text-white hover:bg-white/10"
-            :class="{ 'bg-white/10 text-white': isActive(t.path) }">
-            {{ t.label }}
-          </RouterLink>
+        <nav class="grid gap-2 overflow-y-auto pr-1">
+          <div v-for="s in sections" :key="s.key" class="">
+            <div class="text-[11px] uppercase tracking-wide text-slate-400 px-2">{{ s.label }}</div>
+            <RouterLink
+              v-for="t in tabsForSection(s.key)"
+              :key="t.path"
+              :to="t.path"
+              @click="isMenuOpen=false"
+              class="block px-3 py-2 rounded-lg text-slate-300 hover:text-white hover:bg-white/10"
+              :class="{ 'bg-white/10 text-white': isActive(t.path) }"
+            >
+              {{ t.label }}
+            </RouterLink>
+          </div>
         </nav>
       </aside>
     </transition>
@@ -110,12 +138,62 @@ import { connectNotifications, unreadCount, items as notifItems, markAllRead, ca
 
 const route = useRoute();
 const router = useRouter();
-const tabs = computed(() => {
-  const base = [{ label: 'Dashboard', path: '/dashboard' }];
-  const list = [{ label: 'Utenti', path: '/users' }, ...base];
-  if (role.value === 'super_admin') list.unshift({ label: 'All Settings', path: '/all-settings' });
-  return list;
-});
+
+// Sections and tabs
+type Tab = { label: string; path: string };
+type Section = { key: 'home' | 'logistica' | 'commerciale' | 'amministrativa' | 'impostazioni'; label: string; base: string };
+
+const role = ref<string>('');
+
+const sections = computed<Section[]>(() => [
+  { key: 'home', label: 'Home', base: '/dashboard' },
+  { key: 'logistica', label: 'Logistica', base: '/logistica/giacenze' },
+  { key: 'commerciale', label: 'Direzione commerciale', base: '/direzione-commerciale/bpapp' },
+  { key: 'amministrativa', label: 'Direzione amministrativa', base: '/direzione-amministrativa/piano-finanziario' },
+  { key: 'impostazioni', label: 'Impostazioni', base: role.value === 'super_admin' ? '/all-settings' : '/users' },
+]);
+
+function sectionFromPath(path: string): Section['key'] {
+  if (path.startsWith('/logistica')) return 'logistica';
+  if (path.startsWith('/direzione-commerciale')) return 'commerciale';
+  if (path.startsWith('/direzione-amministrativa')) return 'amministrativa';
+  if (path === '/users' || path === '/all-settings') return 'impostazioni';
+  return 'home';
+}
+
+const currentSection = computed(() => sectionFromPath(route.path));
+
+function tabsForSection(key: Section['key']): Tab[] {
+  switch (key) {
+    case 'home':
+      return [{ label: 'Dashboard', path: '/dashboard' }];
+    case 'logistica':
+      return [
+        { label: 'Giacenze', path: '/logistica/giacenze' },
+        { label: 'Inventario', path: '/logistica/inventario' },
+        { label: 'Magazzini', path: '/logistica/magazzini' },
+        { label: 'Movimenti', path: '/logistica/movimenti' },
+      ];
+    case 'commerciale':
+      return [
+        { label: 'BPApp', path: '/direzione-commerciale/bpapp' },
+      ];
+    case 'amministrativa':
+      return [
+        { label: 'Piano Finanziario', path: '/direzione-amministrativa/piano-finanziario' },
+        { label: 'Marginalità', path: '/direzione-amministrativa/marginalita' },
+        { label: 'Flusso di Cassa', path: '/direzione-amministrativa/flusso-di-cassa' },
+        { label: 'Scadenzari', path: '/direzione-amministrativa/scadenzari' },
+      ];
+    case 'impostazioni':
+      return [
+        ...(role.value === 'super_admin' ? [{ label: 'All Settings', path: '/all-settings' } as Tab] : []),
+        { label: 'Utenti', path: '/users' },
+      ];
+  }
+}
+
+const sectionTabs = computed<Tab[]>(() => tabsForSection(currentSection.value));
 
 const isMenuOpen = ref(false);
 const notifOpen = ref(false);
@@ -123,7 +201,6 @@ const unread = unreadCount;
 const notifications = notifItems;
 const showNotifCTA = ref(false);
 
-const role = ref<string>('');
 const companies = ref<Array<{ id: number; name: string }>>([]);
 const currentCompany = ref<{ id: number; name: string } | null>(null);
 const selectedCompanyId = ref<string>('');

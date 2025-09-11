@@ -1,13 +1,13 @@
 <template>
   <div class="mb-4">
     <!-- Filters Row -->
-    <div class="flex flex-wrap items-center gap-2">
-      <div class="text-xs uppercase tracking-wide text-slate-400 mr-2">Filtri</div>
+    <div class="flex flex-wrap items-start gap-3">
+      <div class="text-xs uppercase tracking-wide text-slate-400 w-full">Filtri</div>
       <template v-for="f in fieldsToUse" :key="f.key">
         <!-- Boolean selector -->
-        <div v-if="f.type==='boolean'" class="flex items-center gap-1">
+        <div v-if="f.type==='boolean'" class="flex flex-col gap-1">
           <label class="text-xs text-slate-400">{{ f.label || f.key }}</label>
-          <select v-model="localFilters[f.key]" class="bg-white/10 border border-white/10 rounded px-2 py-1 text-sm">
+          <select v-model="localFilters[f.key]" class="min-w-[10rem] bg-white/10 border border-white/10 rounded px-2 py-1 text-sm text-slate-200">
             <option :value="''">Tutti</option>
             <option :value="'true'">Sì</option>
             <option :value="'false'">No</option>
@@ -15,24 +15,24 @@
         </div>
 
         <!-- Enum selector -->
-        <div v-else-if="f.type==='enum'" class="flex items-center gap-1">
+        <div v-else-if="f.type==='enum'" class="flex flex-col gap-1">
           <label class="text-xs text-slate-400">{{ f.label || f.key }}</label>
-          <select v-model="localFilters[f.key]" class="bg-white/10 border border-white/10 rounded px-2 py-1 text-sm">
+          <select v-model="localFilters[f.key]" class="min-w-[10rem] bg-white/10 border border-white/10 rounded px-2 py-1 text-sm text-slate-200">
             <option :value="''">Tutti</option>
             <option v-for="opt in f.options || []" :key="String(opt)" :value="String(opt)">{{ opt }}</option>
           </select>
         </div>
 
         <!-- Number input (equality) -->
-        <div v-else-if="f.type==='number'" class="flex items-center gap-1">
+        <div v-else-if="f.type==='number'" class="flex flex-col gap-1">
           <label class="text-xs text-slate-400">{{ f.label || f.key }}</label>
-          <input v-model="localFilters[f.key]" type="number" class="w-28 bg-white/10 border border-white/10 rounded px-2 py-1 text-sm" placeholder="=" />
+          <input v-model="localFilters[f.key]" type="number" class="w-28 bg-white/10 border border-white/10 rounded px-2 py-1 text-sm text-slate-200 placeholder:text-slate-400" placeholder="=" />
         </div>
 
         <!-- String input (contains) -->
-        <div v-else class="flex items-center gap-1">
+        <div v-else class="flex flex-col gap-1">
           <label class="text-xs text-slate-400">{{ f.label || f.key }}</label>
-          <input v-model="localFilters[f.key]" type="text" class="w-40 bg-white/10 border border-white/10 rounded px-2 py-1 text-sm" placeholder="contiene..." />
+          <input v-model="localFilters[f.key]" type="text" class="w-40 bg-white/10 border border-white/10 rounded px-2 py-1 text-sm text-slate-200 placeholder:text-slate-400" placeholder="contiene..." />
         </div>
       </template>
 
@@ -232,5 +232,8 @@ watch(() => props.items, () => { reset(); }, { deep: false });
 </script>
 
 <style scoped>
+/* Improve readability of selects on dark background */
+select { color: #e5e7eb; }
+/* Keep strong contrast inside native option popups */
+select option { color: #111827; }
 </style>
-

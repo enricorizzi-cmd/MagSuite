@@ -41,3 +41,10 @@ Note applicative:
 
 - All Settings (elenco aziende): includere filtro per stato (sospesa/attiva) oltre agli altri campi (`id`, `name`).
 - Pagina Utenti: includere filtri per `ruolo` e `stato` (e in generale tutti i campi disponibili negli elementi: `email`, `name`, `company_id`, ecc.).
+
+## Nota UI: filtri e layout (set 2025)
+
+- Campi predefiniti: usare la tendina per insiemi noti (es. `Ruolo`, `Stato`). Esempio `Ruolo`: `['super_admin','admin','standard','manager','worker']`.
+- Campi liberi: usare input testuale con ricerca "contiene" (case‑insensitive).
+- Layout filtri su desktop: etichette sopra al campo per facilitare l'allineamento delle colonne.
+- Accessibilità su tema scuro: rendere il testo dei `select` leggibile (es. Tailwind `text-slate-200`) e i placeholder degli input con sufficiente contrasto.

@@ -25,7 +25,7 @@ How to use in pages
 ```vue
 <ListFilters :items="rows" :fields="[
   { key: 'status', label: 'Stato', type: 'enum', options: ['active','pending','suspended'] },
-  { key: 'role', label: 'Ruolo', type: 'string' },
+  { key: 'role', label: 'Ruolo', type: 'enum', options: ['super_admin','admin','standard','manager','worker'] },
   { key: 'last_login', label: 'Ultimo Login', type: 'string' }
 ]" v-slot="{ filtered }">
   <!-- render filtered rows here -->
@@ -37,4 +37,3 @@ Notes
 
 - Keep using `filtered` for rendering; it now includes both filter and sort transformations.
 - Prefer `ListFilters` in all new list/table views to get consistent filters and sorting across the app.
-

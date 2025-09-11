@@ -3,7 +3,7 @@
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-14 flex items-center justify-between gap-4">
       <!-- Left: Logo + Menu (mobile) -->
       <div class="flex items-center gap-3">
-        <button class="md:hidden p-2 rounded-lg hover:bg-white/10" @click="isMenuOpen = true" aria-label="Apri menu">
+        <button class="md:hidden p-2 rounded-lg hover:bg-white/10 text-slate-200" @click="isMenuOpen = true" aria-label="Apri menu">
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-6 h-6"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
         </button>
         <img src="/icon.svg" alt="MagSuite" class="h-7 w-7" />
@@ -68,10 +68,10 @@
 
     <!-- Mobile drawer -->
     <transition name="fade">
-      <div v-if="isMenuOpen" class="fixed inset-0 bg-black/60" @click="isMenuOpen=false"></div>
+      <div v-if="isMenuOpen" class="fixed inset-0 bg-black/60 z-50" @click="isMenuOpen=false"></div>
     </transition>
     <transition name="slide">
-      <aside v-if="isMenuOpen" class="fixed top-0 left-0 h-full w-72 bg-[#0b1020] border-r border-white/10 p-4">
+      <aside v-if="isMenuOpen" class="fixed top-0 left-0 h-full w-72 bg-[#0b1020] border-r border-white/10 p-4 z-50 shadow-2xl">
         <div class="flex items-center justify-between mb-4">
           <div class="flex items-center gap-2">
             <img src="/icon.svg" class="h-6 w-6" />
@@ -82,7 +82,7 @@
           </button>
         </div>
         <nav class="grid gap-1">
-          <RouterLink v-for="t in tabs" :key="t.path" :to="t.path" @click.native="isMenuOpen=false"
+          <RouterLink v-for="t in tabs" :key="t.path" :to="t.path" @click="isMenuOpen=false"
             class="px-3 py-2 rounded-lg text-slate-300 hover:text-white hover:bg-white/10"
             :class="{ 'bg-white/10 text-white': isActive(t.path) }">
             {{ t.label }}

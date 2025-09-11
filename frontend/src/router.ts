@@ -18,8 +18,15 @@ const router = createRouter({
 });
 
 router.beforeEach((to, from, next) => {
-  if (to.path === '/') return next();
   const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+
+  // If user hits the auth page and already has a token, send to dashboard
+  if (to.path === '/') {
+    if (token) return next('/dashboard');
+    return next();
+  }
+
+  // For protected routes, require a token
   if (!token) return next({ path: '/', query: { redirect: to.fullPath } });
   next();
 });

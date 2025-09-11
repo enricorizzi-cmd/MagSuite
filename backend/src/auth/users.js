@@ -38,6 +38,12 @@ const ready = (async () => {
     ) THEN
       EXECUTE 'ALTER TABLE users ADD COLUMN mfa_secret text';
     END IF;
+    IF NOT EXISTS (
+      SELECT 1 FROM information_schema.columns
+      WHERE table_name='users' AND column_name='name'
+    ) THEN
+      EXECUTE 'ALTER TABLE users ADD COLUMN name text';
+    END IF;
   END$$;`);
 })();
 
@@ -90,11 +96,75 @@ async function getUserById(id) {
   const { rows } = await db.query(
     `SELECT u.id, u.email, u.password_hash, u.warehouse_id, u.company_id, u.mfa_secret,
             COALESCE(r.name, 'worker') AS role,
-            u.last_login
+            u.last_login,
+            u.name
        FROM users u LEFT JOIN roles r ON r.id = u.role_id
       WHERE u.id = $1`, [id]
   );
   return rows[0] || null;
+}
+
+async function updateUser(id, changes) {
+  await ready;
+  const fields = [];
+  const params = [];
+
+  // Email change with case-insensitive uniqueness check
+  if (typeof changes.email === 'string') {
+    const newEmail = changes.email.trim();
+    if (!newEmail) throw new Error('Email required');
+    const exists = await db.query('SELECT 1 FROM users WHERE lower(email)=lower($1) AND id<>$2', [newEmail, id]);
+    if (exists.rowCount > 0) throw new Error('Email already in use');
+    fields.push('email'); params.push(newEmail);
+  }
+
+  // Optional display name
+  if (Object.prototype.hasOwnProperty.call(changes, 'name')) {
+    const nm = (changes.name == null) ? null : String(changes.name).trim();
+    fields.push('name'); params.push(nm);
+  }
+
+  // Role update -> role_id
+  if (typeof changes.role === 'string') {
+    const roleId = await ensureRole(changes.role);
+    fields.push('role_id'); params.push(roleId);
+  }
+
+  // Warehouse
+  if (Object.prototype.hasOwnProperty.call(changes, 'warehouse_id')) {
+    const wid = (changes.warehouse_id == null) ? null : Number(changes.warehouse_id);
+    fields.push('warehouse_id'); params.push(Number.isNaN(wid) ? null : wid);
+  }
+
+  // Company change
+  if (Object.prototype.hasOwnProperty.call(changes, 'company_id')) {
+    const cid = (changes.company_id == null) ? null : Number(changes.company_id);
+    if (cid != null) {
+      const { rows } = await db.query('SELECT id FROM companies WHERE id=$1', [cid]);
+      if (!rows[0]) throw new Error('Company not found');
+    }
+    fields.push('company_id'); params.push(Number.isNaN(cid) ? null : cid);
+  }
+
+  // Password -> password_hash
+  if (typeof changes.password === 'string' && changes.password.length > 0) {
+    validatePassword(changes.password);
+    const hash = await bcrypt.hash(changes.password, 10);
+    fields.push('password_hash'); params.push(hash);
+  }
+
+  if (fields.length === 0) {
+    const current = await getUserById(id);
+    if (!current) throw new Error('User not found');
+    return current;
+  }
+
+  const setClauses = fields.map((f, i) => `${f}=$${i + 1}`).join(', ');
+  params.push(id);
+  await db.query(`UPDATE users SET ${setClauses} WHERE id=$${params.length}`, params);
+  const updated = await getUserById(id);
+  if (!updated) throw new Error('User not found');
+  return updated;
 }
 
 async function enableMfa(id) {
@@ -137,4 +207,6 @@ module.exports = {
   authenticate,
   enableMfa,
   disableMfa,
+  getUserById,
+  updateUser,
 };

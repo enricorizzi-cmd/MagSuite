@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { createUser, authenticate, enableMfa, ready } = require('./users');
+const { createUser, authenticate, enableMfa, ready, getUserById, updateUser } = require('./users');
 const { generateTokens } = require('./tokens');
 const { authenticateToken } = require('./middleware');
 const audit = require('../audit');
@@ -133,11 +133,11 @@ router.get('/company-users/:id', authenticateToken, (req, res) => {
     if (user.role !== 'super_admin') return res.sendStatus(403);
     const cid = Number(req.params.id);
     const { rows } = await db.query(
-      `SELECT u.id, u.email, COALESCE(r.name,'worker') AS role, u.warehouse_id, u.company_id, u.last_login
+      `SELECT u.id, u.email, COALESCE(r.name,'worker') AS role, u.warehouse_id, u.company_id, u.last_login, u.name
          FROM users u LEFT JOIN roles r ON r.id = u.role_id
         WHERE u.company_id = $1 ORDER BY u.id`, [cid]
     );
-    res.json(rows.map(u => ({ id: u.id, email: u.email, role: u.role, warehouse_id: u.warehouse_id, company_id: u.company_id, last_login: u.last_login })));
+    res.json(rows.map(u => ({ id: u.id, email: u.email, role: u.role, warehouse_id: u.warehouse_id, company_id: u.company_id, last_login: u.last_login, name: u.name })));
   })().catch(err => res.status(500).json({ error: err.message }));
 });
 
@@ -147,12 +147,40 @@ router.get('/my-company/users', authenticateToken, (req, res) => {
     const headerCompany = req.headers['x-company-id'];
     const companyId = Number(headerCompany || req.user.company_id);
     const { rows } = await db.query(
-      `SELECT u.id, u.email, COALESCE(r.name,'worker') AS role, u.warehouse_id, u.company_id, u.last_login
+      `SELECT u.id, u.email, COALESCE(r.name,'worker') AS role, u.warehouse_id, u.company_id, u.last_login, u.name
          FROM users u LEFT JOIN roles r ON r.id = u.role_id
         WHERE u.company_id = $1 ORDER BY u.id`, [companyId]
     );
-    res.json(rows.map(u => ({ id: u.id, email: u.email, role: u.role, warehouse_id: u.warehouse_id, company_id: u.company_id, last_login: u.last_login })));
+    res.json(rows.map(u => ({ id: u.id, email: u.email, role: u.role, warehouse_id: u.warehouse_id, company_id: u.company_id, last_login: u.last_login, name: u.name })));
   })().catch(err => res.status(500).json({ error: err.message }));
+});
+
+// Get user by id (super admin only)
+router.get('/users/:id', authenticateToken, async (req, res) => {
+  if (req.user.role !== 'super_admin') return res.sendStatus(403);
+  const id = Number(req.params.id);
+  try {
+    const user = await getUserById(id);
+    if (!user) return res.sendStatus(404);
+    const out = { id: user.id, email: user.email, role: user.role, warehouse_id: user.warehouse_id, company_id: user.company_id, last_login: user.last_login, name: user.name };
+    res.json(out);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Update user (super admin only)
+router.put('/users/:id', authenticateToken, async (req, res) => {
+  if (req.user.role !== 'super_admin') return res.sendStatus(403);
+  const id = Number(req.params.id);
+  const { email, password, role, warehouse_id, company_id, name } = req.body || {};
+  try {
+    const updated = await updateUser(id, { email, password, role, warehouse_id, company_id, name });
+    const out = { id: updated.id, email: updated.email, role: updated.role, warehouse_id: updated.warehouse_id, company_id: updated.company_id, last_login: updated.last_login, name: updated.name };
+    res.json(out);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
 });
 
 // Maintenance: promote the only existing user to super_admin (protected)

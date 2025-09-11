@@ -1,10 +1,14 @@
 import { createRouter, createWebHistory, RouteRecordRaw } from 'vue-router';
 import Auth from './pages/auth/Auth.vue';
 import Dashboard from './pages/dashboard/Dashboard.vue';
+import AllSettings from './pages/settings/AllSettings.vue';
+import Users from './pages/users/Users.vue';
 
 const routes: Array<RouteRecordRaw> = [
   { path: '/', name: 'auth', component: Auth },
   { path: '/dashboard', name: 'dashboard', component: Dashboard },
+  { path: '/all-settings', name: 'all-settings', component: AllSettings },
+  { path: '/users', name: 'users', component: Users },
   { path: '/:pathMatch(.*)*', redirect: '/' }
 ];
 

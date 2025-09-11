@@ -80,6 +80,7 @@ router.post('/login', async (req, res) => {
   const user = await authenticate({ email, password, mfaToken });
   if (!user) return res.status(401).json({ error: 'Invalid credentials' });
   audit.logAction(user.id, 'login');
+  try { user.last_login = new Date().toISOString(); } catch {}
   const tokens = generateTokens(user, { remember: !!remember });
   res.json(tokens);
 });
@@ -121,6 +122,31 @@ router.get('/companies', authenticateToken, async (req, res) => {
 router.get('/me', authenticateToken, (req, res) => {
   const { id, role, warehouse_id, company_id, permissions } = req.user || {};
   res.json({ id, role, warehouse_id, company_id, permissions });
+});
+
+// List users for a specific company (super admin only)
+router.get('/company-users/:id', authenticateToken, (req, res) => {
+  const user = req.user;
+  if (user.role !== 'super_admin') return res.sendStatus(403);
+  const { _internal } = require('./users');
+  const cid = Number(req.params.id);
+  const list = _internal
+    .list()
+    .filter((u) => Number(u.company_id) === cid)
+    .map((u) => ({ id: u.id, email: u.email, role: u.role, warehouse_id: u.warehouse_id, company_id: u.company_id, last_login: u.last_login || null }));
+  res.json(list);
+});
+
+// List users for the current company (visible to all roles)
+router.get('/my-company/users', authenticateToken, (req, res) => {
+  const headerCompany = req.headers['x-company-id'];
+  const companyId = Number(headerCompany || req.user.company_id);
+  const { _internal } = require('./users');
+  const list = _internal
+    .list()
+    .filter((u) => Number(u.company_id) === companyId)
+    .map((u) => ({ id: u.id, email: u.email, role: u.role, warehouse_id: u.warehouse_id, company_id: u.company_id, last_login: u.last_login || null }));
+  res.json(list);
 });
 
 // Maintenance: promote the only existing user to super_admin (protected)

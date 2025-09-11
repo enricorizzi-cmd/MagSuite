@@ -29,7 +29,7 @@
           </select>
         </div>
         <div v-else class="text-sm text-slate-200 min-w-[180px] truncate">
-          <span class="opacity-70">Azienda:</span> {{ currentCompany?.name || 'â€”' }}
+          <span class="opacity-70">Azienda:</span> {{ currentCompany?.name || '—' }}
         </div>
 
         <!-- Notifications bell -->
@@ -88,15 +88,18 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref } from 'vue';
+import { onMounted, ref, computed } from 'vue';
 import { useRoute } from 'vue-router';
 import api from '../services/api';
 import { connectNotifications, unreadCount, items as notifItems, markAllRead } from '../services/notifications';
 
 const route = useRoute();
-const tabs = [
-  { label: 'Dashboard', path: '/dashboard' },
-];
+const tabs = computed(() => {
+  const base = [{ label: 'Dashboard', path: '/dashboard' }];
+  const list = [{ label: 'Utenti', path: '/users' }, ...base];
+  if (role.value === 'super_admin') list.unshift({ label: 'All Settings', path: '/all-settings' });
+  return list;
+});
 
 const isMenuOpen = ref(false);
 const notifOpen = ref(false);
@@ -174,3 +177,4 @@ onMounted(async () => {
 .slide-enter-active, .slide-leave-active { transition: transform .25s ease; }
 .slide-enter-from, .slide-leave-to { transform: translateX(-100%); }
 </style>
+

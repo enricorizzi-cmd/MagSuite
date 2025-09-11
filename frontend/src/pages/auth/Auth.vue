@@ -38,12 +38,7 @@
                    class="w-full px-3 py-2 rounded-lg bg-white/10 border border-white/10 text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-fuchsia-500/60 focus:border-fuchsia-400/60"
                    placeholder="••••••••" />
           </div>
-          <div>
-            <label class="block text-sm mb-1">MFA Token (se richiesto)</label>
-            <input v-model="mfaToken"
-                   class="w-full px-3 py-2 rounded-lg bg-white/10 border border-white/10 text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-fuchsia-500/60 focus:border-fuchsia-400/60"
-                   placeholder="000000" />
-          </div>
+          
           <div class="flex items-center justify-between text-sm">
             <label class="inline-flex items-center gap-2 select-none">
               <input type="checkbox" v-model="remember" class="h-4 w-4 rounded border-white/20 bg-white/10" />
@@ -107,7 +102,7 @@ const tab = ref<'login' | 'register'>('login');
 
 const email = ref('');
 const password = ref('');
-const mfaToken = ref('');
+
 const companyName = ref('');
 const loading = ref(false);
 const error = ref('');
@@ -126,7 +121,7 @@ async function login() {
   error.value = '';
   try {
     const { default: api } = await import('../../services/api');
-    const { data } = await api.post('/auth/login', { email: email.value, password: password.value, mfaToken: mfaToken.value || undefined, remember: remember.value });
+    const { data } = await api.post('/auth/login', { email: email.value, password: password.value, remember: remember.value });
     if (!data?.accessToken) throw new Error('Credenziali non valide');
     if (remember.value) {
       localStorage.setItem('token', data.accessToken);

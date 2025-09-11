@@ -63,7 +63,9 @@ router.get('/', async (req, res) => {
     params.push(`%${q}%`);
     params.push(`%${q}%`);
     params.push(`%${q}%`);
-    conditions.push(`(i.name ILIKE $${params.length-3} OR i.sku ILIKE $${params.length-2} OR i.code ILIKE $${params.length-1} OR i.description ILIKE $${params.length})`);
+    conditions.push(
+      `(i.name ILIKE $${params.length - 3} OR i.sku ILIKE $${params.length - 2} OR i.code ILIKE $${params.length - 1} OR i.description ILIKE $${params.length})`
+    );
   }
   if (type) { params.push(type); conditions.push(`i.type = $${params.length}`); }
   if (category) { params.push(category); conditions.push(`i.category = $${params.length}`); }
@@ -71,29 +73,61 @@ router.get('/', async (req, res) => {
   if (classKey) { params.push(classKey); conditions.push(`i.class = $${params.length}`); }
   if (supplier) { params.push(supplier); conditions.push(`i.supplier = $${params.length}`); }
   const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
-  const result = await db.query(
-    `SELECT i.id, i.name, i.sku, i.lotti, i.seriali,
-            i.barcode, i.code, i.description, i.type, i.category, i."group", i.class,
-            i.manufacturer, i.distributor, i.supplier, i.notes, i.size, i.color,
-            i.purchase_price, i.avg_weighted_price, i.min_stock, i.rotation_index, i.last_purchase_date,
-            COALESCE(s.qty, 0) AS quantity_on_hand
-       FROM items i
-       LEFT JOIN (
-         SELECT sm.item_id, SUM(sm.quantity) AS qty
-         FROM stock_movements sm
-         JOIN items ii ON ii.id = sm.item_id
-         WHERE ii.company_id = $1
-         GROUP BY sm.item_id
-       ) s ON s.item_id = i.id
-      ${where}
-      ORDER BY i.id LIMIT $${params.length + 1} OFFSET $${params.length + 2}`,
-    [...params, limit, offset]
-  );
-  const totalRes = await db.query(
-    `SELECT COUNT(*) FROM items i ${where.replace('i.', '')}`,
-    params
-  );
-  res.json({ items: result.rows, total: parseInt(totalRes.rows[0].count, 10) });
+
+  try {
+    const result = await db.query(
+      `SELECT i.id, i.name, i.sku, i.lotti, i.seriali,
+              i.barcode, i.code, i.description, i.type, i.category, i."group", i.class,
+              i.manufacturer, i.distributor, i.supplier, i.notes, i.size, i.color,
+              i.purchase_price, i.avg_weighted_price, i.min_stock, i.rotation_index, i.last_purchase_date,
+              COALESCE(s.qty, 0) AS quantity_on_hand
+         FROM items i
+         LEFT JOIN (
+           SELECT sm.item_id, SUM(sm.quantity) AS qty
+           FROM stock_movements sm
+           JOIN items ii ON ii.id = sm.item_id
+           WHERE ii.company_id = $1
+           GROUP BY sm.item_id
+         ) s ON s.item_id = i.id
+        ${where}
+        ORDER BY i.id LIMIT $${params.length + 1} OFFSET $${params.length + 2}`,
+      [...params, limit, offset]
+    );
+    const totalRes = await db.query(
+      `SELECT COUNT(*) FROM items i ${where}`,
+      params
+    );
+    return res.json({ items: result.rows, total: parseInt(totalRes.rows[0].count, 10) });
+  } catch (err) {
+    // If stock_movements (or other joined tables) are missing, fall back to a simpler query
+    const code = err && (err.code || err.sqlState);
+    const msg = err && (err.message || '');
+    if (code === '42P01' || /stock_movements/i.test(msg)) {
+      try {
+        const result = await db.query(
+          `SELECT i.id, i.name, i.sku, i.lotti, i.seriali,
+                  i.barcode, i.code, i.description, i.type, i.category, i."group", i.class,
+                  i.manufacturer, i.distributor, i.supplier, i.notes, i.size, i.color,
+                  i.purchase_price, i.avg_weighted_price, i.min_stock, i.rotation_index, i.last_purchase_date,
+                  0::numeric AS quantity_on_hand
+             FROM items i
+            ${where}
+            ORDER BY i.id LIMIT $${params.length + 1} OFFSET $${params.length + 2}`,
+          [...params, limit, offset]
+        );
+        const totalRes = await db.query(
+          `SELECT COUNT(*) FROM items i ${where}`,
+          params
+        );
+        return res.json({ items: result.rows, total: parseInt(totalRes.rows[0].count, 10) });
+      } catch (e2) {
+        console.error('GET /items fallback failed', e2);
+        return res.status(500).json({ error: 'Errore nel recupero articoli' });
+      }
+    }
+    console.error('GET /items failed', err);
+    return res.status(500).json({ error: 'Errore nel recupero articoli' });
+  }
 });
 
 router.get('/export', async (req, res) => {

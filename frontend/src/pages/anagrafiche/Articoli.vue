@@ -17,7 +17,8 @@
         </div>
         <ListFilters
           :items="rows"
-          :fields="fields"
+          :new-label="'Nuovo articolo'"
+          @new="openCreate"
           v-slot="{ filtered }"
         >
           <div v-if="filtered.length === 0" class="text-slate-400">Nessun risultato.</div>
@@ -25,22 +26,12 @@
             <table class="min-w-full text-sm">
               <thead class="bg-white/5 text-slate-300">
                 <tr>
-                  <th class="text-left px-3 py-2">SKU</th>
-                  <th class="text-left px-3 py-2">Nome</th>
-                  <th class="text-left px-3 py-2">Categoria</th>
-                  <th class="text-left px-3 py-2">Tipo</th>
-                  <th class="text-left px-3 py-2">Fornitore</th>
-                  <th class="text-right px-3 py-2">Giacenza</th>
+                  <th v-for="c in columns" :key="c.key" class="px-3 py-2" :class="c.align==='right' ? 'text-right' : 'text-left'">{{ c.label }}</th>
                 </tr>
               </thead>
               <tbody>
                 <tr v-for="i in filtered" :key="i.id" class="border-t border-white/10">
-                  <td class="px-3 py-2 text-slate-300">{{ i.sku }}</td>
-                  <td class="px-3 py-2 text-slate-100">{{ i.name }}</td>
-                  <td class="px-3 py-2 text-slate-300">{{ i.category || '-' }}</td>
-                  <td class="px-3 py-2 text-slate-300">{{ i.type || '-' }}</td>
-                  <td class="px-3 py-2 text-slate-300">{{ i.supplier || '-' }}</td>
-                  <td class="px-3 py-2 text-right text-slate-100">{{ formatQty(i.quantity_on_hand) }}</td>
+                  <td v-for="c in columns" :key="c.key" class="px-3 py-2" :class="cellClass(c.key, c.align)">{{ renderCell(i, c.key) }}</td>
                 </tr>
               </tbody>
             </table>
@@ -103,9 +94,26 @@ async function load() {
       id: i.id,
       sku: i.sku,
       name: i.name,
-      category: i.category,
+      barcode: i.barcode,
+      code: i.code,
+      description: i.description,
       type: i.type,
+      category: i.category,
+      group: i.group,
+      class: i.class,
+      manufacturer: i.manufacturer,
+      distributor: i.distributor,
       supplier: i.supplier,
+      notes: i.notes,
+      size: i.size,
+      color: i.color,
+      purchase_price: numberOrNull(i.purchase_price),
+      avg_weighted_price: numberOrNull(i.avg_weighted_price),
+      min_stock: intOrNull(i.min_stock),
+      rotation_index: numberOrNull(i.rotation_index),
+      last_purchase_date: i.last_purchase_date || null,
+      lotti: !!i.lotti,
+      seriali: !!i.seriali,
       quantity_on_hand: typeof i.quantity_on_hand === 'number' ? i.quantity_on_hand : 0
     }));
     total.value = typeof data?.total === 'number' ? data.total : 0;
@@ -118,6 +126,58 @@ async function load() {
 
 function formatQty(n?: number) {
   try { return (n ?? 0).toLocaleString(); } catch { return String(n ?? 0); }
+}
+
+// Full columns to render all planned item fields
+const columns = [
+  { key: 'sku', label: 'SKU', align: 'left' },
+  { key: 'name', label: 'Nome', align: 'left' },
+  { key: 'barcode', label: 'Barcode', align: 'left' },
+  { key: 'code', label: 'Codice', align: 'left' },
+  { key: 'description', label: 'Descrizione', align: 'left' },
+  { key: 'type', label: 'Tipo', align: 'left' },
+  { key: 'category', label: 'Categoria', align: 'left' },
+  { key: 'group', label: 'Gruppo', align: 'left' },
+  { key: 'class', label: 'Classe', align: 'left' },
+  { key: 'manufacturer', label: 'Produttore', align: 'left' },
+  { key: 'distributor', label: 'Distributore', align: 'left' },
+  { key: 'supplier', label: 'Fornitore', align: 'left' },
+  { key: 'notes', label: 'Note', align: 'left' },
+  { key: 'size', label: 'Taglia', align: 'left' },
+  { key: 'color', label: 'Colore', align: 'left' },
+  { key: 'purchase_price', label: 'Prezzo acquisto', align: 'right' },
+  { key: 'avg_weighted_price', label: 'Costo medio', align: 'right' },
+  { key: 'min_stock', label: 'Scorta min', align: 'right' },
+  { key: 'rotation_index', label: 'Indice rotazione', align: 'right' },
+  { key: 'last_purchase_date', label: 'Ultimo acquisto', align: 'left' },
+  { key: 'lotti', label: 'Lotti', align: 'left' },
+  { key: 'seriali', label: 'Seriali', align: 'left' },
+  { key: 'quantity_on_hand', label: 'Giacenza', align: 'right' },
+];
+
+function numberOrNull(v: any): number | null {
+  const n = typeof v === 'number' ? v : Number(v);
+  return Number.isFinite(n) ? n : null;
+}
+function intOrNull(v: any): number | null {
+  const n = typeof v === 'number' ? v : Number(v);
+  return Number.isInteger(n) ? n : null;
+}
+
+function cellClass(key: string, align: string) {
+  const base = align === 'right' ? 'text-right' : 'text-left';
+  if (key === 'name') return base + ' text-slate-100';
+  if (key === 'quantity_on_hand' || key.includes('price') || key.includes('stock') || key.includes('index')) return base + ' text-slate-100';
+  return base + ' text-slate-300';
+}
+
+function renderCell(row: Record<string, any>, key: string) {
+  const v = (row as any)[key];
+  if (key === 'quantity_on_hand') return formatQty(v);
+  if (typeof v === 'boolean') return v ? 'Sì' : 'No';
+  if (v == null || v === '') return '-';
+  if (typeof v === 'number') return v.toLocaleString();
+  return String(v);
 }
 
 onMounted(load);
@@ -151,6 +211,32 @@ async function exportItems(format: 'csv'|'xlsx') {
     URL.revokeObjectURL(url);
   } catch (e: any) {
     alert(e?.response?.data?.error || e?.message || 'Errore export');
+  }
+}
+
+// Create Item modal state + actions
+const creating = ref(false);
+const createError = ref('');
+const createForm = ref<{ name: string; sku: string; type: string; category: string; supplier: string; lotti: boolean; seriali: boolean }>({
+  name: '', sku: '', type: '', category: '', supplier: '', lotti: false, seriali: false
+});
+
+function openCreate() {
+  createError.value = '';
+  createForm.value = { name: '', sku: '', type: '', category: '', supplier: '', lotti: false, seriali: false };
+  creating.value = true;
+}
+function closeCreate() { creating.value = false; }
+async function saveCreate() {
+  try {
+    createError.value = '';
+    const payload: any = { ...createForm.value };
+    if (!payload.sku) delete payload.sku; // backend can auto-generate
+    await api.post('/items', payload);
+    creating.value = false;
+    await load();
+  } catch (e: any) {
+    createError.value = e?.response?.data?.error || e?.message || 'Errore creazione articolo';
   }
 }
 </script>

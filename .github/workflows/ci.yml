@@ -27,6 +27,8 @@ jobs:
         run: npm test --silent
       - name: Lint
         run: npm run lint --silent
+      - name: Lint server.js (strict no-undef)
+        run: npx eslint server.js --no-ignore --rule 'no-undef:error' --max-warnings=0
 
   frontend:
     runs-on: ubuntu-latest

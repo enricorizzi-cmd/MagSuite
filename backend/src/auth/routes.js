@@ -111,7 +111,12 @@ router.get('/company-exists', async (req, res) => {
 
 // Current company details for the active context
 router.get('/current-company', authenticateToken, async (req, res) => {
-  const { rows } = await db.query(`SELECT id, name FROM companies WHERE id = current_setting('app.current_company_id')::int`);
+  // Use missing_ok=true and guard against empty string to avoid cast errors
+  const { rows } = await db.query(
+    `SELECT id, name
+       FROM companies
+      WHERE id = NULLIF(current_setting('app.current_company_id', true), '')::int`
+  );
   if (!rows[0]) return res.status(404).json({ error: 'Company not found' });
   res.json(rows[0]);
 });

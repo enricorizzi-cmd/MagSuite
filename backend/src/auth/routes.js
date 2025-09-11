@@ -70,6 +70,8 @@ router.post('/register', async (req, res) => {
     audit.logAction(user.id, 'register', { company_id: finalCompanyId, company_mode: company_mode || 'existing' });
     res.status(201).json({ id: user.id, email: user.email, company_id: finalCompanyId, role: user.role });
   } catch (err) {
+    // Log error to aid debugging in tests
+    console.error('Register error:', err && err.message ? err.message : err);
     res.status(400).json({ error: err.message });
   }
 });
@@ -87,8 +89,8 @@ router.post('/login', async (req, res) => {
   res.json(tokens);
 });
 
-router.post('/mfa/setup', authenticateToken, (req, res) => {
-  const secret = enableMfa(req.user.id);
+router.post('/mfa/setup', authenticateToken, async (req, res) => {
+  const secret = await enableMfa(req.user.id);
   audit.logAction(req.user.id, 'enable_mfa');
   res.json({ secret });
 });

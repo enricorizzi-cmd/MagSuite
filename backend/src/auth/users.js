@@ -24,27 +24,28 @@ const ready = (async () => {
     company_id INTEGER REFERENCES companies(id)
   )`);
   // Optional fields for better UX; add if not present
-  await db.query(`DO $$
-  BEGIN
-    IF NOT EXISTS (
-      SELECT 1 FROM information_schema.columns
-      WHERE table_name='users' AND column_name='last_login'
-    ) THEN
-      EXECUTE 'ALTER TABLE users ADD COLUMN last_login timestamptz';
-    END IF;
-    IF NOT EXISTS (
-      SELECT 1 FROM information_schema.columns
-      WHERE table_name='users' AND column_name='mfa_secret'
-    ) THEN
-      EXECUTE 'ALTER TABLE users ADD COLUMN mfa_secret text';
-    END IF;
-    IF NOT EXISTS (
-      SELECT 1 FROM information_schema.columns
-      WHERE table_name='users' AND column_name='name'
-    ) THEN
-      EXECUTE 'ALTER TABLE users ADD COLUMN name text';
-    END IF;
-  END$$;`);
+  // Note: avoid PL/pgSQL DO blocks to keep compatibility with pg-mem in tests
+  const columnExists = async (column) => {
+    const { rows } = await db.query(
+      `SELECT 1 FROM information_schema.columns
+         WHERE table_name='users' AND column_name=$1`,
+      [column]
+    );
+    return !!rows[0];
+  };
+  if (!(await columnExists('last_login'))) {
+    await db.query('ALTER TABLE users ADD COLUMN last_login timestamptz');
+  }
+  if (!(await columnExists('mfa_secret'))) {
+    await db.query('ALTER TABLE users ADD COLUMN mfa_secret text');
+  }
+  if (!(await columnExists('name'))) {
+    await db.query('ALTER TABLE users ADD COLUMN name text');
+  }
+  if (!(await columnExists('permissions'))) {
+    // store as textified json for compatibility
+    await db.query('ALTER TABLE users ADD COLUMN permissions text');
+  }
 })();
 
 function validatePassword(password) {
@@ -81,12 +82,20 @@ async function createUser({
   const password_hash = await bcrypt.hash(password, 10);
   const role_id = await ensureRole(role);
   const ins = await db.query(
-    `INSERT INTO users(email, password_hash, role_id, warehouse_id, company_id, mfa_secret)
-     VALUES($1,$2,$3,$4,$5,$6) RETURNING id, email, warehouse_id, company_id,
-       (SELECT name FROM roles r WHERE r.id = users.role_id) AS role` ,
-    [email, password_hash, role_id, warehouse_id || null, company_id || null, mfa_secret]
+    `INSERT INTO users(email, password_hash, role_id, warehouse_id, company_id, mfa_secret, permissions)
+     VALUES($1,$2,$3,$4,$5,$6,$7) RETURNING id, email, warehouse_id, company_id, role_id, permissions` ,
+    [
+      email,
+      password_hash,
+      role_id,
+      warehouse_id || null,
+      company_id || null,
+      mfa_secret,
+      permissions && Object.keys(permissions).length ? JSON.stringify(permissions) : null,
+    ]
   );
   const user = ins.rows[0];
+  user.role = role; // we know the role name we inserted
   user.permissions = permissions || {};
   return user;
 }
@@ -94,14 +103,21 @@ async function createUser({
 async function getUserById(id) {
   await ready;
   const { rows } = await db.query(
-    `SELECT u.id, u.email, u.password_hash, u.warehouse_id, u.company_id, u.mfa_secret,
+    `SELECT u.id, u.email, u.password_hash, u.warehouse_id, u.company_id, u.mfa_secret, u.permissions,
             COALESCE(r.name, 'worker') AS role,
             u.last_login,
             u.name
        FROM users u LEFT JOIN roles r ON r.id = u.role_id
       WHERE u.id = $1`, [id]
   );
-  return rows[0] || null;
+  const u = rows[0];
+  if (!u) return null;
+  if (u.permissions) {
+    try { u.permissions = JSON.parse(u.permissions); } catch { u.permissions = {}; }
+  } else {
+    u.permissions = {};
+  }
+  return u;
 }
 
 async function updateUser(id, changes) {
@@ -182,7 +198,7 @@ async function disableMfa(id) {
 async function authenticate({ email, password, mfaToken }) {
   await ready;
   const { rows } = await db.query(
-    `SELECT u.id, u.email, u.password_hash, u.warehouse_id, u.company_id, u.mfa_secret,
+    `SELECT u.id, u.email, u.password_hash, u.warehouse_id, u.company_id, u.mfa_secret, u.permissions,
             COALESCE(r.name, 'worker') AS role,
             u.last_login
        FROM users u LEFT JOIN roles r ON r.id = u.role_id
@@ -191,6 +207,11 @@ async function authenticate({ email, password, mfaToken }) {
   );
   const user = rows[0];
   if (!user) return null;
+  if (user.permissions) {
+    try { user.permissions = JSON.parse(user.permissions); } catch { user.permissions = {}; }
+  } else {
+    user.permissions = {};
+  }
   const ok = await bcrypt.compare(password, user.password_hash);
   if (!ok) return null;
   if (user.mfa_secret) {

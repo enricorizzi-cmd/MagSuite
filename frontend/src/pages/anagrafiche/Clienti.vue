@@ -1,19 +1,71 @@
 <template>
   <div>
     <Topbar />
-    <main class="min-h-[70vh] flex items-center justify-center px-6">
-      <div class="text-center">
-        <div class="text-[11vw] md:text-7xl font-black tracking-tight leading-none bg-gradient-to-r from-fuchsia-500 via-cyan-400 to-emerald-400 bg-clip-text text-transparent drop-shadow-[0_0_35px_rgba(236,72,153,0.35)]">
-          Clienti
-        </div>
+    <main class="max-w-6xl mx-auto px-4 py-6">
+      <h1 class="text-xl font-semibold mb-2">Clienti</h1>
+      <p class="text-slate-400 mb-4">Anagrafica clienti (fino a 100 risultati).</p>
+
+      <div v-if="loading" class="text-slate-400">Caricamento…</div>
+      <div v-else-if="error" class="text-rose-400">{{ error }}</div>
+      <div v-else>
+        <ListFilters
+          :items="items"
+          :fields="[
+            { key: 'id', label: 'ID', type: 'number' },
+            { key: 'name', label: 'Nome', type: 'string' }
+          ]"
+          v-slot="{ filtered }"
+        >
+          <div v-if="filtered.length === 0" class="text-slate-400">Nessun risultato.</div>
+          <div v-else class="overflow-x-auto border border-white/10 rounded-lg">
+            <table class="min-w-full text-sm">
+              <thead class="bg-white/5 text-slate-300">
+                <tr>
+                  <th class="text-left px-3 py-2">ID</th>
+                  <th class="text-left px-3 py-2">Nome</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="c in filtered" :key="c.id" class="border-t border-white/10">
+                  <td class="px-3 py-2 text-slate-300">{{ c.id }}</td>
+                  <td class="px-3 py-2 text-slate-100">{{ c.name }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </ListFilters>
       </div>
     </main>
   </div>
+  
 </template>
 
 <script setup lang="ts">
+import { onMounted, ref } from 'vue';
 import Topbar from '../../components/Topbar.vue';
+import ListFilters from '../../components/ListFilters.vue';
+import api from '../../services/api';
+
+type Customer = { id: number; name: string };
+
+const items = ref<Customer[]>([]);
+const loading = ref(false);
+const error = ref('');
+
+async function load() {
+  loading.value = true;
+  error.value = '';
+  try {
+    const { data } = await api.get('/customers', { params: { page: 1, limit: 100 } });
+    items.value = data?.items || [];
+  } catch (e: any) {
+    error.value = e?.response?.data?.error || e?.message || 'Errore caricamento';
+  } finally {
+    loading.value = false;
+  }
+}
+
+onMounted(load);
 </script>
 
 <style scoped></style>
-

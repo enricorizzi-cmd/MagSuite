@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { createUser, authenticate, enableMfa } = require('./users');
+const { createUser, authenticate, enableMfa, ready } = require('./users');
 const { generateTokens } = require('./tokens');
 const { authenticateToken } = require('./middleware');
 const audit = require('../audit');
@@ -18,6 +18,7 @@ router.post('/register', async (req, res) => {
     company_mode, // 'existing' | 'new'
   } = req.body || {};
   try {
+    await ready;
     let finalCompanyId = company_id || null;
 
     // Ensure companies table and case-insensitive unique index exist
@@ -55,11 +56,9 @@ router.post('/register', async (req, res) => {
     }
 
     // Role assignment: first-ever user becomes super_admin; else admin for new company, standard for existing
-    const { _internal } = require('./users');
-    const assignedRole =
-      _internal.count === 0
-        ? 'super_admin'
-        : (role || (company_mode === 'new' ? 'admin' : 'standard'));
+    const { rows: cntRows } = await db.query('SELECT COUNT(*)::int AS c FROM users');
+    const isFirstUser = (cntRows[0]?.c || 0) === 0;
+    const assignedRole = isFirstUser ? 'super_admin' : (role || (company_mode === 'new' ? 'admin' : 'standard'));
     const user = await createUser({
       email,
       password,
@@ -80,7 +79,10 @@ router.post('/login', async (req, res) => {
   const user = await authenticate({ email, password, mfaToken });
   if (!user) return res.status(401).json({ error: 'Invalid credentials' });
   audit.logAction(user.id, 'login');
-  try { user.last_login = new Date().toISOString(); } catch {}
+  try {
+    await db.query('UPDATE users SET last_login=now() WHERE id=$1', [user.id]);
+    user.last_login = new Date().toISOString();
+  } catch {}
   const tokens = generateTokens(user, { remember: !!remember });
   res.json(tokens);
 });
@@ -126,39 +128,46 @@ router.get('/me', authenticateToken, (req, res) => {
 
 // List users for a specific company (super admin only)
 router.get('/company-users/:id', authenticateToken, (req, res) => {
-  const user = req.user;
-  if (user.role !== 'super_admin') return res.sendStatus(403);
-  const { _internal } = require('./users');
-  const cid = Number(req.params.id);
-  const list = _internal
-    .list()
-    .filter((u) => Number(u.company_id) === cid)
-    .map((u) => ({ id: u.id, email: u.email, role: u.role, warehouse_id: u.warehouse_id, company_id: u.company_id, last_login: u.last_login || null }));
-  res.json(list);
+  (async () => {
+    const user = req.user;
+    if (user.role !== 'super_admin') return res.sendStatus(403);
+    const cid = Number(req.params.id);
+    const { rows } = await db.query(
+      `SELECT u.id, u.email, COALESCE(r.name,'worker') AS role, u.warehouse_id, u.company_id, u.last_login
+         FROM users u LEFT JOIN roles r ON r.id = u.role_id
+        WHERE u.company_id = $1 ORDER BY u.id`, [cid]
+    );
+    res.json(rows.map(u => ({ id: u.id, email: u.email, role: u.role, warehouse_id: u.warehouse_id, company_id: u.company_id, last_login: u.last_login })));
+  })().catch(err => res.status(500).json({ error: err.message }));
 });
 
 // List users for the current company (visible to all roles)
 router.get('/my-company/users', authenticateToken, (req, res) => {
-  const headerCompany = req.headers['x-company-id'];
-  const companyId = Number(headerCompany || req.user.company_id);
-  const { _internal } = require('./users');
-  const list = _internal
-    .list()
-    .filter((u) => Number(u.company_id) === companyId)
-    .map((u) => ({ id: u.id, email: u.email, role: u.role, warehouse_id: u.warehouse_id, company_id: u.company_id, last_login: u.last_login || null }));
-  res.json(list);
+  (async () => {
+    const headerCompany = req.headers['x-company-id'];
+    const companyId = Number(headerCompany || req.user.company_id);
+    const { rows } = await db.query(
+      `SELECT u.id, u.email, COALESCE(r.name,'worker') AS role, u.warehouse_id, u.company_id, u.last_login
+         FROM users u LEFT JOIN roles r ON r.id = u.role_id
+        WHERE u.company_id = $1 ORDER BY u.id`, [companyId]
+    );
+    res.json(rows.map(u => ({ id: u.id, email: u.email, role: u.role, warehouse_id: u.warehouse_id, company_id: u.company_id, last_login: u.last_login })));
+  })().catch(err => res.status(500).json({ error: err.message }));
 });
 
 // Maintenance: promote the only existing user to super_admin (protected)
 router.post('/promote-if-single', async (req, res) => {
   const allow = process.env.API_KEY ? req.headers['x-api-key'] === process.env.API_KEY : process.env.NODE_ENV !== 'production';
   if (!allow) return res.sendStatus(403);
-  const { _internal } = require('./users');
-  if (_internal.count === 1) {
-    const [u] = _internal.list();
-    _internal.setRole(u.id, 'super_admin');
-    audit.logAction(u.id, 'promote_super_admin');
-    return res.json({ ok: true, id: u.id, role: 'super_admin' });
+  const { rows } = await db.query('SELECT COUNT(*)::int AS c FROM users');
+  if ((rows[0]?.c || 0) === 1) {
+    const { rows: only } = await db.query('SELECT id FROM users LIMIT 1');
+    const uid = only[0].id;
+    // ensure role exists
+    await db.query(`INSERT INTO roles(name) VALUES('super_admin') ON CONFLICT(name) DO NOTHING`);
+    await db.query(`UPDATE users SET role_id=(SELECT id FROM roles WHERE name='super_admin') WHERE id=$1`, [uid]);
+    audit.logAction(uid, 'promote_super_admin');
+    return res.json({ ok: true, id: uid, role: 'super_admin' });
   }
   res.json({ ok: false, reason: 'not-single' });
 });

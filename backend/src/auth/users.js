@@ -1,8 +1,45 @@
 const bcrypt = require('bcryptjs');
 const { generateMfaSecret, verifyMfaToken } = require('./mfa');
+const db = require('../db');
 
-const users = [];
-let idSeq = 1;
+// Ensure required tables/columns exist. We keep using the "users" table
+// defined by migrations, but we add a few optional columns if missing
+// (company_id is handled by migrations already).
+const ready = (async () => {
+  // Ensure companies exists to satisfy FK when creating users
+  await db.query(`CREATE TABLE IF NOT EXISTS companies (
+    id SERIAL PRIMARY KEY,
+    name TEXT NOT NULL UNIQUE
+  )`);
+  await db.query(`CREATE TABLE IF NOT EXISTS roles (
+    id SERIAL PRIMARY KEY,
+    name TEXT UNIQUE NOT NULL
+  )`);
+  await db.query(`CREATE TABLE IF NOT EXISTS users (
+    id SERIAL PRIMARY KEY,
+    email TEXT UNIQUE NOT NULL,
+    password_hash TEXT NOT NULL,
+    role_id INTEGER REFERENCES roles(id),
+    warehouse_id INTEGER,
+    company_id INTEGER REFERENCES companies(id)
+  )`);
+  // Optional fields for better UX; add if not present
+  await db.query(`DO $$
+  BEGIN
+    IF NOT EXISTS (
+      SELECT 1 FROM information_schema.columns
+      WHERE table_name='users' AND column_name='last_login'
+    ) THEN
+      EXECUTE 'ALTER TABLE users ADD COLUMN last_login timestamptz';
+    END IF;
+    IF NOT EXISTS (
+      SELECT 1 FROM information_schema.columns
+      WHERE table_name='users' AND column_name='mfa_secret'
+    ) THEN
+      EXECUTE 'ALTER TABLE users ADD COLUMN mfa_secret text';
+    END IF;
+  END$$;`);
+})();
 
 function validatePassword(password) {
   const complexity = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*]).{8,}$/;
@@ -11,56 +48,78 @@ function validatePassword(password) {
   }
 }
 
+async function ensureRole(name) {
+  const sel = await db.query('SELECT id FROM roles WHERE name=$1', [name]);
+  if (sel.rows[0]) return sel.rows[0].id;
+  const ins = await db.query('INSERT INTO roles(name) VALUES($1) ON CONFLICT(name) DO NOTHING RETURNING id', [name]);
+  if (ins.rows[0]) return ins.rows[0].id;
+  const again = await db.query('SELECT id FROM roles WHERE name=$1', [name]);
+  return again.rows[0] ? again.rows[0].id : null;
+}
+
 async function createUser({
   email,
   password,
   role = 'worker',
-  permissions = {},
+  permissions = {}, // kept for API compatibility, not persisted directly
   mfa_secret = null,
   warehouse_id,
   company_id,
 }) {
-  if (users.find((u) => u.email === email)) {
+  await ready;
+  const exists = await db.query('SELECT 1 FROM users WHERE lower(email)=lower($1)', [email]);
+  if (exists.rowCount > 0) {
     throw new Error('User exists');
   }
   validatePassword(password);
   const password_hash = await bcrypt.hash(password, 10);
-  const user = {
-    id: idSeq++,
-    email,
-    password_hash,
-    role,
-    permissions,
-    mfa_secret,
-    warehouse_id,
-    company_id,
-  };
-  users.push(user);
-  // Promote first and only user to super_admin
-  if (users.length === 1) {
-    user.role = 'super_admin';
-  }
+  const role_id = await ensureRole(role);
+  const ins = await db.query(
+    `INSERT INTO users(email, password_hash, role_id, warehouse_id, company_id, mfa_secret)
+     VALUES($1,$2,$3,$4,$5,$6) RETURNING id, email, warehouse_id, company_id,
+       (SELECT name FROM roles r WHERE r.id = users.role_id) AS role` ,
+    [email, password_hash, role_id, warehouse_id || null, company_id || null, mfa_secret]
+  );
+  const user = ins.rows[0];
+  user.permissions = permissions || {};
   return user;
 }
 
-function getUserById(id) {
-  return users.find((u) => u.id === id);
+async function getUserById(id) {
+  await ready;
+  const { rows } = await db.query(
+    `SELECT u.id, u.email, u.password_hash, u.warehouse_id, u.company_id, u.mfa_secret,
+            COALESCE(r.name, 'worker') AS role,
+            u.last_login
+       FROM users u LEFT JOIN roles r ON r.id = u.role_id
+      WHERE u.id = $1`, [id]
+  );
+  return rows[0] || null;
 }
 
-function enableMfa(id) {
-  const user = getUserById(id);
-  if (!user) throw new Error('User not found');
-  user.mfa_secret = generateMfaSecret();
-  return user.mfa_secret;
+async function enableMfa(id) {
+  await ready;
+  const secret = generateMfaSecret();
+  await db.query('UPDATE users SET mfa_secret=$1 WHERE id=$2', [secret, id]);
+  return secret;
 }
 
-function disableMfa(id) {
-  const user = getUserById(id);
-  if (user) user.mfa_secret = null;
+async function disableMfa(id) {
+  await ready;
+  await db.query('UPDATE users SET mfa_secret=NULL WHERE id=$1', [id]);
 }
 
 async function authenticate({ email, password, mfaToken }) {
-  const user = users.find((u) => u.email === email);
+  await ready;
+  const { rows } = await db.query(
+    `SELECT u.id, u.email, u.password_hash, u.warehouse_id, u.company_id, u.mfa_secret,
+            COALESCE(r.name, 'worker') AS role,
+            u.last_login
+       FROM users u LEFT JOIN roles r ON r.id = u.role_id
+      WHERE lower(u.email) = lower($1)` ,
+    [email]
+  );
+  const user = rows[0];
   if (!user) return null;
   const ok = await bcrypt.compare(password, user.password_hash);
   if (!ok) return null;
@@ -73,14 +132,9 @@ async function authenticate({ email, password, mfaToken }) {
 }
 
 module.exports = {
+  ready,
   createUser,
   authenticate,
   enableMfa,
   disableMfa,
-  // internal state helpers for maintenance
-  _internal: {
-    get count() { return users.length; },
-    list: () => users.slice(),
-    setRole: (id, role) => { const u = users.find(x=>x.id===id); if (u) u.role = role; return u; },
-  }
 };

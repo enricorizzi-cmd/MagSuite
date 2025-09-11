@@ -18,6 +18,7 @@ const transfersRouter = require('./src/transfers');
 const logsRouter = require('./src/logs');
 const operations = require('./src/operations');
 const customersRouter = require('./src/customers');
+const suppliersRouter = require('./src/suppliers');
 
 const notificationsRouter = require('./src/notifications');
 const usersRouter = require('./src/users');

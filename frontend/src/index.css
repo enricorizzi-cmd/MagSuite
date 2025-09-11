@@ -2,46 +2,8 @@
 @source "../index.html";
 @source "./**/*.{vue,ts,tsx,js,jsx}";
 
-:root {
-  --bg: #0b1220;
-  --bg-soft: #0f172a;
-  --fg: #0f172a;
-  --text: #0b1220;
-}
-
-html, body, #app {
-  height: 100%;
-}
+html, body, #app { height: 100%; }
 
 body {
   font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Noto Sans, Ubuntu, Cantarell, Helvetica Neue, Arial, "Apple Color Emoji", "Segoe UI Emoji";
-  @apply bg-white text-slate-800 dark:bg-slate-900 dark:text-slate-100 antialiased;
-}
-
-.container-page {
-  @apply max-w-7xl mx-auto px-4 py-6;
-}
-
-.card {
-  @apply bg-white dark:bg-slate-800 rounded-lg shadow border border-slate-200/60 dark:border-slate-700/50;
-}
-
-.btn {
-  @apply inline-flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed;
-}
-.btn-primary {
-  @apply inline-flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed bg-brand text-white hover:bg-brand-dark focus:ring-brand;
-}
-.btn-secondary {
-  @apply inline-flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed bg-slate-100 text-slate-800 hover:bg-slate-200 dark:bg-slate-700 dark:text-slate-100 dark:hover:bg-slate-600 focus:ring-slate-400;
-}
-
-.table-base {
-  @apply min-w-full divide-y divide-slate-200 dark:divide-slate-700;
-}
-.table-base thead th {
-  @apply bg-slate-50 dark:bg-slate-800/60 px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-300 sticky top-0;
-}
-.table-base tbody td {
-  @apply px-3 py-2 text-sm;
 }

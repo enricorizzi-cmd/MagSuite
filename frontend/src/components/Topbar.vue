@@ -19,7 +19,7 @@
         </RouterLink>
       </nav>
 
-      <!-- Right: Company, Notifications -->
+      <!-- Right: Company, Notifications, Logout -->
       <div class="flex items-center gap-3">
         <!-- Company field: dropdown for super admin, static otherwise -->
         <div v-if="role==='super_admin'" class="min-w-[220px]">
@@ -63,6 +63,12 @@
             </div>
           </div>
         </div>
+
+        <!-- Logout -->
+        <button @click="logout" class="px-2 py-1.5 rounded-lg text-sm bg-white/10 hover:bg-white/20 text-slate-200"
+                aria-label="Esci">
+          Esci
+        </button>
       </div>
     </div>
 
@@ -95,11 +101,12 @@
 
 <script setup lang="ts">
 import { onMounted, ref, computed } from 'vue';
-import { useRoute } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 import api from '../services/api';
 import { connectNotifications, unreadCount, items as notifItems, markAllRead, canRequestNotificationPermission, requestNotificationPermission } from '../services/notifications';
 
 const route = useRoute();
+const router = useRouter();
 const tabs = computed(() => {
   const base = [{ label: 'Dashboard', path: '/dashboard' }];
   const list = [{ label: 'Utenti', path: '/users' }, ...base];
@@ -183,6 +190,13 @@ onMounted(async () => {
   // Show CTA if we can ask for notifications permission
   showNotifCTA.value = canRequestNotificationPermission();
 });
+
+function logout() {
+  try { localStorage.removeItem('token'); } catch {}
+  try { sessionStorage.removeItem('token'); } catch {}
+  try { localStorage.removeItem('companyId'); } catch {}
+  router.push('/');
+}
 </script>
 
 <style scoped>

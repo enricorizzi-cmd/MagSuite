@@ -55,6 +55,13 @@ if (usePgMem) {
       return val;
     },
   });
+  // Provide NULLIF(text, text) for tests
+  pg.registerFunction({
+    name: 'nullif',
+    args: ['text', 'text'],
+    returns: 'text',
+    implementation: (a, b) => (a === b ? null : a),
+  });
   mem.public.none(
     "CREATE TABLE companies (id SERIAL PRIMARY KEY, name TEXT NOT NULL UNIQUE)"
   );

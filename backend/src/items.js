@@ -14,7 +14,7 @@ const ready = (async () => {
     sku TEXT NOT NULL UNIQUE,
     lotti BOOLEAN DEFAULT false,
     seriali BOOLEAN DEFAULT false,
-    company_id INTEGER NOT NULL REFERENCES companies(id) DEFAULT current_setting('app.current_company_id')::int
+    company_id INTEGER NOT NULL REFERENCES companies(id) DEFAULT NULLIF(current_setting('app.current_company_id', true), '')::int
   )`);
   // Extend schema with additional business fields (idempotent)
   await db.query("ALTER TABLE items ADD COLUMN IF NOT EXISTS barcode TEXT");
@@ -44,7 +44,7 @@ const viewsReady = (async () => {
     name TEXT NOT NULL,
     filters JSONB NOT NULL DEFAULT '{}'::jsonb,
     columns JSONB DEFAULT '[]'::jsonb,
-    company_id INTEGER NOT NULL DEFAULT current_setting('app.current_company_id')::int,
+    company_id INTEGER NOT NULL DEFAULT NULLIF(current_setting('app.current_company_id', true), '')::int,
     created_at TIMESTAMPTZ DEFAULT now()
   )`);
 })();
@@ -54,7 +54,7 @@ router.get('/', async (req, res) => {
   const page = Math.max(parseInt(req.query.page) || 1, 1);
   const offset = (page - 1) * limit;
   const params = [];
-  const conditions = ["i.company_id = current_setting('app.current_company_id')::int"];
+  const conditions = ["i.company_id = NULLIF(current_setting('app.current_company_id', true), '')::int"];
   const { q, type, category, group: groupKey, class: classKey, supplier } = req.query;
   if (q) {
     params.push(`%${q}%`);
@@ -80,7 +80,7 @@ router.get('/', async (req, res) => {
          SELECT sm.item_id, SUM(sm.quantity) AS qty
          FROM stock_movements sm
          JOIN items ii ON ii.id = sm.item_id
-         WHERE ii.company_id = current_setting('app.current_company_id')::int
+         WHERE ii.company_id = NULLIF(current_setting('app.current_company_id', true), '')::int
          GROUP BY sm.item_id
        ) s ON s.item_id = i.id
       ${where}
@@ -105,7 +105,7 @@ router.get('/export', async (req, res) => {
   if (columns.length === 0) columns = allowed;
   const format = (req.query.format || 'csv').toLowerCase();
   const result = await db.query(
-    `SELECT ${columns.join(', ')} FROM items WHERE company_id = current_setting('app.current_company_id')::int ORDER BY id`
+    `SELECT ${columns.join(', ')} FROM items WHERE company_id = NULLIF(current_setting('app.current_company_id', true), '')::int ORDER BY id`
   );
 
   if (format === 'xlsx') {
@@ -178,7 +178,7 @@ router.get('/:id', async (req, res) => {
     return res.status(400).json({ error: 'Invalid id' });
   }
   const result = await db.query(
-    `SELECT id, name, sku, lotti, seriali FROM items WHERE id=$1 AND company_id = current_setting('app.current_company_id')::int`,
+    `SELECT id, name, sku, lotti, seriali FROM items WHERE id=$1 AND company_id = NULLIF(current_setting('app.current_company_id', true), '')::int`,
     [id]
   );
   if (result.rows.length === 0) {
@@ -194,7 +194,7 @@ router.put('/:id', async (req, res) => {
   }
   const { name, sku, lotti, seriali } = req.body;
   const oldRes = await db.query(
-    `SELECT id, name, sku, lotti, seriali FROM items WHERE id=$1 AND company_id = current_setting('app.current_company_id')::int`,
+    `SELECT id, name, sku, lotti, seriali FROM items WHERE id=$1 AND company_id = NULLIF(current_setting('app.current_company_id', true), '')::int`,
     [id]
   );
   if (oldRes.rows.length === 0) {
@@ -255,7 +255,7 @@ router.put('/:id', async (req, res) => {
   const setClause = fields.map((f, i) => `${f}=$${i + 1}`).join(', ');
   values.push(id);
   const result = await db.query(
-    `UPDATE items SET ${setClause} WHERE id=$${fields.length + 1} AND company_id = current_setting('app.current_company_id')::int RETURNING id, name, sku, lotti, seriali`,
+    `UPDATE items SET ${setClause} WHERE id=$${fields.length + 1} AND company_id = NULLIF(current_setting('app.current_company_id', true), '')::int RETURNING id, name, sku, lotti, seriali`,
     values
   );
   if (result.rows.length === 0) {
@@ -278,14 +278,14 @@ router.delete('/:id', async (req, res) => {
     return res.status(400).json({ error: 'Invalid id' });
   }
   const oldRes = await db.query(
-    `SELECT id, name, sku, lotti, seriali FROM items WHERE id=$1 AND company_id = current_setting('app.current_company_id')::int`,
+    `SELECT id, name, sku, lotti, seriali FROM items WHERE id=$1 AND company_id = NULLIF(current_setting('app.current_company_id', true), '')::int`,
     [id]
   );
   if (oldRes.rows.length === 0) {
     return res.status(404).json({ error: 'Not found' });
   }
   await db.query(
-    `DELETE FROM items WHERE id=$1 AND company_id = current_setting('app.current_company_id')::int`,
+    `DELETE FROM items WHERE id=$1 AND company_id = NULLIF(current_setting('app.current_company_id', true), '')::int`,
     [id]
   );
   audit.logAction(req.user.id, 'delete_item', { item: oldRes.rows[0] });
@@ -298,7 +298,7 @@ module.exports = { router, ready };
 router.get('/views', async (req, res) => {
   await viewsReady;
   const { rows } = await db.query(
-    `SELECT id, name, filters, columns FROM item_views WHERE company_id = current_setting('app.current_company_id')::int ORDER BY id`
+    `SELECT id, name, filters, columns FROM item_views WHERE company_id = NULLIF(current_setting('app.current_company_id', true), '')::int ORDER BY id`
   );
   res.json(rows);
 });
@@ -318,7 +318,7 @@ router.delete('/views/:id', async (req, res) => {
   await viewsReady;
   const id = Number(req.params.id);
   await db.query(
-    `DELETE FROM item_views WHERE id=$1 AND company_id = current_setting('app.current_company_id')::int`,
+    `DELETE FROM item_views WHERE id=$1 AND company_id = NULLIF(current_setting('app.current_company_id', true), '')::int`,
     [id]
   );
   res.status(204).end();
@@ -343,7 +343,7 @@ router.get('/export', async (req, res) => {
   const limit = 10000;
   const offset = 0;
   const params = [];
-  const conditions = ["i.company_id = current_setting('app.current_company_id')::int"];
+  const conditions = ["i.company_id = NULLIF(current_setting('app.current_company_id', true), '')::int"];
   const { q, type, category, group: groupKey, class: classKey, supplier } = req.query;
   if (q) {
     params.push(`%${q}%`);
@@ -368,7 +368,7 @@ router.get('/export', async (req, res) => {
          SELECT sm.item_id, SUM(sm.quantity) AS qty
          FROM stock_movements sm
          JOIN items ii ON ii.id = sm.item_id
-         WHERE ii.company_id = current_setting('app.current_company_id')::int
+         WHERE ii.company_id = NULLIF(current_setting('app.current_company_id', true), '')::int
          GROUP BY sm.item_id
        ) s ON s.item_id = i.id
       ${where}

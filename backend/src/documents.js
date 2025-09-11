@@ -12,12 +12,12 @@ const ready = (async () => {
     causal TEXT,
     created_at TIMESTAMPTZ DEFAULT now(),
     lines JSONB DEFAULT '[]',
-    company_id INTEGER NOT NULL DEFAULT current_setting('app.current_company_id')::int
+    company_id INTEGER NOT NULL DEFAULT NULLIF(current_setting('app.current_company_id', true), '')::int
   )`);
   await db.query(`CREATE TABLE IF NOT EXISTS warehouses (
     id SERIAL PRIMARY KEY,
     name TEXT NOT NULL,
-    company_id INTEGER NOT NULL DEFAULT current_setting('app.current_company_id')::int
+    company_id INTEGER NOT NULL DEFAULT NULLIF(current_setting('app.current_company_id', true), '')::int
   )`);
   await db.query(`CREATE TABLE IF NOT EXISTS lots (
     id SERIAL PRIMARY KEY,
@@ -25,7 +25,7 @@ const ready = (async () => {
     lot TEXT NOT NULL,
     expiry DATE,
     status TEXT NOT NULL DEFAULT 'active',
-    company_id INTEGER NOT NULL DEFAULT current_setting('app.current_company_id')::int
+    company_id INTEGER NOT NULL DEFAULT NULLIF(current_setting('app.current_company_id', true), '')::int
   )`);
   await db.query(`CREATE TABLE IF NOT EXISTS serials (
     id SERIAL PRIMARY KEY,
@@ -33,7 +33,7 @@ const ready = (async () => {
     serial TEXT NOT NULL,
     expiry DATE,
     blocked BOOLEAN DEFAULT false,
-    company_id INTEGER NOT NULL DEFAULT current_setting('app.current_company_id')::int
+    company_id INTEGER NOT NULL DEFAULT NULLIF(current_setting('app.current_company_id', true), '')::int
   )`);
   await db.query(`CREATE TABLE IF NOT EXISTS stock_movements (
     id SERIAL PRIMARY KEY,
@@ -45,7 +45,7 @@ const ready = (async () => {
     serial_id INT REFERENCES serials(id),
     expiry DATE,
     moved_at TIMESTAMPTZ DEFAULT now(),
-    company_id INTEGER NOT NULL DEFAULT current_setting('app.current_company_id')::int
+    company_id INTEGER NOT NULL DEFAULT NULLIF(current_setting('app.current_company_id', true), '')::int
   )`);
   await db.query(
     "ALTER TABLE lots ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'active'"
@@ -189,7 +189,7 @@ router.post('/:id/confirm', async (req, res) => {
         condition += ' AND serial_id IS NULL';
       }
       const availRes = await db.query(
-        `SELECT COALESCE(SUM(quantity),0) AS qty FROM stock_movements WHERE ${condition} AND company_id = current_setting('app.current_company_id')::int`,
+        `SELECT COALESCE(SUM(quantity),0) AS qty FROM stock_movements WHERE ${condition} AND company_id = NULLIF(current_setting('app.current_company_id', true), '')::int`,
         params
       );
       const available = Number(availRes.rows[0].qty);
@@ -249,7 +249,7 @@ async function selectNextBatch(item_id, warehouse_id) {
     `SELECT lot_id, serial_id, expiry, qty, first_movement FROM (
        SELECT lot_id, serial_id, expiry, SUM(quantity) AS qty, MIN(moved_at) AS first_movement
        FROM stock_movements
-       WHERE item_id=$1 AND warehouse_id=$2 AND company_id = current_setting('app.current_company_id')::int
+       WHERE item_id=$1 AND warehouse_id=$2 AND company_id = NULLIF(current_setting('app.current_company_id', true), '')::int
        GROUP BY lot_id, serial_id, expiry
      ) s
      WHERE qty > 0

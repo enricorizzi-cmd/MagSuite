@@ -10,7 +10,7 @@ async function ensureReady() {
     id SERIAL PRIMARY KEY,
     name TEXT NOT NULL,
     currency TEXT DEFAULT 'EUR',
-    company_id INTEGER NOT NULL DEFAULT current_setting('app.current_company_id')::int,
+    company_id INTEGER NOT NULL DEFAULT NULLIF(current_setting('app.current_company_id', true), '')::int,
     created_at TIMESTAMPTZ DEFAULT now()
   )`);
   await db.query(`CREATE TABLE IF NOT EXISTS item_prices (
@@ -18,7 +18,7 @@ async function ensureReady() {
     item_id INTEGER REFERENCES items(id) ON DELETE CASCADE,
     price NUMERIC NOT NULL,
     PRIMARY KEY(price_list_id, item_id),
-    company_id INTEGER NOT NULL DEFAULT current_setting('app.current_company_id')::int
+    company_id INTEGER NOT NULL DEFAULT NULLIF(current_setting('app.current_company_id', true), '')::int
   )`);
   initialized = true;
 }
@@ -26,7 +26,7 @@ async function ensureReady() {
 router.get('/', async (req, res) => {
   await ensureReady();
   const { rows } = await db.query(
-    `SELECT id, name, currency FROM price_lists WHERE company_id = current_setting('app.current_company_id')::int ORDER BY id`
+    `SELECT id, name, currency FROM price_lists WHERE company_id = NULLIF(current_setting('app.current_company_id', true), '')::int ORDER BY id`
   );
   res.json(rows);
 });
@@ -46,7 +46,7 @@ router.get('/:id', async (req, res) => {
   await ensureReady();
   const id = Number(req.params.id);
   const { rows } = await db.query(
-    `SELECT id, name, currency FROM price_lists WHERE id=$1 AND company_id = current_setting('app.current_company_id')::int`,
+    `SELECT id, name, currency FROM price_lists WHERE id=$1 AND company_id = NULLIF(current_setting('app.current_company_id', true), '')::int`,
     [id]
   );
   if (!rows[0]) return res.status(404).end();
@@ -64,7 +64,7 @@ router.put('/:id', async (req, res) => {
   if (!fields.length) return res.status(400).json({ error: 'No fields' });
   params.push(id);
   const { rows } = await db.query(
-    `UPDATE price_lists SET ${fields.join(', ')} WHERE id=$${params.length} AND company_id = current_setting('app.current_company_id')::int RETURNING id, name, currency`,
+    `UPDATE price_lists SET ${fields.join(', ')} WHERE id=$${params.length} AND company_id = NULLIF(current_setting('app.current_company_id', true), '')::int RETURNING id, name, currency`,
     params
   );
   if (!rows[0]) return res.status(404).end();
@@ -75,7 +75,7 @@ router.delete('/:id', async (req, res) => {
   await ensureReady();
   const id = Number(req.params.id);
   await db.query(
-    `DELETE FROM price_lists WHERE id=$1 AND company_id = current_setting('app.current_company_id')::int`,
+    `DELETE FROM price_lists WHERE id=$1 AND company_id = NULLIF(current_setting('app.current_company_id', true), '')::int`,
     [id]
   );
   res.status(204).end();
@@ -93,7 +93,7 @@ router.get('/:id/items', async (req, res) => {
      FROM items i
      LEFT JOIN item_prices p
        ON p.item_id = i.id AND p.price_list_id=$1
-     WHERE i.company_id = current_setting('app.current_company_id')::int
+     WHERE i.company_id = NULLIF(current_setting('app.current_company_id', true), '')::int
      ORDER BY i.id`,
     [id]
   );
@@ -127,7 +127,7 @@ router.get('/item/:itemId/price', async (req, res) => {
                  ELSE p.price - i.avg_weighted_price END AS margin
      FROM item_prices p
      JOIN items i ON i.id = p.item_id
-     WHERE p.price_list_id=$1 AND p.item_id=$2 AND p.company_id = current_setting('app.current_company_id')::int`,
+     WHERE p.price_list_id=$1 AND p.item_id=$2 AND p.company_id = NULLIF(current_setting('app.current_company_id', true), '')::int`,
     [listId, itemId]
   );
   if (!rows[0]) return res.status(404).end();

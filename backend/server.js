@@ -234,7 +234,7 @@ async function start(port = process.env.PORT || 3000) {
         params.push(warehouse);
         conditions.push(`warehouse_id = $${params.length}`);
       }
-      conditions.push("company_id = current_setting('app.current_company_id')::int");
+      conditions.push("company_id = NULLIF(current_setting('app.current_company_id', true), '')::int");
       const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
 
       const totalStockRes = await db.query(
@@ -289,7 +289,7 @@ async function start(port = process.env.PORT || 3000) {
       let rows = [];
       if (type === 'inventory') {
         const params = [];
-        const conditions = ["company_id = current_setting('app.current_company_id')::int"];
+        const conditions = ["company_id = NULLIF(current_setting('app.current_company_id', true), '')::int"];
         if (date) {
           params.push(date);
           conditions.push(`moved_at::date = $${params.length}`);
@@ -307,7 +307,7 @@ async function start(port = process.env.PORT || 3000) {
         rows = result.rows;
       } else if (type === 'sales') {
         const params = [];
-        const conditions = ["type = 'sale'", "company_id = current_setting('app.current_company_id')::int"];
+        const conditions = ["type = 'sale'", "company_id = NULLIF(current_setting('app.current_company_id', true), '')::int"];
         if (date) {
           params.push(date);
           conditions.push(`created_at::date = $${params.length}`);

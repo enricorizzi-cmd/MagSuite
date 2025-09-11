@@ -40,6 +40,21 @@ if (usePgMem) {
       return (map && map.get(key)) || null;
     },
   });
+  pg.registerFunction({
+    name: 'current_setting',
+    args: ['text', 'boolean'],
+    returns: 'text',
+    impure: true,
+    implementation: (key, missing_ok) => {
+      const id = sessionContext.getStore();
+      const map = settings.get(id);
+      const val = (map && map.get(key)) || null;
+      if (val == null && !missing_ok) {
+        throw new Error(`unrecognized configuration parameter "${key}"`);
+      }
+      return val;
+    },
+  });
   mem.public.none(
     "CREATE TABLE companies (id SERIAL PRIMARY KEY, name TEXT NOT NULL UNIQUE)"
   );

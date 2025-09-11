@@ -9,13 +9,13 @@ const ready = (async () => {
     name TEXT NOT NULL,
     prefix TEXT DEFAULT '',
     next_number INTEGER NOT NULL DEFAULT 1,
-    company_id INTEGER NOT NULL REFERENCES companies(id) DEFAULT current_setting('app.current_company_id')::int
+    company_id INTEGER NOT NULL REFERENCES companies(id) DEFAULT NULLIF(current_setting('app.current_company_id', true), '')::int
   )`);
 })();
 
 router.get('/', async (req, res) => {
   const result = await db.query(
-    "SELECT * FROM sequences WHERE company_id = current_setting('app.current_company_id')::int ORDER BY id"
+    "SELECT * FROM sequences WHERE company_id = NULLIF(current_setting('app.current_company_id', true), '')::int ORDER BY id"
   );
   res.json({ items: result.rows });
 });
@@ -35,7 +35,7 @@ router.post('/', async (req, res) => {
 router.get('/:id', async (req, res) => {
   const id = Number(req.params.id);
   const result = await db.query(
-    "SELECT * FROM sequences WHERE id=$1 AND company_id = current_setting('app.current_company_id')::int",
+    "SELECT * FROM sequences WHERE id=$1 AND company_id = NULLIF(current_setting('app.current_company_id', true), '')::int",
     [id]
   );
   const seq = result.rows[0];
@@ -65,7 +65,7 @@ router.put('/:id', async (req, res) => {
   }
   params.push(id);
   const result = await db.query(
-    `UPDATE sequences SET ${fields.join(', ')} WHERE id=$${params.length} AND company_id = current_setting('app.current_company_id')::int RETURNING *`,
+    `UPDATE sequences SET ${fields.join(', ')} WHERE id=$${params.length} AND company_id = NULLIF(current_setting('app.current_company_id', true), '')::int RETURNING *`,
     params,
   );
   if (!result.rows[0]) return res.status(404).end();
@@ -75,7 +75,7 @@ router.put('/:id', async (req, res) => {
 router.delete('/:id', async (req, res) => {
   const id = Number(req.params.id);
   await db.query(
-    "DELETE FROM sequences WHERE id=$1 AND company_id = current_setting('app.current_company_id')::int",
+    "DELETE FROM sequences WHERE id=$1 AND company_id = NULLIF(current_setting('app.current_company_id', true), '')::int",
     [id]
   );
   res.status(204).end();
@@ -84,7 +84,7 @@ router.delete('/:id', async (req, res) => {
 router.get('/:id/preview', async (req, res) => {
   const id = Number(req.params.id);
   const result = await db.query(
-    `SELECT prefix, next_number FROM sequences WHERE id=$1 AND company_id = current_setting('app.current_company_id')::int`,
+    `SELECT prefix, next_number FROM sequences WHERE id=$1 AND company_id = NULLIF(current_setting('app.current_company_id', true), '')::int`,
     [id]
   );
   const seq = result.rows[0];

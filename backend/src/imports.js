@@ -50,7 +50,7 @@ async function uploadMiddleware(req, res, next) {
     count INTEGER DEFAULT 0,
     log JSONB DEFAULT '[]',
     file BYTEA,
-    company_id INTEGER DEFAULT current_setting('app.current_company_id')::int,
+    company_id INTEGER DEFAULT NULLIF(current_setting('app.current_company_id', true), '')::int,
     created_at TIMESTAMP DEFAULT NOW()
   )`);
   await db.query(`CREATE TABLE IF NOT EXISTS import_templates (
@@ -58,7 +58,7 @@ async function uploadMiddleware(req, res, next) {
     type TEXT NOT NULL,
     name TEXT NOT NULL,
     mapping JSONB NOT NULL,
-    company_id INTEGER DEFAULT current_setting('app.current_company_id')::int,
+    company_id INTEGER DEFAULT NULLIF(current_setting('app.current_company_id', true), '')::int,
     created_at TIMESTAMP DEFAULT NOW()
   )`);
 })();
@@ -196,7 +196,7 @@ router.post('/imports/:type', uploadMiddleware, async (req, res) => {
 
 router.get('/system/imports', async (req, res) => {
   const result = await db.query(
-    `SELECT id, type, count FROM import_logs WHERE company_id = current_setting('app.current_company_id')::int ORDER BY id`
+    `SELECT id, type, count FROM import_logs WHERE company_id = NULLIF(current_setting('app.current_company_id', true), '')::int ORDER BY id`
   );
   res.json(result.rows);
 });
@@ -204,7 +204,7 @@ router.get('/system/imports', async (req, res) => {
 router.get('/imports/:id/log', async (req, res) => {
   const id = Number(req.params.id);
   const result = await db.query(
-    'SELECT log FROM import_logs WHERE id=$1 AND company_id = current_setting(\'app.current_company_id\')::int',
+    'SELECT log FROM import_logs WHERE id=$1 AND company_id = NULLIF(current_setting(\'app.current_company_id\', true), \'\')::int',
     [id]
   );
   const row = result.rows[0];
@@ -215,7 +215,7 @@ router.get('/imports/:id/log', async (req, res) => {
 router.get('/imports/:id/file', async (req, res) => {
   const id = Number(req.params.id);
   const result = await db.query(
-    'SELECT filename, file FROM import_logs WHERE id=$1 AND company_id = current_setting(\'app.current_company_id\')::int',
+    'SELECT filename, file FROM import_logs WHERE id=$1 AND company_id = NULLIF(current_setting(\'app.current_company_id\', true), \'\')::int',
     [id]
   );
   const row = result.rows[0];
@@ -226,7 +226,7 @@ router.get('/imports/:id/file', async (req, res) => {
 router.get('/imports/:id/report', async (req, res) => {
   const id = Number(req.params.id);
   const result = await db.query(
-    'SELECT log FROM import_logs WHERE id=$1 AND company_id = current_setting(\'app.current_company_id\')::int',
+    'SELECT log FROM import_logs WHERE id=$1 AND company_id = NULLIF(current_setting(\'app.current_company_id\', true), \'\')::int',
     [id]
   );
   const row = result.rows[0];
@@ -260,7 +260,7 @@ router.get('/imports/:id/report', async (req, res) => {
 router.get('/imports/templates/:type', async (req, res) => {
   const { type } = req.params;
   const result = await db.query(
-    `SELECT id, name, mapping FROM import_templates WHERE type=$1 AND company_id = current_setting('app.current_company_id')::int ORDER BY id`,
+    `SELECT id, name, mapping FROM import_templates WHERE type=$1 AND company_id = NULLIF(current_setting('app.current_company_id', true), '')::int ORDER BY id`,
     [type]
   );
   res.json(result.rows);

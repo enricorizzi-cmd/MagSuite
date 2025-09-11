@@ -5,7 +5,7 @@
       <!-- Left: Logo + Menu (mobile) -->
       <div class="flex items-center gap-2 sm:gap-3">
         <!-- On mobile: use the "M" icon as the menu button -->
-        <button class="md:hidden p-1 -ml-1 rounded-lg hover:bg-white/10 text-slate-200" @click="isMenuOpen = true" aria-label="Apri menu">
+        <button class="md:hidden p-1 -ml-1 rounded-lg hover:bg-white/10 text-slate-200" @click="isMenuOpen = !isMenuOpen" :aria-expanded="isMenuOpen ? 'true' : 'false'" aria-label="Apri menu">
           <img src="/icon.svg" alt="Apri menu" class="h-7 w-7" />
         </button>
         <!-- On desktop: show the static brand icon -->
@@ -71,8 +71,8 @@
           </div>
         </div>
 
-        <!-- Logout -->
-        <button @click="logout" class="px-2 py-1.5 rounded-lg text-sm bg-white/10 hover:bg-white/20 text-slate-200 shrink-0"
+        <!-- Logout (desktop only; on mobile it's inside the drawer) -->
+        <button @click="logout" class="hidden md:inline-flex px-2 py-1.5 rounded-lg text-sm bg-white/10 hover:bg-white/20 text-slate-200 shrink-0"
                 aria-label="Esci">
           <svg class="w-5 h-5 sm:hidden" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 24 24"><path d="M15.75 2.25a.75.75 0 01.75.75v5.25a.75.75 0 01-1.5 0V4.81l-8.47 8.47a.75.75 0 11-1.06-1.06L13.94 3.75H10.5a.75.75 0 010-1.5h5.25z"/><path d="M4.5 20.25h9.75a.75.75 0 010 1.5H4.5A2.25 2.25 0 012.25 19.5V4.5A2.25 2.25 0 014.5 2.25h9.75a.75.75 0 010 1.5H4.5c-.414 0-.75.336-.75.75v15a.75.75 0 00.75.75z"/></svg>
           <span class="hidden sm:inline">Esci</span>
@@ -97,10 +97,11 @@
 
     <!-- Mobile drawer -->
     <transition name="fade">
-      <div v-if="isMenuOpen" class="fixed inset-0 z-50 bg-black/60 backdrop-blur-[1px]" @click="isMenuOpen=false"></div>
+      <!-- Lower z-index so header remains clickable; aside stays on top -->
+      <div v-if="isMenuOpen" class="fixed inset-0 z-30 bg-black/60 backdrop-blur-[1px]" @click="isMenuOpen=false"></div>
     </transition>
     <transition name="slide">
-      <aside v-if="isMenuOpen" class="fixed top-0 left-0 h-full w-72 bg-[#0b1020]/95 border-r border-white/10 p-4 z-50 shadow-2xl">
+      <aside v-if="isMenuOpen" class="fixed top-0 left-0 h-full w-72 bg-[#0b1020]/95 border-r border-white/10 p-4 z-50 shadow-2xl flex flex-col">
         <div class="flex items-center justify-between mb-4">
           <div class="flex items-center gap-2">
             <img src="/icon.svg" class="h-6 w-6" />
@@ -110,7 +111,7 @@
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-6 h-6"><path d="M6 18L18 6M6 6l12 12"/></svg>
           </button>
         </div>
-        <nav class="grid gap-2 overflow-y-auto pr-1">
+        <nav class="grid gap-2 overflow-y-auto pr-1 flex-1">
           <div v-for="s in sections" :key="s.key" class="">
             <div class="text-[11px] uppercase tracking-wide text-slate-400 px-2">{{ s.label }}</div>
             <RouterLink
@@ -125,6 +126,12 @@
             </RouterLink>
           </div>
         </nav>
+        <!-- Mobile-only logout pinned to bottom -->
+        <div class="pt-3 border-t border-white/10">
+          <button @click="logout" class="w-full px-3 py-2 rounded-lg text-sm bg-white/10 hover:bg-white/20 text-slate-200" aria-label="Esci">
+            Esci
+          </button>
+        </div>
       </aside>
     </transition>
   </header>

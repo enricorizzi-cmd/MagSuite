@@ -22,7 +22,6 @@ const suppliersRouter = require('./src/suppliers');
 
 const notificationsRouter = require('./src/notifications');
 const usersRouter = require('./src/users');
-const priceListsRouter = require('./src/priceLists');
 const db = require('./src/db');
 const { runTenantBackups } = require('./src/backup');
 const cron = require('node-cron');

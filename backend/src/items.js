@@ -339,8 +339,6 @@ router.get('/export', async (req, res) => {
   // reuse filters
   req.query.limit = '10000';
   req.query.page = '1';
-  const fakeReq = { query: req.query };
-  const fakeRes = { json: (data) => data };
   // build filtered query again
   const limit = 10000;
   const offset = 0;

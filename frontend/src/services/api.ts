@@ -1,9 +1,16 @@
 import axios from 'axios';
 
+function getEnv(key: string): string | undefined {
+  const runtime = (globalThis as any)?.__ENV__?.[key];
+  const proc = typeof process !== 'undefined' ? (process as any).env?.[key] : undefined;
+  const vite = (import.meta as any)?.env?.[key];
+  return runtime ?? proc ?? vite;
+}
+
 // Create a pre-configured Axios instance for API calls
 // The base URL can be configured via VITE_API_URL; by default it uses the same origin.
 const api = axios.create({
-  baseURL: import.meta.env?.VITE_API_URL ?? '',
+  baseURL: getEnv('VITE_API_URL') ?? '',
   headers: {
     'Content-Type': 'application/json'
   }
@@ -29,8 +36,8 @@ api.interceptors.request.use((config) => {
   }
 
   if (!token) {
-    const apiKey = (import.meta as any).env.VITE_API_KEY;
-    const companyId = (import.meta as any).env.VITE_COMPANY_ID;
+    const apiKey = getEnv('VITE_API_KEY');
+    const companyId = getEnv('VITE_COMPANY_ID');
     if (apiKey && companyId) {
       (config.headers as any)['x-api-key'] = apiKey;
       (config.headers as any)['x-company-id'] = companyId;

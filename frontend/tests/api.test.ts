@@ -14,8 +14,8 @@ describe('api service', () => {
   });
 
   it('injects API key headers when env vars are set', async () => {
-    import.meta.env.VITE_API_KEY = 'k';
-    import.meta.env.VITE_COMPANY_ID = '1';
+    process.env.VITE_API_KEY = 'k';
+    process.env.VITE_COMPANY_ID = '1';
     const config = await (api as any).interceptors.request.handlers[0].fulfilled({ headers: {} });
     expect(config.headers['x-api-key']).toBe('k');
     expect(config.headers['x-company-id']).toBe('1');
@@ -23,8 +23,8 @@ describe('api service', () => {
 
   it('prefers bearer token over API key headers', async () => {
     localStorage.setItem('token', 'abc');
-    import.meta.env.VITE_API_KEY = 'k';
-    import.meta.env.VITE_COMPANY_ID = '1';
+    process.env.VITE_API_KEY = 'k';
+    process.env.VITE_COMPANY_ID = '1';
     const config = await (api as any).interceptors.request.handlers[0].fulfilled({ headers: {} });
     expect(config.headers.Authorization).toBe('Bearer abc');
     expect(config.headers['x-api-key']).toBeUndefined();

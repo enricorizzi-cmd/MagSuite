@@ -5,6 +5,7 @@
     "node": true,
     "jest": true
   },
+  "ignorePatterns": ["dist/", "node_modules/"],
   "extends": ["eslint:recommended", "prettier"],
   "parserOptions": {
     "ecmaVersion": "latest",

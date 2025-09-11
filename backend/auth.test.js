@@ -6,6 +6,17 @@ let server;
 
 beforeAll(async () => {
   server = await start(0);
+  // Seed a super admin so subsequent registrations don't get auto-promoted
+  const seed = await require('supertest')(server)
+    .post('/auth/register')
+    .send({
+      email: 'seed-admin@example.com',
+      password: 'Str0ng!Pass1',
+      role: 'admin',
+      warehouse_id: 1,
+      company_id: 1,
+    });
+  expect(seed.status).toBe(201);
 });
 
 afterAll((done) => {

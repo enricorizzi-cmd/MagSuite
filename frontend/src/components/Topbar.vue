@@ -32,6 +32,12 @@
           <span class="opacity-70">Azienda:</span> {{ currentCompany?.name || '—' }}
         </div>
 
+        <!-- Ask notifications permission (only if needed) -->
+        <button v-if="showNotifCTA" @click="askNotifPermission"
+                class="px-2 py-1 rounded-lg text-xs bg-white/10 hover:bg-white/20 text-slate-200">
+          Attiva notifiche
+        </button>
+
         <!-- Notifications bell -->
         <div class="relative">
           <button @click="toggleNotifications" class="p-2 rounded-lg hover:bg-white/10 relative" aria-label="Notifiche">
@@ -91,7 +97,7 @@
 import { onMounted, ref, computed } from 'vue';
 import { useRoute } from 'vue-router';
 import api from '../services/api';
-import { connectNotifications, unreadCount, items as notifItems, markAllRead } from '../services/notifications';
+import { connectNotifications, unreadCount, items as notifItems, markAllRead, canRequestNotificationPermission, requestNotificationPermission } from '../services/notifications';
 
 const route = useRoute();
 const tabs = computed(() => {
@@ -105,6 +111,7 @@ const isMenuOpen = ref(false);
 const notifOpen = ref(false);
 const unread = unreadCount;
 const notifications = notifItems;
+const showNotifCTA = ref(false);
 
 const role = ref<string>('');
 const companies = ref<Array<{ id: number; name: string }>>([]);
@@ -124,6 +131,11 @@ function formatTime(iso?: string) {
 function toggleNotifications() {
   notifOpen.value = !notifOpen.value;
   if (notifOpen.value) markAllRead();
+}
+
+async function askNotifPermission() {
+  const res = await requestNotificationPermission();
+  showNotifCTA.value = res === 'default';
 }
 
 async function loadMe() {
@@ -168,6 +180,8 @@ onMounted(async () => {
   await loadCompaniesIfAllowed();
   await loadCurrentCompany();
   connectNotifications();
+  // Show CTA if we can ask for notifications permission
+  showNotifCTA.value = canRequestNotificationPermission();
 });
 </script>
 

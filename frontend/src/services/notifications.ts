@@ -6,6 +6,42 @@ export const items = ref<Array<{ title: string; body?: string; time?: string }>>
 
 let es: EventSource | null = null;
 
+export function canRequestNotificationPermission(): boolean {
+  return typeof Notification !== 'undefined' && Notification.permission === 'default';
+}
+
+export async function requestNotificationPermission(): Promise<'granted'|'denied'|'default'|'unsupported'> {
+  if (typeof Notification === 'undefined') return 'unsupported';
+  if (Notification.permission !== 'default') return Notification.permission as any;
+  try {
+    const res = await Notification.requestPermission();
+    return res as any;
+  } catch {
+    return 'denied';
+  }
+}
+
+function maybeShowOsNotification(data: { title?: string; body?: string; url?: string }) {
+  if (typeof Notification === 'undefined' || Notification.permission !== 'granted') return;
+  const title = data.title || 'Nuova notifica';
+  const options: NotificationOptions = {
+    body: data.body,
+    icon: '/icons/icons-192.png',
+    badge: '/icons/icons-192.png',
+    data: { url: data.url || '/' }
+  };
+  try {
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.getRegistration().then((reg) => {
+        if (reg && 'showNotification' in reg) reg.showNotification(title, options);
+        else new Notification(title, options);
+      });
+    } else {
+      new Notification(title, options);
+    }
+  } catch {}
+}
+
 export function connectNotifications() {
   if (es) return;
   // Build stream URL relative to API base
@@ -22,6 +58,8 @@ export function connectNotifications() {
       const data = JSON.parse(evt.data);
       items.value.unshift(data);
       unreadCount.value += 1;
+      // Try to surface OS-level notification if allowed
+      maybeShowOsNotification(data);
     } catch {}
   };
   es.onerror = () => {

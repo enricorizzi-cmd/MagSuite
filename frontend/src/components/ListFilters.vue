@@ -1,5 +1,13 @@
 <template>
   <div class="mb-4">
+    <!-- New button row (uniform across project) -->
+    <div v-if="showNewButton" class="flex items-center mb-2">
+      <div class="text-xs uppercase tracking-wide text-slate-400">Azioni</div>
+      <button
+        class="ml-auto px-3 py-1.5 rounded-lg text-sm bg-fuchsia-600 hover:bg-fuchsia-500 text-white"
+        @click="emit('new')"
+      >{{ newLabelComputed }}</button>
+    </div>
     <!-- Filters Row -->
     <div class="flex flex-wrap items-start gap-3">
       <div class="text-xs uppercase tracking-wide text-slate-400 w-full">Filtri</div>
@@ -62,7 +70,7 @@
     <slot :filtered="filteredItems" />
   </div>
   
-</template>
+  </template>
 
 <script setup lang="ts">
 import { computed, reactive, ref, watch } from 'vue';
@@ -74,7 +82,17 @@ type SortDir = 'asc' | 'desc';
 const props = defineProps<{
   items: Array<Record<string, any>>;
   fields?: Array<Field>;
+  newLabel?: string; // When provided, shows the uniform "Nuovo…" button
+  showNew?: boolean; // Force show/hide; defaults to true when newLabel provided
 }>();
+
+const emit = defineEmits<{ (e: 'new'): void }>();
+
+const showNewButton = computed<boolean>(() => {
+  if (typeof props.showNew === 'boolean') return props.showNew;
+  return typeof props.newLabel === 'string' && props.newLabel.length > 0;
+});
+const newLabelComputed = computed<string>(() => props.newLabel || 'Nuovo…');
 
 // Build fields list when not provided, inferring type and enum options
 const fieldsToUse = computed<Array<Field>>(() => {

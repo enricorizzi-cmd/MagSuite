@@ -18,6 +18,8 @@
           { key: 'name', label: 'Nome', type: 'string' },
           { key: 'suspended', label: 'Sospesa', type: 'boolean' }
         ]"
+        new-label="Nuova azienda"
+        @new="openCreateCompany"
         v-slot="{ filtered }"
       >
       <div v-if="filtered.length === 0" class="text-slate-400">Nessun risultato con i filtri correnti.</div>
@@ -57,6 +59,45 @@
       </div>
       </ListFilters>
     </main>
+
+    <!-- Create Company Modal -->
+    <transition name="fade">
+      <div v-if="isCreating" class="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4" @click.self="closeCreateCompany">
+        <div class="w-full max-w-lg bg-[#0b1020] border border-white/10 rounded-xl p-4">
+          <div class="flex items-center justify-between mb-2">
+            <h2 class="text-lg font-semibold">Nuova azienda</h2>
+            <button class="p-2 rounded-lg hover:bg-white/10" @click="closeCreateCompany" aria-label="Chiudi">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-5 h-5"><path d="M6 18L18 6M6 6l12 12"/></svg>
+            </button>
+          </div>
+          <div v-if="createError" class="text-rose-400 text-sm mb-2">{{ createError }}</div>
+          <div class="grid gap-3">
+            <div>
+              <label class="block text-xs text-slate-400 mb-1">Nome azienda</label>
+              <input v-model="createForm.company_name" class="w-full bg-white/10 border border-white/10 rounded-lg px-3 py-2 text-sm" placeholder="Es. ACME S.p.A." />
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label class="block text-xs text-slate-400 mb-1">Email admin</label>
+                <input v-model="createForm.email" class="w-full bg-white/10 border border-white/10 rounded-lg px-3 py-2 text-sm" placeholder="admin@example.com" />
+              </div>
+              <div>
+                <label class="block text-xs text-slate-400 mb-1">Password admin</label>
+                <input v-model="createForm.password" type="password" class="w-full bg-white/10 border border-white/10 rounded-lg px-3 py-2 text-sm" placeholder="Min 8 caratteri, maiuscole, numeri e simboli" />
+              </div>
+            </div>
+            <div>
+              <label class="block text-xs text-slate-400 mb-1">Nome admin (opzionale)</label>
+              <input v-model="createForm.name" class="w-full bg-white/10 border border-white/10 rounded-lg px-3 py-2 text-sm" placeholder="Nome e cognome" />
+            </div>
+            <div class="flex justify-end items-center gap-2 pt-2">
+              <button class="px-3 py-2 rounded-lg text-sm bg-white/5 hover:bg-white/10" @click="closeCreateCompany">Annulla</button>
+              <button class="px-3 py-2 rounded-lg text-sm bg-fuchsia-600 hover:bg-fuchsia-500 text-white" :disabled="creating" @click="saveCreateCompany">Crea</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </transition>
   </div>
 </template>
 
@@ -71,6 +112,13 @@ const expanded = ref<Set<number>>(new Set());
 const usersByCompany = ref<Record<number, Array<{ id: number; email: string; role: string; last_login?: string }>>>({});
 const loadingUsers = ref<Record<number, boolean>>({});
 const error = ref('');
+
+const isCreating = ref(false);
+const creating = ref(false);
+const createError = ref('');
+const createForm = ref<{ company_name: string; email: string; password: string; name: string }>({
+  company_name: '', email: '', password: '', name: ''
+});
 
 function formatTime(iso?: string) {
   if (!iso) return '—';
@@ -141,6 +189,39 @@ async function confirmDelete(c: { id: number; name: string }) {
 }
 
 loadCompanies();
+
+function openCreateCompany() {
+  createError.value = '';
+  createForm.value = { company_name: '', email: '', password: '', name: '' };
+  isCreating.value = true;
+}
+
+function closeCreateCompany() {
+  isCreating.value = false;
+  creating.value = false;
+}
+
+async function saveCreateCompany() {
+  creating.value = true;
+  createError.value = '';
+  try {
+    const payload: any = {
+      company_name: createForm.value.company_name,
+      company_mode: 'new',
+      email: createForm.value.email,
+      password: createForm.value.password,
+      role: 'admin',
+      name: createForm.value.name || undefined,
+    };
+    await api.post('/auth/register', payload);
+    await loadCompanies();
+    closeCreateCompany();
+  } catch (e: any) {
+    createError.value = e?.response?.data?.error || e?.message || 'Errore creazione azienda';
+  } finally {
+    creating.value = false;
+  }
+}
 </script>
 
 <style scoped></style>

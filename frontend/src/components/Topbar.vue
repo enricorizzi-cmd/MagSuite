@@ -1,5 +1,5 @@
 ﻿<template>
-  <header class="sticky top-0 z-40 backdrop-blur bg-black/20 border-b border-white/10">
+  <header class="sticky top-0 z-60 backdrop-blur bg-black/20 border-b border-white/10">
     <!-- Top row: brand + sections + actions -->
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-14 flex items-center justify-between gap-4 overflow-x-hidden">
       <!-- Left: Logo + Menu (mobile) -->
@@ -97,8 +97,8 @@
 
     <!-- Mobile drawer -->
     <transition name="fade">
-      <!-- Lower z-index so header remains clickable; aside stays on top -->
-      <div v-if="isMenuOpen" class="fixed inset-0 z-30 bg-black/60 backdrop-blur-[1px]" @click="isMenuOpen=false"></div>
+      <!-- Backdrop below header but above page; aside stays on top -->
+      <div v-if="isMenuOpen" class="fixed inset-0 z-40 bg-black/60 backdrop-blur-[1px]" @click="isMenuOpen=false"></div>
     </transition>
     <transition name="slide">
       <aside v-if="isMenuOpen" class="fixed top-0 left-0 h-full w-72 bg-[#0b1020]/95 border-r border-white/10 p-4 z-50 shadow-2xl flex flex-col">
@@ -111,11 +111,11 @@
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-6 h-6"><path d="M6 18L18 6M6 6l12 12"/></svg>
           </button>
         </div>
-        <nav class="grid gap-2 overflow-y-auto pr-1 flex-1">
-          <div v-for="s in sections" :key="s.key" class="">
-            <div class="text-[11px] uppercase tracking-wide text-slate-400 px-2">{{ s.label }}</div>
+        <nav class="grid gap-2 overflow-y-auto pr-1 flex-1 min-h-0">
+          <div v-for="g in menuGroups" :key="g.label">
+            <div class="text-[11px] uppercase tracking-wide text-slate-400 px-2">{{ g.label }}</div>
             <RouterLink
-              v-for="t in tabsForSection(s.key)"
+              v-for="t in g.items"
               :key="t.path"
               :to="t.path"
               @click="isMenuOpen=false"
@@ -302,12 +302,71 @@ watch(isMenuOpen, (open) => {
   } catch {}
 });
 
+// Also close the drawer on any route change (extra safety)
+watch(() => route.path, () => { isMenuOpen.value = false; });
+
 function logout() {
   try { localStorage.removeItem('token'); } catch {}
   try { sessionStorage.removeItem('token'); } catch {}
   try { localStorage.removeItem('companyId'); } catch {}
   router.push('/');
 }
+
+// Explicit grouped menu for mobile to avoid any rendering edge-cases
+const menuGroups = computed(() => {
+  const groups: Array<{ label: string; items: Tab[] }> = [
+    { label: 'Home', items: [{ label: 'Dashboard', path: '/dashboard' }] },
+    {
+      label: 'Anagrafiche',
+      items: [
+        { label: 'Clienti', path: '/anagrafiche/clienti' },
+        { label: 'Fornitori', path: '/anagrafiche/fornitori' },
+        { label: 'Articoli', path: '/anagrafiche/articoli' },
+        { label: 'Operatori', path: '/anagrafiche/operatori' },
+      ],
+    },
+    {
+      label: 'Logistica',
+      items: [
+        { label: 'Giacenze', path: '/logistica/giacenze' },
+        { label: 'Inventario', path: '/logistica/inventario' },
+        { label: 'Magazzini', path: '/logistica/magazzini' },
+        { label: 'Movimenti', path: '/logistica/movimenti' },
+      ],
+    },
+    {
+      label: 'Edilizia',
+      items: [
+        { label: 'SAL', path: '/edilizia/sal' },
+        { label: 'Materiali di cantiere', path: '/edilizia/materiali-cantiere' },
+        { label: 'Manodopera di cantiere', path: '/edilizia/manodopera-cantiere' },
+      ],
+    },
+    {
+      label: 'Direzione commerciale',
+      items: [
+        { label: 'BPApp', path: '/direzione-commerciale/bpapp' },
+      ],
+    },
+    {
+      label: 'Direzione amministrativa',
+      items: [
+        { label: 'Piano Finanziario', path: '/direzione-amministrativa/piano-finanziario' },
+        { label: 'Marginalità', path: '/direzione-amministrativa/marginalita' },
+        { label: 'Flusso di Cassa', path: '/direzione-amministrativa/flusso-di-cassa' },
+        { label: 'Scadenzari', path: '/direzione-amministrativa/scadenzari' },
+      ],
+    },
+    {
+      label: 'Impostazioni',
+      items: [
+        ...(role.value === 'super_admin' ? [{ label: 'All Settings', path: '/all-settings' } as Tab] : []),
+        { label: 'Utenti', path: '/users' },
+      ],
+    },
+  ];
+  return groups;
+});
 </script>
 
 <style scoped>

@@ -16,6 +16,9 @@
           { key: 'status', label: 'Stato', type: 'enum', options: ['active','pending','suspended'] },
           { key: 'last_login', label: 'Ultimo login', type: 'string' }
         ]"
+        :new-label="role==='super_admin' ? 'Nuovo utente' : ''"
+        :show-new="role==='super_admin'"
+        @new="openCreate"
         v-slot="{ filtered }"
       >
       <div v-if="filtered.length === 0" class="text-slate-400">Nessun risultato con i filtri correnti.</div>
@@ -38,6 +41,57 @@
       </ListFilters>
     </main>
   </div>
+
+  <!-- Create Modal -->
+  <transition name="fade">
+    <div v-if="isCreating" class="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4" @click.self="closeCreate">
+      <div class="w-full max-w-lg bg-[#0b1020] border border-white/10 rounded-xl p-4">
+        <div class="flex items-center justify-between mb-2">
+          <h2 class="text-lg font-semibold">Nuovo utente</h2>
+          <button class="p-2 rounded-lg hover:bg-white/10" @click="closeCreate" aria-label="Chiudi">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-5 h-5"><path d="M6 18L18 6M6 6l12 12"/></svg>
+          </button>
+        </div>
+        <div v-if="createError" class="text-rose-400 text-sm mb-2">{{ createError }}</div>
+        <div class="grid gap-3">
+          <div>
+            <label class="block text-xs text-slate-400 mb-1">Nome</label>
+            <input v-model="createForm.name" class="w-full bg-white/10 border border-white/10 rounded-lg px-3 py-2 text-sm" placeholder="Nome" />
+          </div>
+          <div>
+            <label class="block text-xs text-slate-400 mb-1">Email</label>
+            <input v-model="createForm.email" class="w-full bg-white/10 border border-white/10 rounded-lg px-3 py-2 text-sm" placeholder="email@example.com" />
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs text-slate-400 mb-1">Ruolo</label>
+              <select v-model="createForm.role" class="w-full bg-white/10 border border-white/10 rounded-lg px-3 py-2 text-sm text-slate-200">
+                <option value="super_admin">super_admin</option>
+                <option value="admin">admin</option>
+                <option value="standard">standard</option>
+                <option value="manager">manager</option>
+                <option value="worker">worker</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs text-slate-400 mb-1">Azienda</label>
+              <select v-model.number="createForm.company_id" class="w-full bg-white/10 border border-white/10 rounded-lg px-3 py-2 text-sm text-slate-200" :disabled="role!=='super_admin'">
+                <option v-for="c in companies" :key="c.id" :value="c.id">{{ c.name }}</option>
+              </select>
+            </div>
+          </div>
+          <div>
+            <label class="block text-xs text-slate-400 mb-1">Password</label>
+            <input v-model="createForm.password" type="password" class="w-full bg-white/10 border border-white/10 rounded-lg px-3 py-2 text-sm" placeholder="Min 8 caratteri, maiuscole, numeri e simboli" />
+          </div>
+          <div class="flex justify-end items-center gap-2 pt-2">
+            <button class="px-3 py-2 rounded-lg text-sm bg-white/5 hover:bg-white/10" @click="closeCreate">Annulla</button>
+            <button class="px-3 py-2 rounded-lg text-sm bg-fuchsia-600 hover:bg-fuchsia-500 text-white" :disabled="creating" @click="saveCreate">Crea</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </transition>
 
   <!-- Edit Modal -->
   <transition name="fade">
@@ -113,6 +167,7 @@ type U = { id: number; email: string; role: string; last_login?: string; name?: 
 const users = ref<Array<U>>([]);
 const error = ref('');
 const role = ref<string>('');
+const myCompanyId = ref<number | null>(null);
 const companies = ref<Array<{ id: number; name: string }>>([]);
 
 const isEditing = ref(false);
@@ -121,6 +176,13 @@ const editError = ref('');
 const editingUser = ref<U | null>(null);
 const form = ref<{ name: string; email: string; role: string; company_id: number | null; password: string; status: string }>({
   name: '', email: '', role: 'standard', company_id: null, password: '', status: 'active'
+});
+
+const isCreating = ref(false);
+const creating = ref(false);
+const createError = ref('');
+const createForm = ref<{ name: string; email: string; role: string; company_id: number | null; password: string }>({
+  name: '', email: '', role: 'standard', company_id: null, password: ''
 });
 
 function formatTime(iso?: string) {
@@ -141,6 +203,7 @@ async function loadMe() {
   try {
     const { data } = await api.get('/auth/me');
     role.value = data?.role || '';
+    myCompanyId.value = typeof data?.company_id === 'number' ? data.company_id : null;
   } catch {}
 }
 
@@ -169,6 +232,44 @@ function openEdit(u: U) {
 function closeEdit() {
   isEditing.value = false;
   saving.value = false;
+}
+
+function openCreate() {
+  createError.value = '';
+  createForm.value = {
+    name: '',
+    email: '',
+    role: 'standard',
+    company_id: (role.value === 'super_admin' ? (companies.value[0]?.id ?? null) : (myCompanyId.value ?? null)),
+    password: ''
+  };
+  isCreating.value = true;
+}
+
+function closeCreate() {
+  isCreating.value = false;
+  creating.value = false;
+}
+
+async function saveCreate() {
+  creating.value = true;
+  createError.value = '';
+  try {
+    const payload: any = {
+      email: createForm.value.email,
+      password: createForm.value.password,
+      role: createForm.value.role,
+      name: createForm.value.name,
+      company_id: role.value === 'super_admin' ? createForm.value.company_id : (myCompanyId.value ?? null)
+    };
+    await api.post('/auth/register', payload);
+    await loadUsers();
+    closeCreate();
+  } catch (e: any) {
+    createError.value = e?.response?.data?.error || e?.message || 'Errore creazione';
+  } finally {
+    creating.value = false;
+  }
 }
 
 async function saveEdit() {

@@ -24,7 +24,7 @@
         <!-- Company field: dropdown for super admin, static otherwise -->
         <div v-if="role==='super_admin'" class="min-w-[220px]">
           <select v-model="selectedCompanyId" @change="onCompanyChange"
-                  class="w-full bg-white/10 border border-white/10 rounded-lg px-3 py-1.5 text-sm">
+                  class="company-select w-full bg-white/10 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-slate-100">
             <option v-for="c in companies" :key="c.id" :value="String(c.id)">{{ c.name }}</option>
           </select>
         </div>
@@ -206,5 +206,11 @@ function logout() {
 .slide-enter-from, .slide-leave-to { transform: translateX(-100%); }
 </style>
 
+<!-- Global styles for native select dropdown contrast -->
+<style>
+/* Ensure readable options in the OS/native dropdown list */
+.company-select { color-scheme: dark; }
+.company-select option { color: #0f172a; background-color: #ffffff; }
+</style>
 
 

@@ -6,14 +6,21 @@
       <p class="text-slate-300 mb-4">Utenti della tua azienda.</p>
       <div v-if="error" class="text-rose-400 text-sm mb-3">{{ error }}</div>
       <div v-if="users.length === 0" class="text-slate-400">Nessun utente.</div>
-      <div v-for="u in users" :key="u.id" class="flex items-center justify-between gap-3 py-2 border-b border-white/10 text-sm">
+      <div v-for="u in users" :key="u.id" class="flex items-center justify-between gap-3 py-2 border-b border-white/10 text-sm" :class="{ 'bg-yellow-900/20': u.status==='pending', 'opacity-70': u.status==='suspended' }">
         <div class="flex-1 min-w-0">
-          <div class="text-slate-200 truncate">{{ u.email }}</div>
+          <div class="truncate" :class="u.status==='pending' ? 'text-yellow-200' : 'text-slate-200'">{{ u.email }}</div>
           <div class="text-slate-500 text-xs" v-if="u.name">Nome: {{ u.name }}</div>
         </div>
         <div class="w-28 text-slate-400 shrink-0">{{ u.role }}</div>
+        <div class="w-24 text-right shrink-0">
+          <span v-if="u.status==='pending'" class="text-xs px-2 py-0.5 rounded bg-yellow-500/20 text-yellow-200">in attivazione</span>
+          <span v-else-if="u.status==='suspended'" class="text-xs px-2 py-0.5 rounded bg-rose-500/20 text-rose-200">sospeso</span>
+        </div>
         <div class="hidden sm:block text-slate-500 shrink-0">Ultimo login: {{ formatTime(u.last_login) }}</div>
-        <button v-if="role==='super_admin'" class="px-2 py-1 rounded-lg text-xs bg-white/10 hover:bg-white/20 text-slate-200 shrink-0" @click="openEdit(u)">Modifica</button>
+        <div class="flex gap-2 shrink-0">
+          <button v-if="role==='admin' && u.status==='pending'" class="px-2 py-1 rounded-lg text-xs bg-emerald-700/40 hover:bg-emerald-700/60 text-emerald-100" @click="approveUser(u)">Approva</button>
+          <button v-if="role==='super_admin'" class="px-2 py-1 rounded-lg text-xs bg-white/10 hover:bg-white/20 text-slate-200" @click="openEdit(u)">Modifica</button>
+        </div>
       </div>
     </main>
   </div>
@@ -57,12 +64,23 @@
             </div>
           </div>
           <div>
+            <label class="block text-xs text-slate-400 mb-1">Stato</label>
+            <select v-model="form.status" class="w-full bg-white/10 border border-white/10 rounded-lg px-3 py-2 text-sm">
+              <option value="active">attivo</option>
+              <option value="pending">in attivazione</option>
+              <option value="suspended">sospeso</option>
+            </select>
+          </div>
+          <div>
             <label class="block text-xs text-slate-400 mb-1">Nuova password (opzionale)</label>
             <input v-model="form.password" type="password" class="w-full bg-white/10 border border-white/10 rounded-lg px-3 py-2 text-sm" placeholder="Min 8 caratteri, maiuscole, numeri e simboli" />
           </div>
-          <div class="flex justify-end gap-2 pt-2">
-            <button class="px-3 py-2 rounded-lg text-sm bg-white/5 hover:bg-white/10" @click="closeEdit">Annulla</button>
-            <button class="px-3 py-2 rounded-lg text-sm bg-fuchsia-600 hover:bg-fuchsia-500 text-white" :disabled="saving" @click="saveEdit">Salva</button>
+          <div class="flex justify-between items-center gap-2 pt-2">
+            <button class="px-3 py-2 rounded-lg text-sm bg-rose-700/30 hover:bg-rose-700/50 text-rose-200" :disabled="saving" @click="confirmDelete">Elimina utente</button>
+            <div class="flex gap-2">
+              <button class="px-3 py-2 rounded-lg text-sm bg-white/5 hover:bg-white/10" @click="closeEdit">Annulla</button>
+              <button class="px-3 py-2 rounded-lg text-sm bg-fuchsia-600 hover:bg-fuchsia-500 text-white" :disabled="saving" @click="saveEdit">Salva</button>
+            </div>
           </div>
         </div>
       </div>
@@ -76,7 +94,7 @@ import { ref } from 'vue';
 import Topbar from '../../components/Topbar.vue';
 import api from '../../services/api';
 
-type U = { id: number; email: string; role: string; last_login?: string; name?: string; company_id?: number };
+type U = { id: number; email: string; role: string; last_login?: string; name?: string; company_id?: number; status?: string };
 const users = ref<Array<U>>([]);
 const error = ref('');
 const role = ref<string>('');
@@ -86,8 +104,8 @@ const isEditing = ref(false);
 const saving = ref(false);
 const editError = ref('');
 const editingUser = ref<U | null>(null);
-const form = ref<{ name: string; email: string; role: string; company_id: number | null; password: string }>({
-  name: '', email: '', role: 'standard', company_id: null, password: ''
+const form = ref<{ name: string; email: string; role: string; company_id: number | null; password: string; status: string }>({
+  name: '', email: '', role: 'standard', company_id: null, password: '', status: 'active'
 });
 
 function formatTime(iso?: string) {
@@ -127,7 +145,8 @@ function openEdit(u: U) {
     email: u.email,
     role: u.role,
     company_id: typeof u.company_id === 'number' ? u.company_id : (companies.value[0]?.id ?? null),
-    password: ''
+    password: '',
+    status: u.status || 'active'
   };
   isEditing.value = true;
 }
@@ -142,13 +161,40 @@ async function saveEdit() {
   saving.value = true;
   editError.value = '';
   try {
-    const payload: any = { email: form.value.email, role: form.value.role, company_id: form.value.company_id, name: form.value.name };
+    const payload: any = { email: form.value.email, role: form.value.role, company_id: form.value.company_id, name: form.value.name, status: form.value.status };
     if (form.value.password) payload.password = form.value.password;
     await api.put(`/auth/users/${editingUser.value.id}`, payload);
     await loadUsers();
     closeEdit();
   } catch (e: any) {
     editError.value = e?.response?.data?.error || e?.message || 'Errore salvataggio';
+  } finally {
+    saving.value = false;
+  }
+}
+
+async function approveUser(u: U) {
+  const r = prompt('Ruolo per questo utente (super_admin, admin, standard, manager, worker):', 'standard');
+  if (!r) return;
+  try {
+    await api.post(`/auth/users/${u.id}/approve`, { role: r });
+    await loadUsers();
+  } catch (e: any) {
+    alert(e?.response?.data?.error || e?.message || 'Errore approvazione');
+  }
+}
+
+async function confirmDelete() {
+  if (!editingUser.value) return;
+  if (!confirm('Eliminare definitivamente questo utente?')) return;
+  saving.value = true;
+  editError.value = '';
+  try {
+    await api.delete(`/auth/users/${editingUser.value.id}`);
+    await loadUsers();
+    closeEdit();
+  } catch (e: any) {
+    editError.value = e?.response?.data?.error || e?.message || 'Errore eliminazione';
   } finally {
     saving.value = false;
   }
@@ -161,4 +207,3 @@ loadMe().then(() => Promise.all([loadCompaniesIfAllowed(), loadUsers()]));
 .fade-enter-active, .fade-leave-active { transition: opacity .2s ease; }
 .fade-enter-from, .fade-leave-to { opacity: 0; }
 </style>
-

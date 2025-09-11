@@ -2,7 +2,7 @@ import { ref } from 'vue';
 import api from './api';
 
 export const unreadCount = ref(0);
-export const items = ref<Array<{ title: string; body?: string; time?: string }>>([]);
+export const items = ref<Array<{ title: string; body?: string; time?: string; type?: string; user_id?: number; url?: string }>>([]);
 
 let es: EventSource | null = null;
 
@@ -56,6 +56,11 @@ export function connectNotifications() {
   es.onmessage = (evt) => {
     try {
       const data = JSON.parse(evt.data);
+      if (data && data.type === 'user_approval_resolved' && data.user_id) {
+        // remove associated pending notifications
+        items.value = items.value.filter(n => !(n.type === 'user_approval_pending' && n.user_id === data.user_id));
+        return;
+      }
       items.value.unshift(data);
       unreadCount.value += 1;
       // Try to surface OS-level notification if allowed

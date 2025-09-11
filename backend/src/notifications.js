@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { authenticateToken } = require('./auth/middleware');
 const events = require('./events');
+const approvals = require('./auth/approvals');
 
 // In-memory client registry per company
 const clients = new Map(); // companyId -> Set(res)
@@ -57,6 +58,26 @@ router.get('/stream', authenticateToken, (req, res) => {
   // Register client
   if (!Number.isNaN(cid) && cid) addClient(cid, res);
 
+  // Send initial backlog of pending approvals for this company
+  (async () => {
+    try {
+      if (!Number.isNaN(cid) && cid) {
+        const pending = await approvals.listOpen(cid);
+        for (const p of pending) {
+          const payload = {
+            type: 'user_approval_pending',
+            title: 'Nuovo utente in attivazione',
+            body: p.email ? `Conferma e scegli ruolo per ${p.email}` : 'Conferma e scegli ruolo',
+            time: new Date(p.created_at || Date.now()).toISOString(),
+            user_id: p.user_id,
+            url: '/users'
+          };
+          res.write(`data: ${JSON.stringify(payload)}\n\n`);
+        }
+      }
+    } catch {}
+  })();
+
   req.on('close', () => {
     clearInterval(heartbeat);
     if (!Number.isNaN(cid) && cid) removeClient(cid, res);
@@ -79,4 +100,3 @@ router.post('/test', authenticateToken, (req, res) => {
 });
 
 module.exports = { router, notify };
-

@@ -1,5 +1,7 @@
 const { verifyAccessToken, verifySsoToken } = require('./tokens');
 const companyContext = require('../companyContext');
+const db = require('../db');
+require('../companies');
 
 // Expanded role map to support new roles while preserving compatibility
 const rolePermissions = {
@@ -27,6 +29,17 @@ const rolePermissions = {
   api: { '*': ['*'] },
 };
 
+async function ensureCompanyAccessOrBlock(user, companyId) {
+  if (!companyId) return;
+  if (user && (user.role === 'super_admin' || user.role === 'admin_global')) return;
+  const { rows } = await db.query('SELECT suspended FROM companies WHERE id=$1', [companyId]);
+  if (rows[0] && rows[0].suspended) {
+    const err = new Error('Company suspended');
+    err.status = 403;
+    throw err;
+  }
+}
+
 function authenticateToken(req, res, next) {
   const apiKey = req.headers['x-api-key'];
   if (apiKey && process.env.API_KEY && apiKey === process.env.API_KEY) {
@@ -36,14 +49,28 @@ function authenticateToken(req, res, next) {
       return res.status(400).json({ error: 'x-company-id header required' });
     }
     req.user = { role: 'api', company_id: companyId };
-    return companyContext.run({ companyId: req.user.company_id }, next);
+    return (async () => {
+      try {
+        await ensureCompanyAccessOrBlock(req.user, companyId);
+        companyContext.run({ companyId: req.user.company_id }, next);
+      } catch (e) {
+        res.sendStatus(e.status || 403);
+      }
+    })();
   }
 
   const sso = req.headers['x-sso-token'];
   if (sso) {
     try {
       req.user = verifySsoToken(sso);
-      return companyContext.run({ companyId: req.user.company_id }, next);
+      return (async () => {
+        try {
+          await ensureCompanyAccessOrBlock(req.user, req.user.company_id);
+          companyContext.run({ companyId: req.user.company_id }, next);
+        } catch (e) {
+          res.sendStatus(e.status || 401);
+        }
+      })();
     } catch {
       return res.sendStatus(401);
     }
@@ -67,7 +94,14 @@ function authenticateToken(req, res, next) {
     ) {
       companyId = Number(headerCompany);
     }
-    companyContext.run({ companyId }, next);
+    (async () => {
+      try {
+        await ensureCompanyAccessOrBlock(req.user, companyId);
+        companyContext.run({ companyId }, next);
+      } catch (e) {
+        res.sendStatus(e.status || 401);
+      }
+    })();
   } catch {
     return res.sendStatus(401);
   }

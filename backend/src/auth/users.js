@@ -46,6 +46,10 @@ const ready = (async () => {
     // store as textified json for compatibility
     await db.query('ALTER TABLE users ADD COLUMN permissions text');
   }
+  if (!(await columnExists('status'))) {
+    // user status: 'pending' | 'active' | 'suspended' (default active for existing rows)
+    await db.query("ALTER TABLE users ADD COLUMN status text DEFAULT 'active'");
+  }
 })();
 
 function validatePassword(password) {
@@ -73,6 +77,7 @@ async function createUser({
   warehouse_id,
   company_id,
   name,
+  status = 'pending',
 }) {
   await ready;
   const exists = await db.query('SELECT 1 FROM users WHERE lower(email)=lower($1)', [email]);
@@ -83,8 +88,8 @@ async function createUser({
   const password_hash = await bcrypt.hash(password, 10);
   const role_id = await ensureRole(role);
   const ins = await db.query(
-    `INSERT INTO users(email, password_hash, role_id, warehouse_id, company_id, mfa_secret, permissions, name)
-     VALUES($1,$2,$3,$4,$5,$6,$7,$8) RETURNING id, email, warehouse_id, company_id, role_id, permissions, name` ,
+    `INSERT INTO users(email, password_hash, role_id, warehouse_id, company_id, mfa_secret, permissions, name, status)
+     VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING id, email, warehouse_id, company_id, role_id, permissions, name, status` ,
     [
       email,
       password_hash,
@@ -94,6 +99,7 @@ async function createUser({
       mfa_secret,
       permissions && Object.keys(permissions).length ? JSON.stringify(permissions) : null,
       name == null ? null : String(name).trim(),
+      status,
     ]
   );
   const user = ins.rows[0];
@@ -108,7 +114,8 @@ async function getUserById(id) {
     `SELECT u.id, u.email, u.password_hash, u.warehouse_id, u.company_id, u.mfa_secret, u.permissions,
             COALESCE(r.name, 'worker') AS role,
             u.last_login,
-            u.name
+            u.name,
+            u.status
        FROM users u LEFT JOIN roles r ON r.id = u.role_id
       WHERE u.id = $1`, [id]
   );
@@ -164,6 +171,14 @@ async function updateUser(id, changes) {
     fields.push('company_id'); params.push(Number.isNaN(cid) ? null : cid);
   }
 
+  // Status update
+  if (typeof changes.status === 'string') {
+    const allowed = ['pending', 'active', 'suspended'];
+    const st = changes.status.trim().toLowerCase();
+    if (!allowed.includes(st)) throw new Error('Invalid status');
+    fields.push('status'); params.push(st);
+  }
+
   // Password -> password_hash
   if (typeof changes.password === 'string' && changes.password.length > 0) {
     validatePassword(changes.password);
@@ -202,7 +217,8 @@ async function authenticate({ email, password, mfaToken }) {
   const { rows } = await db.query(
     `SELECT u.id, u.email, u.password_hash, u.warehouse_id, u.company_id, u.mfa_secret, u.permissions,
             COALESCE(r.name, 'worker') AS role,
-            u.last_login
+            u.last_login,
+            u.status
        FROM users u LEFT JOIN roles r ON r.id = u.role_id
       WHERE lower(u.email) = lower($1)` ,
     [email]

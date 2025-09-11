@@ -51,6 +51,12 @@
 
         <form v-else class="space-y-4" @submit.prevent="register">
           <div>
+            <label class="block text-sm mb-1">Nome</label>
+            <input v-model="displayName"
+                   class="w-full px-3 py-2 rounded-lg bg-white/10 border border-white/10 text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-fuchsia-500/60 focus:border-fuchsia-400/60"
+                   placeholder="Nome e cognome" />
+          </div>
+          <div>
             <label class="block text-sm mb-1">Nome Azienda</label>
             <input v-model="companyName" required
                    class="w-full px-3 py-2 rounded-lg bg-white/10 border border-white/10 text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-fuchsia-500/60 focus:border-fuchsia-400/60"
@@ -102,6 +108,7 @@ const tab = ref<'login' | 'register'>('login');
 
 const email = ref('');
 const password = ref('');
+const displayName = ref('');
 
 const companyName = ref('');
 const loading = ref(false);
@@ -146,6 +153,7 @@ async function register() {
     const res = await api.post('/auth/register', {
       email: email.value,
       password: password.value,
+      name: displayName.value,
       company_name: companyName.value,
       company_mode: companyMode.value
     });

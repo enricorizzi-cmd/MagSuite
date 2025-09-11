@@ -14,6 +14,7 @@ router.post('/register', async (req, res) => {
     warehouse_id,
     company_id,
     permissions,
+    name,
     company_name,
     company_mode, // 'existing' | 'new'
   } = req.body || {};
@@ -66,6 +67,7 @@ router.post('/register', async (req, res) => {
       permissions,
       warehouse_id,
       company_id: finalCompanyId,
+      name,
     });
     audit.logAction(user.id, 'register', { company_id: finalCompanyId, company_mode: company_mode || 'existing' });
     res.status(201).json({ id: user.id, email: user.email, company_id: finalCompanyId, role: user.role });

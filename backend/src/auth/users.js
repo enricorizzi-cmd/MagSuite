@@ -72,6 +72,7 @@ async function createUser({
   mfa_secret = null,
   warehouse_id,
   company_id,
+  name,
 }) {
   await ready;
   const exists = await db.query('SELECT 1 FROM users WHERE lower(email)=lower($1)', [email]);
@@ -82,8 +83,8 @@ async function createUser({
   const password_hash = await bcrypt.hash(password, 10);
   const role_id = await ensureRole(role);
   const ins = await db.query(
-    `INSERT INTO users(email, password_hash, role_id, warehouse_id, company_id, mfa_secret, permissions)
-     VALUES($1,$2,$3,$4,$5,$6,$7) RETURNING id, email, warehouse_id, company_id, role_id, permissions` ,
+    `INSERT INTO users(email, password_hash, role_id, warehouse_id, company_id, mfa_secret, permissions, name)
+     VALUES($1,$2,$3,$4,$5,$6,$7,$8) RETURNING id, email, warehouse_id, company_id, role_id, permissions, name` ,
     [
       email,
       password_hash,
@@ -92,6 +93,7 @@ async function createUser({
       company_id || null,
       mfa_secret,
       permissions && Object.keys(permissions).length ? JSON.stringify(permissions) : null,
+      name == null ? null : String(name).trim(),
     ]
   );
   const user = ins.rows[0];

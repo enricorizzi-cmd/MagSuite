@@ -9,7 +9,19 @@
 
       <div v-if="companies.length === 0" class="text-slate-400">Nessuna azienda.</div>
 
-      <div v-for="c in companies" :key="c.id" class="mb-3 border border-white/10 rounded-xl overflow-hidden">
+      <!-- Header Filters + List -->
+      <ListFilters
+        v-else
+        :items="companies"
+        :fields="[
+          { key: 'id', label: 'ID', type: 'number' },
+          { key: 'name', label: 'Nome', type: 'string' },
+          { key: 'suspended', label: 'Sospesa', type: 'boolean' }
+        ]"
+        v-slot="{ filtered }"
+      >
+      <div v-if="filtered.length === 0" class="text-slate-400">Nessun risultato con i filtri correnti.</div>
+      <div v-for="c in filtered" :key="c.id" class="mb-3 border border-white/10 rounded-xl overflow-hidden">
         <button @click="toggle(c.id)" class="w-full flex items-center justify-between px-4 py-3 bg-white/5 hover:bg-white/10">
           <div class="font-medium flex items-center gap-2">
             <span>{{ c.name }}</span>
@@ -43,6 +55,7 @@
           </div>
         </div>
       </div>
+      </ListFilters>
     </main>
   </div>
 </template>
@@ -50,6 +63,7 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import Topbar from '../../components/Topbar.vue';
+import ListFilters from '../../components/ListFilters.vue';
 import api from '../../services/api';
 
 const companies = ref<Array<{ id: number; name: string; suspended?: boolean }>>([]);

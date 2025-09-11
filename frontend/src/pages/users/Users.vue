@@ -6,7 +6,20 @@
       <p class="text-slate-300 mb-4">Utenti della tua azienda.</p>
       <div v-if="error" class="text-rose-400 text-sm mb-3">{{ error }}</div>
       <div v-if="users.length === 0" class="text-slate-400">Nessun utente.</div>
-      <div v-for="u in users" :key="u.id" class="flex items-center justify-between gap-3 py-2 border-b border-white/10 text-sm" :class="{ 'bg-yellow-900/20': u.status==='pending', 'opacity-70': u.status==='suspended' }">
+      <ListFilters
+        v-else
+        :items="users"
+        :fields="[
+          { key: 'email', label: 'Email', type: 'string' },
+          { key: 'name', label: 'Nome', type: 'string' },
+          { key: 'role', label: 'Ruolo', type: 'string' },
+          { key: 'status', label: 'Stato', type: 'enum', options: ['active','pending','suspended'] },
+          { key: 'last_login', label: 'Ultimo login', type: 'string' }
+        ]"
+        v-slot="{ filtered }"
+      >
+      <div v-if="filtered.length === 0" class="text-slate-400">Nessun risultato con i filtri correnti.</div>
+      <div v-for="u in filtered" :key="u.id" class="flex items-center justify-between gap-3 py-2 border-b border-white/10 text-sm" :class="{ 'bg-yellow-900/20': u.status==='pending', 'opacity-70': u.status==='suspended' }">
         <div class="flex-1 min-w-0">
           <div class="truncate" :class="u.status==='pending' ? 'text-yellow-200' : 'text-slate-200'">{{ u.email }}</div>
           <div class="text-slate-500 text-xs" v-if="u.name">Nome: {{ u.name }}</div>
@@ -22,6 +35,7 @@
           <button v-if="role==='super_admin'" class="px-2 py-1 rounded-lg text-xs bg-white/10 hover:bg-white/20 text-slate-200" @click="openEdit(u)">Modifica</button>
         </div>
       </div>
+      </ListFilters>
     </main>
   </div>
 
@@ -92,6 +106,7 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import Topbar from '../../components/Topbar.vue';
+import ListFilters from '../../components/ListFilters.vue';
 import api from '../../services/api';
 
 type U = { id: number; email: string; role: string; last_login?: string; name?: string; company_id?: number; status?: string };

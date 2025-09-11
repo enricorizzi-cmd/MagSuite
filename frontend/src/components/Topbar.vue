@@ -1,12 +1,14 @@
 ﻿<template>
   <header class="sticky top-0 z-40 backdrop-blur bg-black/20 border-b border-white/10">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-14 flex items-center justify-between gap-4">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-14 flex items-center justify-between gap-4 overflow-x-hidden">
       <!-- Left: Logo + Menu (mobile) -->
-      <div class="flex items-center gap-3">
-        <button class="md:hidden p-2 rounded-lg hover:bg-white/10 text-slate-200" @click="isMenuOpen = true" aria-label="Apri menu">
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-6 h-6"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+      <div class="flex items-center gap-2 sm:gap-3">
+        <!-- On mobile: use the "M" icon as the menu button -->
+        <button class="md:hidden p-1 -ml-1 rounded-lg hover:bg-white/10 text-slate-200" @click="isMenuOpen = true" aria-label="Apri menu">
+          <img src="/icon.svg" alt="Apri menu" class="h-7 w-7" />
         </button>
-        <img src="/icon.svg" alt="MagSuite" class="h-7 w-7" />
+        <!-- On desktop: show the static brand icon -->
+        <img src="/icon.svg" alt="MagSuite" class="hidden md:block h-7 w-7" />
         <span class="hidden sm:inline text-sm font-semibold tracking-wide">MagSuite</span>
       </div>
 
@@ -20,26 +22,26 @@
       </nav>
 
       <!-- Right: Company, Notifications, Logout -->
-      <div class="flex items-center gap-3">
+      <div class="flex items-center gap-2 sm:gap-3 min-w-0">
         <!-- Company field: dropdown for super admin, static otherwise -->
-        <div v-if="role==='super_admin'" class="min-w-[220px]">
+        <div v-if="role==='super_admin'" class="min-w-0 sm:min-w-[160px] md:min-w-[220px] max-w-[50vw]">
           <select v-model="selectedCompanyId" @change="onCompanyChange"
-                  class="company-select w-full bg-white/10 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-slate-100">
+                  class="company-select w-full bg-white/10 border border-white/10 rounded-lg px-2 sm:px-3 py-1.5 text-xs sm:text-sm text-slate-100 truncate">
             <option v-for="c in companies" :key="c.id" :value="String(c.id)">{{ c.name }}</option>
           </select>
         </div>
-        <div v-else class="text-sm text-slate-200 min-w-[180px] truncate">
-          <span class="opacity-70">Azienda:</span> {{ currentCompany?.name || '—' }}
+        <div v-else class="text-xs sm:text-sm text-slate-200 min-w-0 max-w-[48vw] truncate">
+          <span class="opacity-70 hidden sm:inline">Azienda:</span> <span class="truncate inline-block align-bottom max-w-full">{{ currentCompany?.name || '-' }}</span>
         </div>
 
         <!-- Ask notifications permission (only if needed) -->
         <button v-if="showNotifCTA" @click="askNotifPermission"
-                class="px-2 py-1 rounded-lg text-xs bg-white/10 hover:bg-white/20 text-slate-200">
+                class="hidden sm:inline-flex px-2 py-1 rounded-lg text-xs bg-white/10 hover:bg-white/20 text-slate-200">
           Attiva notifiche
         </button>
 
         <!-- Notifications bell -->
-        <div class="relative">
+        <div class="relative shrink-0">
           <button @click="toggleNotifications" class="p-2 rounded-lg hover:bg-white/10 relative" aria-label="Notifiche">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-6 h-6">
               <path d="M12 2a6 6 0 00-6 6v3.586l-.707.707A1 1 0 006 14h12a1 1 0 00.707-1.707L18 11.586V8a6 6 0 00-6-6z"/>
@@ -50,7 +52,7 @@
             </span>
           </button>
 
-          <div v-if="notifOpen" class="absolute right-0 mt-2 w-80 max-h-96 overflow-auto bg-[#0b1020]/95 border border-white/10 rounded-xl shadow-xl p-2">
+          <div v-if="notifOpen" class="absolute right-0 mt-2 w-80 max-w-[92vw] max-h-96 overflow-auto bg-[#0b1020]/95 border border-white/10 rounded-xl shadow-xl p-2">
             <div class="flex items-center justify-between px-2 py-1">
               <div class="text-sm font-semibold">Notifiche</div>
               <button class="text-xs text-slate-300 hover:text-white" @click="markAll">Segna tutte lette</button>
@@ -65,19 +67,20 @@
         </div>
 
         <!-- Logout -->
-        <button @click="logout" class="px-2 py-1.5 rounded-lg text-sm bg-white/10 hover:bg-white/20 text-slate-200"
+        <button @click="logout" class="px-2 py-1.5 rounded-lg text-sm bg-white/10 hover:bg-white/20 text-slate-200 shrink-0"
                 aria-label="Esci">
-          Esci
+          <svg class="w-5 h-5 sm:hidden" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 24 24"><path d="M15.75 2.25a.75.75 0 01.75.75v5.25a.75.75 0 01-1.5 0V4.81l-8.47 8.47a.75.75 0 11-1.06-1.06L13.94 3.75H10.5a.75.75 0 010-1.5h5.25z"/><path d="M4.5 20.25h9.75a.75.75 0 010 1.5H4.5A2.25 2.25 0 012.25 19.5V4.5A2.25 2.25 0 014.5 2.25h9.75a.75.75 0 010 1.5H4.5c-.414 0-.75.336-.75.75v15a.75.75 0 00.75.75z"/></svg>
+          <span class="hidden sm:inline">Esci</span>
         </button>
       </div>
     </div>
 
     <!-- Mobile drawer -->
     <transition name="fade">
-      <div v-if="isMenuOpen" class="fixed inset-0 bg-black/60 z-50" @click="isMenuOpen=false"></div>
+      <div v-if="isMenuOpen" class="fixed inset-0 z-50 bg-black/60 backdrop-blur-[1px]" @click="isMenuOpen=false"></div>
     </transition>
     <transition name="slide">
-      <aside v-if="isMenuOpen" class="fixed top-0 left-0 h-full w-72 bg-[#0b1020] border-r border-white/10 p-4 z-50 shadow-2xl">
+      <aside v-if="isMenuOpen" class="fixed top-0 left-0 h-full w-72 bg-[#0b1020]/95 border-r border-white/10 p-4 z-50 shadow-2xl">
         <div class="flex items-center justify-between mb-4">
           <div class="flex items-center gap-2">
             <img src="/icon.svg" class="h-6 w-6" />
@@ -100,7 +103,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref, computed } from 'vue';
+import { onMounted, ref, computed, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import api from '../services/api';
 import { connectNotifications, unreadCount, items as notifItems, markAllRead, canRequestNotificationPermission, requestNotificationPermission } from '../services/notifications';
@@ -189,6 +192,13 @@ onMounted(async () => {
   connectNotifications();
   // Show CTA if we can ask for notifications permission
   showNotifCTA.value = canRequestNotificationPermission();
+});
+
+// Prevent background scrolling when the mobile menu is open
+watch(isMenuOpen, (open) => {
+  try {
+    document.body.style.overflow = open ? 'hidden' : '';
+  } catch {}
 });
 
 function logout() {

@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <header class="sticky top-0 z-40 backdrop-blur bg-black/20 border-b border-white/10">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-14 flex items-center justify-between gap-4">
       <!-- Left: Logo + Menu (mobile) -->
@@ -29,7 +29,7 @@
           </select>
         </div>
         <div v-else class="text-sm text-slate-200 min-w-[180px] truncate">
-          <span class="opacity-70">Azienda:</span> {{ currentCompany?.name || '—' }}
+          <span class="opacity-70">Azienda:</span> {{ currentCompany?.name || '�' }}
         </div>
 
         <!-- Notifications bell -->
@@ -177,6 +177,5 @@ onMounted(async () => {
 .slide-enter-active, .slide-leave-active { transition: transform .25s ease; }
 .slide-enter-from, .slide-leave-to { transform: translateX(-100%); }
 </style>
-
 
 

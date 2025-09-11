@@ -197,3 +197,4 @@ watchEffect(async () => {
   filter: brightness(1.08);
 }
 </style>
+

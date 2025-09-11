@@ -54,7 +54,9 @@ router.get('/', async (req, res) => {
   const page = Math.max(parseInt(req.query.page) || 1, 1);
   const offset = (page - 1) * limit;
   const params = [];
-  const conditions = ["i.company_id = NULLIF(current_setting('app.current_company_id', true), '')::int"];
+  // Bind company directly to avoid relying on DB GUC
+  params.push(req.user.company_id);
+  const conditions = ["i.company_id = $1"];
   const { q, type, category, group: groupKey, class: classKey, supplier } = req.query;
   if (q) {
     params.push(`%${q}%`);
@@ -80,7 +82,7 @@ router.get('/', async (req, res) => {
          SELECT sm.item_id, SUM(sm.quantity) AS qty
          FROM stock_movements sm
          JOIN items ii ON ii.id = sm.item_id
-         WHERE ii.company_id = NULLIF(current_setting('app.current_company_id', true), '')::int
+         WHERE ii.company_id = $1
          GROUP BY sm.item_id
        ) s ON s.item_id = i.id
       ${where}
@@ -343,7 +345,8 @@ router.get('/export', async (req, res) => {
   const limit = 10000;
   const offset = 0;
   const params = [];
-  const conditions = ["i.company_id = NULLIF(current_setting('app.current_company_id', true), '')::int"];
+  params.push(req.user.company_id);
+  const conditions = ["i.company_id = $1"];
   const { q, type, category, group: groupKey, class: classKey, supplier } = req.query;
   if (q) {
     params.push(`%${q}%`);
@@ -368,7 +371,7 @@ router.get('/export', async (req, res) => {
          SELECT sm.item_id, SUM(sm.quantity) AS qty
          FROM stock_movements sm
          JOIN items ii ON ii.id = sm.item_id
-         WHERE ii.company_id = NULLIF(current_setting('app.current_company_id', true), '')::int
+         WHERE ii.company_id = $1
          GROUP BY sm.item_id
        ) s ON s.item_id = i.id
       ${where}

@@ -62,6 +62,9 @@ router.get('/', async (req, res) => {
   let query = 'SELECT * FROM documents';
   const params = [];
   const conditions = [];
+  // Scope to current company explicitly
+  params.push(req.user.company_id);
+  conditions.push(`company_id = $${params.length}`);
   if (type) {
     params.push(type);
     conditions.push(`type = $${params.length}`);
@@ -105,7 +108,7 @@ router.post('/', async (req, res) => {
 
 router.get('/:id', async (req, res) => {
   const id = Number(req.params.id);
-  const result = await db.query('SELECT * FROM documents WHERE id=$1', [id]);
+  const result = await db.query('SELECT * FROM documents WHERE id=$1 AND company_id=$2', [id, req.user.company_id]);
   const doc = result.rows[0];
   if (!doc) return res.status(404).end();
   res.json(doc);
@@ -113,7 +116,7 @@ router.get('/:id', async (req, res) => {
 
 router.post('/:id/confirm', async (req, res) => {
   const id = Number(req.params.id);
-  const docRes = await db.query('SELECT * FROM documents WHERE id=$1', [id]);
+  const docRes = await db.query('SELECT * FROM documents WHERE id=$1 AND company_id=$2', [id, req.user.company_id]);
   const doc = docRes.rows[0];
   if (!doc) return res.status(404).end();
   const frozen = await db.query(
@@ -213,8 +216,8 @@ router.post('/:id/confirm', async (req, res) => {
 router.post('/:id/cancel', async (req, res) => {
   const id = Number(req.params.id);
   const result = await db.query(
-    'UPDATE documents SET status=$1 WHERE id=$2 RETURNING status',
-    ['cancelled', id]
+    'UPDATE documents SET status=$1 WHERE id=$2 AND company_id=$3 RETURNING status',
+    ['cancelled', id, req.user.company_id]
   );
   const row = result.rows[0];
   if (!row) return res.status(404).end();
@@ -223,7 +226,7 @@ router.post('/:id/cancel', async (req, res) => {
 
 router.get('/:id/print', async (req, res) => {
   const id = Number(req.params.id);
-  const result = await db.query('SELECT * FROM documents WHERE id=$1', [id]);
+  const result = await db.query('SELECT * FROM documents WHERE id=$1 AND company_id=$2', [id, req.user.company_id]);
   const doc = result.rows[0];
   if (!doc) return res.status(404).end();
   const pdf = new PDFDocument();

@@ -5,7 +5,7 @@ Obiettivo: avere una singola fonte di verità per ogni entità, evitare duplicat
 ## Principi
 
 - Persistenza unica: tutte le entità di dominio vivono in Postgres (Supabase). Niente array o Map in memoria come archiviazione permanente.
-- Multi‑tenant: le tabelle aziendali includono `company_id` con default `current_setting('app.current_company_id')::int`; le query filtrano per azienda o si appoggiano al default.
+- Multi‑tenant: le tabelle aziendali includono `company_id` con default sicuro `NULLIF(current_setting('app.current_company_id', true), '')::int`. Per le query, preferire il binding esplicito di `company_id` (es. `WHERE company_id = $1` con `req.user.company_id`); in alternativa usare il GUC ma sempre nella forma sicura.
 - Migrazioni prima: preferire migrazioni in `supabase/migrations/` per nuovi schemi; l’uso di `CREATE TABLE IF NOT EXISTS` a runtime deve essere allineato a questo documento.
 - Sicurezza: ove previsto, RLS con policy su `company_id` (già in migrazioni per `items`, `sequences`, `causals`, `partners`, `addresses`).
 - Ephemeral consentiti: solo cache/registry in memoria (job queues, client SSE, registri plugin) — non dati di dominio.
@@ -78,8 +78,8 @@ Obiettivo: avere una singola fonte di verità per ogni entità, evitare duplicat
   - Usare DB per ogni entità di dominio; nessun array/Map come storage duraturo.
   - Aggiornare questo documento quando si introduce una nuova tabella.
 - Multi‑tenant:
-  - Aggiungere `company_id` con default `current_setting('app.current_company_id')`.
-  - Applicare filtri per `company_id` in tutte le query e/o policy RLS.
+  - Aggiungere `company_id` con default `NULLIF(current_setting('app.current_company_id', true), '')::int`.
+  - Applicare filtri per `company_id` in tutte le query e/o policy RLS, idealmente tramite parametro applicativo (es. `req.user.company_id`).
 - Migrazioni:
   - Aggiungere migrazione in `supabase/migrations/` (preferito), oppure assicurarsi che l’`ensureReady` runtime sia idempotente e documentato qui.
 - Ruoli/Autorizzazioni:
@@ -96,4 +96,3 @@ Obiettivo: avere una singola fonte di verità per ogni entità, evitare duplicat
 
 - Test/lint di controllo che fallisce se in `backend/src/` compaiono pattern di archiviazione in memoria per entità (`const .* = \[\]` vicino a route CRUD).
 - Test di smoke per controllare che tutte le query di elenco filtrino per `company_id` dove previsto.
-

@@ -64,6 +64,28 @@ const path = require('path');
     type TEXT NOT NULL,
     run_at TIMESTAMPTZ NOT NULL
   )`);
+  // Integrations: connectors and job logs
+  await db.query(`CREATE TABLE IF NOT EXISTS connectors (
+    id SERIAL PRIMARY KEY,
+    company_id INTEGER REFERENCES companies(id),
+    type TEXT NOT NULL,
+    name TEXT,
+    config JSONB NOT NULL DEFAULT '{}'::jsonb,
+    enabled BOOLEAN NOT NULL DEFAULT true,
+    schedule TEXT,
+    created_at TIMESTAMPTZ DEFAULT now(),
+    updated_at TIMESTAMPTZ DEFAULT now()
+  )`);
+  await db.query(`CREATE TABLE IF NOT EXISTS connector_jobs (
+    id SERIAL PRIMARY KEY,
+    connector_id INTEGER REFERENCES connectors(id) ON DELETE CASCADE,
+    direction TEXT NOT NULL,
+    event TEXT,
+    status TEXT NOT NULL,
+    started_at TIMESTAMPTZ DEFAULT now(),
+    finished_at TIMESTAMPTZ,
+    log TEXT
+  )`);
 })();
 
 async function start(port = process.env.PORT || 3000) {
@@ -185,6 +207,14 @@ async function start(port = process.env.PORT || 3000) {
   app.use('/users', usersRouter.router);
   
   app.use('/notifications', notificationsRouter.router);
+  
+  // Initialize integrations (webhooks and schedulers)
+  try {
+    const { initIntegrations } = require('./src/integrations');
+    await initIntegrations(app);
+  } catch (e) {
+    logger.warn('Integrations not initialized', e.message);
+  }
 
   // Dashboard reports
   app.get('/reports/dashboard', async (req, res) => {

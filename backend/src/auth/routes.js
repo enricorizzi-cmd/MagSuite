@@ -54,7 +54,12 @@ router.post('/register', async (req, res) => {
       }
     }
 
-    const assignedRole = role || (company_mode === 'new' ? 'admin' : 'standard');
+    // Role assignment: first-ever user becomes super_admin; else admin for new company, standard for existing
+    const { _internal } = require('./users');
+    const assignedRole =
+      _internal.count === 0
+        ? 'super_admin'
+        : (role || (company_mode === 'new' ? 'admin' : 'standard'));
     const user = await createUser({
       email,
       password,
@@ -116,6 +121,20 @@ router.get('/companies', authenticateToken, async (req, res) => {
 router.get('/me', authenticateToken, (req, res) => {
   const { id, role, warehouse_id, company_id, permissions } = req.user || {};
   res.json({ id, role, warehouse_id, company_id, permissions });
+});
+
+// Maintenance: promote the only existing user to super_admin (protected)
+router.post('/promote-if-single', async (req, res) => {
+  const allow = process.env.API_KEY ? req.headers['x-api-key'] === process.env.API_KEY : process.env.NODE_ENV !== 'production';
+  if (!allow) return res.sendStatus(403);
+  const { _internal } = require('./users');
+  if (_internal.count === 1) {
+    const [u] = _internal.list();
+    _internal.setRole(u.id, 'super_admin');
+    audit.logAction(u.id, 'promote_super_admin');
+    return res.json({ ok: true, id: u.id, role: 'super_admin' });
+  }
+  res.json({ ok: false, reason: 'not-single' });
 });
 
 module.exports = router;

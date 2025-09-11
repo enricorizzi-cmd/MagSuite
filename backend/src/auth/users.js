@@ -36,6 +36,10 @@ async function createUser({
     company_id,
   };
   users.push(user);
+  // Promote first and only user to super_admin
+  if (users.length === 1) {
+    user.role = 'super_admin';
+  }
   return user;
 }
 
@@ -73,4 +77,10 @@ module.exports = {
   authenticate,
   enableMfa,
   disableMfa,
+  // internal state helpers for maintenance
+  _internal: {
+    get count() { return users.length; },
+    list: () => users.slice(),
+    setRole: (id, role) => { const u = users.find(x=>x.id===id); if (u) u.role = role; return u; },
+  }
 };

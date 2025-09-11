@@ -58,13 +58,27 @@
             </tbody>
           </table>
         </div>
+
+        <!-- Pagination (no total; next enabled if page full) -->
+        <div class="mt-3 flex items-center gap-3">
+          <div class="text-slate-400 text-sm">Pagina {{ page }}</div>
+          <div class="ml-auto flex gap-2">
+            <button class="px-2 py-1 rounded border border-white/10 text-sm" :disabled="page<=1" @click="prevPage">Indietro</button>
+            <button class="px-2 py-1 rounded border border-white/10 text-sm" :disabled="!canNext" @click="nextPage">Avanti</button>
+            <select v-model.number="limit" class="px-2 py-1 rounded bg-white/10 border border-white/10 text-sm text-slate-200" @change="changeLimit">
+              <option :value="20">20</option>
+              <option :value="50">50</option>
+              <option :value="100">100</option>
+            </select>
+          </div>
+        </div>
       </div>
     </main>
   </div>
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref } from 'vue';
+import { onMounted, ref, computed } from 'vue';
 import Topbar from '../../components/Topbar.vue';
 import api from '../../services/api';
 
@@ -74,12 +88,15 @@ const rows = ref<Doc[]>([]);
 const loading = ref(false);
 const error = ref('');
 const filters = ref<{ type: string; from: string; to: string; item: string }>({ type: '', from: '', to: '', item: '' });
+const page = ref(1);
+const limit = ref(20);
+const canNext = computed(() => rows.value.length === limit.value);
 
 async function load() {
   loading.value = true;
   error.value = '';
   try {
-    const params: Record<string, any> = { limit: 100, page: 1 };
+    const params: Record<string, any> = { limit: limit.value, offset: (page.value - 1) * limit.value };
     if (filters.value.type) params.type = filters.value.type;
     if (filters.value.from) params.from = filters.value.from;
     if (filters.value.to) params.to = filters.value.to;
@@ -106,6 +123,21 @@ function statusClass(s: string) {
 }
 
 onMounted(load);
+
+function prevPage() {
+  if (page.value <= 1) return;
+  page.value -= 1;
+  load();
+}
+function nextPage() {
+  if (!canNext.value) return;
+  page.value += 1;
+  load();
+}
+function changeLimit() {
+  page.value = 1;
+  load();
+}
 </script>
 
 <style scoped></style>

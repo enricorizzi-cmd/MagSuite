@@ -20,7 +20,7 @@
             </tr>
           </thead>
           <tbody>
-            <tr v-for="row in filtered" :key="rowKey(row)" class="border-t border-white/10">
+            <tr v-for="row in paged(filtered)" :key="rowKey(row)" class="border-t border-white/10">
               <td v-for="f in fields" :key="f.key" class="px-3 py-2" :class="cellAlign(f)">{{ renderCell(row[f.key], f) }}</td>
               <td class="px-3 py-2 text-right">
                 <button class="px-2 py-1 rounded-lg text-xs bg-white/10 hover:bg-white/20 text-slate-200" @click="$emit('edit', row)">Modifica</button>
@@ -45,6 +45,8 @@ const props = defineProps<{
   newLabel?: string;
   showNew?: boolean;
   rowKeyField?: string; // defaults to 'id' if present, else JSON stringify
+  page?: number;
+  limit?: number;
 }>();
 
 defineEmits<{ (e: 'new'): void; (e: 'edit', row: Record<string, any>): void }>();
@@ -70,7 +72,16 @@ function renderCell(val: any, f: Field) {
   }
   return String(val);
 }
+
+function paged(list: any[]) {
+  const p = props.page || 0;
+  const l = props.limit || 0;
+  if (p > 0 && l > 0) {
+    const start = (p - 1) * l;
+    return list.slice(start, start + l);
+  }
+  return list;
+}
 </script>
 
 <style scoped></style>
-

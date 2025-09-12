@@ -8,52 +8,70 @@
       <div v-if="loading" class="text-slate-400">Caricamento…</div>
       <div v-else-if="error" class="text-rose-400">{{ error }}</div>
       <div v-else>
-        <ListFilters
+        <ListFiltersTable
           :items="rows"
-          :fields="[
-            { key: 'sku', label: 'SKU', type: 'string' },
-            { key: 'name', label: 'Nome', type: 'string' },
-            { key: 'category', label: 'Categoria', type: 'string' },
-            { key: 'quantity_on_hand', label: 'Q.tà', type: 'number' }
-          ]"
-          v-slot="{ filtered }"
-        >
-          <div v-if="filtered.length === 0" class="text-slate-400">Nessun risultato.</div>
-          <div v-else class="overflow-x-auto border border-white/10 rounded-lg">
-            <table class="min-w-full text-sm">
-              <thead class="bg-white/5 text-slate-300">
-                <tr>
-                  <th class="text-left px-3 py-2">SKU</th>
-                  <th class="text-left px-3 py-2">Nome</th>
-                  <th class="text-left px-3 py-2">Categoria</th>
-                  <th class="text-right px-3 py-2">Giacenza</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="r in filtered" :key="r.id" class="border-t border-white/10">
-                  <td class="px-3 py-2 text-slate-300">{{ r.sku }}</td>
-                  <td class="px-3 py-2 text-slate-100">{{ r.name }}</td>
-                  <td class="px-3 py-2 text-slate-300">{{ r.category || '-' }}</td>
-                  <td class="px-3 py-2 text-right text-slate-100">{{ formatQty(r.quantity_on_hand) }}</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
+          :fields="giacenzeFields"
+          new-label="Nuovo articolo"
+          @new="openCreate"
+          @edit="openEdit"
+        />
 
-          <!-- Pagination -->
-          <div class="mt-3 flex items-center gap-3">
-            <div class="text-slate-400 text-sm">Pagina {{ page }} di {{ totalPages }}</div>
-            <div class="ml-auto flex gap-2">
-              <button class="px-2 py-1 rounded border border-white/10 text-sm" :disabled="page<=1" @click="prevPage">Indietro</button>
-              <button class="px-2 py-1 rounded border border-white/10 text-sm" :disabled="page>=totalPages" @click="nextPage">Avanti</button>
-              <select v-model.number="limit" class="px-2 py-1 rounded bg-white/10 border border-white/10 text-sm text-slate-200" @change="changeLimit">
-                <option :value="20">20</option>
-                <option :value="50">50</option>
-                <option :value="100">100</option>
-              </select>
+        <!-- Pagination -->
+        <div class="mt-3 flex items-center gap-3">
+          <div class="text-slate-400 text-sm">Pagina {{ page }} di {{ totalPages }}</div>
+          <div class="ml-auto flex gap-2">
+            <button class="px-2 py-1 rounded border border-white/10 text-sm" :disabled="page<=1" @click="prevPage">Indietro</button>
+            <button class="px-2 py-1 rounded border border-white/10 text-sm" :disabled="page>=totalPages" @click="nextPage">Avanti</button>
+            <select v-model.number="limit" class="px-2 py-1 rounded bg-white/10 border border-white/10 text-sm text-slate-200" @change="changeLimit">
+              <option :value="20">20</option>
+              <option :value="50">50</option>
+              <option :value="100">100</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Modale Articolo -->
+        <transition name="fade">
+          <div v-if="itemModal.open" class="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
+            <div class="w-full max-w-lg bg-[#0b1020] border border-white/10 rounded-xl p-4">
+              <div class="flex items-center mb-3">
+                <h2 class="text-lg font-semibold">{{ itemModal.mode==='create' ? 'Nuovo articolo' : 'Modifica articolo' }}</h2>
+                <button class="ml-auto p-2 rounded hover:bg-white/10" @click="closeItemModal" aria-label="Chiudi">✕</button>
+              </div>
+              <div class="grid gap-3 sm:grid-cols-2">
+                <label class="text-sm text-slate-300 sm:col-span-2">Nome
+                  <input v-model="itemForm.name" type="text" class="mt-1 w-full bg-white/10 border border-white/10 rounded px-2 py-1.5 text-sm text-slate-200" />
+                </label>
+                <label class="text-sm text-slate-300">SKU
+                  <input v-model="itemForm.sku" type="text" class="mt-1 w-full bg-white/10 border border-white/10 rounded px-2 py-1.5 text-sm text-slate-200" />
+                </label>
+                <label class="text-sm text-slate-300">Tipo
+                  <input v-model="itemForm.type" type="text" class="mt-1 w-full bg-white/10 border border-white/10 rounded px-2 py-1.5 text-sm text-slate-200" />
+                </label>
+                <label class="text-sm text-slate-300">Categoria
+                  <input v-model="itemForm.category" type="text" class="mt-1 w-full bg-white/10 border border-white/10 rounded px-2 py-1.5 text-sm text-slate-200" />
+                </label>
+                <label class="text-sm text-slate-300">Fornitore
+                  <input v-model="itemForm.supplier" type="text" class="mt-1 w-full bg-white/10 border border-white/10 rounded px-2 py-1.5 text-sm text-slate-200" />
+                </label>
+                <label class="text-sm text-slate-300 flex items-center gap-2">
+                  <input v-model="itemForm.lotti" type="checkbox" class="rounded" /> Lotti
+                </label>
+                <label class="text-sm text-slate-300 flex items-center gap-2">
+                  <input v-model="itemForm.seriali" type="checkbox" class="rounded" /> Seriali
+                </label>
+              </div>
+              <div v-if="itemModal.error" class="mt-2 text-sm text-rose-400">{{ itemModal.error }}</div>
+              <div class="mt-4 flex items-center gap-2">
+                <button class="px-3 py-1.5 rounded-lg text-sm bg-white/10 hover:bg-white/20 text-slate-200" @click="closeItemModal">Annulla</button>
+                <button class="ml-auto px-3 py-1.5 rounded-lg text-sm bg-fuchsia-600 hover:bg-fuchsia-500 text-white" :disabled="itemModal.saving" @click="saveItemModal">
+                  <span v-if="itemModal.saving">Salvataggio…</span>
+                  <span v-else>Salva</span>
+                </button>
+              </div>
             </div>
           </div>
-        </ListFilters>
+        </transition>
       </div>
     </main>
   </div>
@@ -62,7 +80,7 @@
 <script setup lang="ts">
 import { onMounted, ref, computed } from 'vue';
 import Topbar from '../../components/Topbar.vue';
-import ListFilters from '../../components/ListFilters.vue';
+import ListFiltersTable from '../../components/ListFiltersTable.vue';
 import api from '../../services/api';
 
 type ItemRow = { id: number; sku: string; name: string; category?: string; quantity_on_hand?: number };
@@ -74,6 +92,12 @@ const page = ref(1);
 const limit = ref(20);
 const total = ref(0);
 const totalPages = computed(() => Math.max(1, Math.ceil(total.value / limit.value)));
+const giacenzeFields = [
+  { key: 'sku', label: 'SKU', type: 'string' },
+  { key: 'name', label: 'Nome', type: 'string' },
+  { key: 'category', label: 'Categoria', type: 'string' },
+  { key: 'quantity_on_hand', label: 'Giacenza', type: 'number' },
+];
 
 async function load() {
   loading.value = true;
@@ -96,10 +120,6 @@ async function load() {
   }
 }
 
-function formatQty(n?: number) {
-  try { return (n ?? 0).toLocaleString(); } catch { return String(n ?? 0); }
-}
-
 onMounted(load);
 
 function prevPage() {
@@ -116,6 +136,50 @@ function changeLimit() {
   page.value = 1;
   load();
 }
+
+// Modale Articolo (riuso come in Articoli)
+const itemModal = ref<{ open: boolean; mode: 'create'|'edit'; id?: number|null; saving: boolean; error: string }>({ open: false, mode: 'create', id: null, saving: false, error: '' });
+const itemForm = ref<{ name: string; sku: string; type: string; category: string; supplier: string; lotti: boolean; seriali: boolean }>({
+  name: '', sku: '', type: '', category: '', supplier: '', lotti: false, seriali: false
+});
+
+function openCreate() {
+  itemModal.value = { open: true, mode: 'create', id: null, saving: false, error: '' };
+  itemForm.value = { name: '', sku: '', type: '', category: '', supplier: '', lotti: false, seriali: false };
+}
+function openEdit(row: any) {
+  itemModal.value = { open: true, mode: 'edit', id: row.id, saving: false, error: '' };
+  itemForm.value = {
+    name: row.name || '',
+    sku: row.sku || '',
+    type: (row as any).type || '',
+    category: row.category || '',
+    supplier: (row as any).supplier || '',
+    lotti: !!(row as any).lotti,
+    seriali: !!(row as any).seriali,
+  };
+}
+function closeItemModal() { itemModal.value.open = false; }
+async function saveItemModal() {
+  try {
+    itemModal.value.saving = true;
+    itemModal.value.error = '';
+    const payload: any = { ...itemForm.value };
+    if (itemModal.value.mode === 'create') {
+      if (!payload.sku) delete payload.sku;
+      await api.post('/items', payload);
+    } else if (itemModal.value.mode === 'edit' && itemModal.value.id) {
+      await api.put(`/items/${itemModal.value.id}`, payload);
+    }
+    itemModal.value.open = false;
+    await load();
+  } catch (e: any) {
+    itemModal.value.error = e?.response?.data?.error || e?.message || 'Errore salvataggio articolo';
+  } finally {
+    itemModal.value.saving = false;
+  }
+}
 </script>
 
 <style scoped></style>
+

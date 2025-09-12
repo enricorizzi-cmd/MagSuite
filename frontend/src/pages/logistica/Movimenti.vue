@@ -8,7 +8,7 @@
       <div v-if="loading" class="text-slate-400">Caricamento…</div>
       <div v-else-if="error" class="text-rose-400">{{ error }}</div>
       <div v-else>
-        <!-- Filtri lato server (type, from, to, item) esposti anche nella UI -->
+        <!-- Filtri lato server (type, from, to, item) esposti anche nella UI) -->
         <div class="flex flex-wrap items-end gap-3 mb-3">
           <div>
             <label class="block text-xs text-slate-400 mb-1">Tipo</label>
@@ -35,29 +35,13 @@
           <button class="ml-auto px-3 py-1.5 rounded-lg text-sm bg-white/10 hover:bg-white/20 text-slate-200" @click="load">Applica</button>
         </div>
 
-        <div v-if="rows.length === 0" class="text-slate-400">Nessun risultato.</div>
-        <div v-else class="overflow-x-auto border border-white/10 rounded-lg">
-          <table class="min-w-full text-sm">
-            <thead class="bg-white/5 text-slate-300">
-              <tr>
-                <th class="text-left px-3 py-2">ID</th>
-                <th class="text-left px-3 py-2">Tipo</th>
-                <th class="text-left px-3 py-2">Causale</th>
-                <th class="text-left px-3 py-2">Stato</th>
-                <th class="text-left px-3 py-2">Data</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="d in rows" :key="d.id" class="border-t border-white/10">
-                <td class="px-3 py-2 text-slate-300">{{ d.id }}</td>
-                <td class="px-3 py-2 text-slate-100">{{ d.type }}</td>
-                <td class="px-3 py-2 text-slate-300">{{ d.causal || '-' }}</td>
-                <td class="px-3 py-2"><span :class="statusClass(d.status)" class="px-2 py-0.5 rounded text-xs">{{ d.status }}</span></td>
-                <td class="px-3 py-2 text-slate-400">{{ formatTime(d.created_at) }}</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
+        <ListFiltersTable
+          :items="rows"
+          :fields="docFields"
+          new-label="Nuovo documento"
+          @new="openDocCreate"
+          @edit="openDocEdit"
+        />
 
         <!-- Pagination (no total; next enabled if page full) -->
         <div class="mt-3 flex items-center gap-3">
@@ -72,6 +56,57 @@
             </select>
           </div>
         </div>
+
+        <!-- Modale creazione documento -->
+        <transition name="fade">
+          <div v-if="docCreate.open" class="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
+            <div class="w-full max-w-md bg-[#0b1020] border border-white/10 rounded-xl p-4">
+              <div class="flex items-center mb-3">
+                <h2 class="text-lg font-semibold">Nuovo documento</h2>
+                <button class="ml-auto p-2 rounded hover:bg-white/10" @click="docCreate.open=false" aria-label="Chiudi">✕</button>
+              </div>
+              <div class="grid gap-3">
+                <label class="text-sm text-slate-300">Tipo
+                  <select v-model="docCreate.type" class="mt-1 w-full bg-white/10 border border-white/10 rounded px-2 py-1.5 text-sm text-slate-200">
+                    <option value="">Seleziona…</option>
+                    <option value="purchase">Acquisto</option>
+                    <option value="sale">Vendita</option>
+                    <option value="transfer">Trasferimento</option>
+                    <option value="adjustment">Rettifica</option>
+                  </select>
+                </label>
+                <label class="text-sm text-slate-300">Causale
+                  <input v-model="docCreate.causal" type="text" class="mt-1 w-full bg-white/10 border border-white/10 rounded px-2 py-1.5 text-sm text-slate-200" />
+                </label>
+              </div>
+              <div v-if="docCreate.error" class="mt-2 text-sm text-rose-400">{{ docCreate.error }}</div>
+              <div class="mt-4 flex items-center gap-2">
+                <button class="px-3 py-1.5 rounded-lg text-sm bg-white/10 hover:bg-white/20 text-slate-200" @click="docCreate.open=false">Annulla</button>
+                <button class="ml-auto px-3 py-1.5 rounded-lg text-sm bg-fuchsia-600 hover:bg-fuchsia-500 text-white" :disabled="docCreate.saving || !docCreate.type" @click="saveDocCreate">
+                  <span v-if="docCreate.saving">Creazione…</span>
+                  <span v-else>Crea</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </transition>
+
+        <!-- Modale modifica documento -->
+        <transition name="fade">
+          <div v-if="docModal.open" class="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
+            <div class="w-full max-w-md bg-[#0b1020] border border-white/10 rounded-xl p-4">
+              <div class="flex items-center mb-3">
+                <h2 class="text-lg font-semibold">Documento #{{ docModal.id }}</h2>
+                <button class="ml-auto p-2 rounded hover:bg-white/10" @click="docModal.open=false" aria-label="Chiudi">✕</button>
+              </div>
+              <div class="text-sm text-slate-300">Stato: <span :class="statusClass(docModal.status)" class="px-2 py-0.5 rounded text-xs">{{ docModal.status }}</span></div>
+              <div v-if="docModal.error" class="mt-2 text-sm text-rose-400">{{ docModal.error }}</div>
+              <div class="mt-4 flex flex-wrap gap-2">
+                <button v-if="docModal.status!=='cancelled'" class="px-3 py-1.5 rounded-lg text-sm bg-white/10 hover:bg-white/20 text-slate-200 ml-auto" :disabled="docModal.busy" @click="cancelDoc">Annulla documento</button>
+              </div>
+            </div>
+          </div>
+        </transition>
       </div>
     </main>
   </div>
@@ -80,6 +115,7 @@
 <script setup lang="ts">
 import { onMounted, ref, computed } from 'vue';
 import Topbar from '../../components/Topbar.vue';
+import ListFiltersTable from '../../components/ListFiltersTable.vue';
 import api from '../../services/api';
 
 type Doc = { id: number; type: string; status: string; created_at?: string; causal?: string };
@@ -91,6 +127,13 @@ const filters = ref<{ type: string; from: string; to: string; item: string }>({ 
 const page = ref(1);
 const limit = ref(20);
 const canNext = computed(() => rows.value.length === limit.value);
+const docFields = [
+  { key: 'id', label: 'ID', type: 'number' },
+  { key: 'type', label: 'Tipo', type: 'enum', options: ['purchase','sale','transfer','adjustment'] },
+  { key: 'causal', label: 'Causale', type: 'string' },
+  { key: 'status', label: 'Stato', type: 'enum', options: ['draft','confirmed','cancelled'] },
+  { key: 'created_at', label: 'Data', type: 'string' },
+];
 
 async function load() {
   loading.value = true;
@@ -108,11 +151,6 @@ async function load() {
   } finally {
     loading.value = false;
   }
-}
-
-function formatTime(iso?: string) {
-  if (!iso) return '';
-  try { return new Date(iso).toLocaleString(); } catch { return iso; }
 }
 
 function statusClass(s: string) {
@@ -138,6 +176,44 @@ function changeLimit() {
   page.value = 1;
   load();
 }
+
+// Modale creazione documento
+const docCreate = ref<{ open: boolean; saving: boolean; error: string; type: string; causal: string }>({ open: false, saving: false, error: '', type: '', causal: '' });
+function openDocCreate() {
+  docCreate.value = { open: true, saving: false, error: '', type: '', causal: '' };
+}
+async function saveDocCreate() {
+  try {
+    docCreate.value.saving = true; docCreate.value.error = '';
+    await api.post('/documents', { type: docCreate.value.type, causal: docCreate.value.causal || null });
+    docCreate.value.open = false;
+    await load();
+  } catch (e: any) {
+    docCreate.value.error = e?.response?.data?.error || e?.message || 'Errore creazione documento';
+  } finally { docCreate.value.saving = false; }
+}
+
+// Modale modifica documento (azioni minime)
+const docModal = ref<{ open: boolean; id: number|null; status: string; busy: boolean; error: string }>({ open: false, id: null, status: 'draft', busy: false, error: '' });
+async function openDocEdit(row: Doc) {
+  try {
+    docModal.value = { open: true, id: row.id, status: row.status, busy: false, error: '' };
+    const { data } = await api.get(`/documents/${row.id}`);
+    docModal.value.status = data?.status || row.status;
+  } catch {}
+}
+async function cancelDoc() {
+  if (!docModal.value.id) return;
+  docModal.value.busy = true; docModal.value.error = '';
+  try {
+    await api.post(`/documents/${docModal.value.id}/cancel`);
+    await load();
+    docModal.value.status = 'cancelled';
+  } catch (e: any) {
+    docModal.value.error = e?.response?.data?.error || e?.message || 'Errore annullamento';
+  } finally { docModal.value.busy = false; }
+}
 </script>
 
 <style scoped></style>
+

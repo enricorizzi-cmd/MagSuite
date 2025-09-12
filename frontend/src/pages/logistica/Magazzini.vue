@@ -12,6 +12,8 @@
           :items="items"
           :fields="warehouseFields"
           new-label="Nuovo magazzino"
+          :page="page"
+          :limit="limit"
           @new="openCreate"
           @edit="openEdit"
         />

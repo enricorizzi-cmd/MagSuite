@@ -86,7 +86,7 @@ if (usePgMem) {
     ? { connectionString }
     : {
         host: process.env.PGHOST,
-        port: process.env.PGPORT,
+        port: Number(process.env.PGPORT) || undefined,
         user: process.env.PGUSER,
         password: process.env.PGPASSWORD,
         database: process.env.PGDATABASE,
@@ -94,10 +94,17 @@ if (usePgMem) {
 
   const useSSL = process.env.PGSSLMODE !== 'disable';
 
+  // Conservative pool to play nice with external poolers (e.g., Supabase 6543)
+  // and improve resilience on cold starts / transient network hiccups.
   pool = new Pool({
     ...baseConfig,
     ssl: useSSL ? { ca, rejectUnauthorized: true, minVersion: 'TLSv1.2' } : false,
     enableChannelBinding: useSSL,
+    max: Number(process.env.PGPOOL_MAX) || 5,
+    idleTimeoutMillis: Number(process.env.PG_IDLE_TIMEOUT_MS) || 0,
+    connectionTimeoutMillis: Number(process.env.PG_CONNECTION_TIMEOUT_MS) || 10000,
+    keepAlive: true,
+    keepAliveInitialDelayMillis: Number(process.env.PG_KEEPALIVE_DELAY_MS) || 30000,
   });
 
   pool.query('SELECT 1').catch((err) => {
@@ -105,11 +112,29 @@ if (usePgMem) {
   });
 }
 
+async function connectWithRetry(attempts = 3) {
+  let lastErr;
+  for (let i = 0; i < attempts; i++) {
+    try {
+      return await pool.connect();
+    } catch (err) {
+      lastErr = err;
+      const code = err && (err.code || err.errno);
+      // Retry only on transient/connection-level errors
+      const transient = ['ETIMEDOUT','ECONNRESET','ECONNREFUSED','EAI_AGAIN','ENETUNREACH','EHOSTUNREACH'];
+      if (!transient.includes(code)) break;
+      const backoff = 200 * Math.pow(2, i); // 200, 400, 800ms
+      await new Promise((r) => setTimeout(r, backoff));
+    }
+  }
+  throw lastErr;
+}
+
 async function query(text, params) {
   const store = companyContext.getStore();
   const companyId = store && store.companyId;
   const sessionId = Symbol('session');
-  const client = await pool.connect();
+  const client = await connectWithRetry(Number(process.env.PG_CONNECT_RETRIES) || 3);
   try {
     return await sessionContext.run(sessionId, async () => {
       try {

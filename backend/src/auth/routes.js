@@ -100,7 +100,18 @@ router.post('/register', async (req, res) => {
 
 router.post('/login', async (req, res) => {
   const { email, password, mfaToken, remember } = req.body || {};
-  const user = await authenticate({ email, password, mfaToken });
+  let user;
+  try {
+    user = await authenticate({ email, password, mfaToken });
+  } catch (err) {
+    const code = err && (err.code || err.errno);
+    const transient = ['ETIMEDOUT','ECONNRESET','ECONNREFUSED','EAI_AGAIN','ENETUNREACH','EHOSTUNREACH'];
+    if (transient.includes(code)) {
+      return res.status(503).json({ error: 'Database temporarily unavailable. Please retry.' });
+    }
+    // Unknown error -> generic failure
+    return res.status(500).json({ error: 'Internal error' });
+  }
   if (!user) return res.status(401).json({ error: 'Invalid credentials' });
   // Block login for pending or suspended users
   if (user.status && user.status !== 'active') {
@@ -158,6 +169,65 @@ router.get('/companies', authenticateToken, async (req, res) => {
   await companies.ready;
   const { rows } = await db.query(`SELECT id, name, suspended FROM companies ORDER BY name`);
   res.json(rows);
+});
+
+// Company feature flags: read for current context (header or own company)
+router.get('/company-features', authenticateToken, async (req, res) => {
+  try {
+    const headerCompany = req.headers['x-company-id'];
+    const companyId = Number(headerCompany || req.user.company_id);
+    await db.query(`CREATE TABLE IF NOT EXISTS company_settings (
+      company_id INTEGER PRIMARY KEY REFERENCES companies(id) ON DELETE CASCADE,
+      settings JSONB NOT NULL DEFAULT '{}'::jsonb
+    )`);
+    const { rows } = await db.query('SELECT settings FROM company_settings WHERE company_id=$1', [companyId]);
+    const settings = rows[0]?.settings || {};
+    res.json(settings.features || {});
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Company feature flags CRUD (super admin only)
+router.get('/companies/:id/features', authenticateToken, async (req, res) => {
+  if (req.user.role !== 'super_admin') return res.sendStatus(403);
+  const id = Number(req.params.id);
+  if (Number.isNaN(id)) return res.status(400).json({ error: 'Invalid id' });
+  try {
+    await db.query(`CREATE TABLE IF NOT EXISTS company_settings (
+      company_id INTEGER PRIMARY KEY REFERENCES companies(id) ON DELETE CASCADE,
+      settings JSONB NOT NULL DEFAULT '{}'::jsonb
+    )`);
+    const { rows } = await db.query('SELECT settings FROM company_settings WHERE company_id=$1', [id]);
+    const settings = rows[0]?.settings || {};
+    res.json(settings.features || {});
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.put('/companies/:id/features', authenticateToken, async (req, res) => {
+  if (req.user.role !== 'super_admin') return res.sendStatus(403);
+  const id = Number(req.params.id);
+  if (Number.isNaN(id)) return res.status(400).json({ error: 'Invalid id' });
+  const features = (req.body && req.body.features) || req.body || {};
+  try {
+    await db.query(`CREATE TABLE IF NOT EXISTS company_settings (
+      company_id INTEGER PRIMARY KEY REFERENCES companies(id) ON DELETE CASCADE,
+      settings JSONB NOT NULL DEFAULT '{}'::jsonb
+    )`);
+    const { rows } = await db.query('SELECT settings FROM company_settings WHERE company_id=$1', [id]);
+    const settings = rows[0]?.settings || {};
+    const next = { ...settings, features };
+    await db.query(
+      `INSERT INTO company_settings(company_id, settings) VALUES($1,$2::jsonb)
+       ON CONFLICT (company_id) DO UPDATE SET settings=EXCLUDED.settings`,
+      [id, JSON.stringify(next)]
+    );
+    res.json(features);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // Suspend/unsuspend a company (super admin only)

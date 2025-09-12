@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <header class="sticky top-0 z-60 backdrop-blur bg-black/20 border-b border-white/10">
     <!-- Top row: brand + sections + actions -->
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-14 flex items-center justify-between gap-4 overflow-x-hidden">
@@ -97,11 +97,11 @@
 
     <!-- Mobile drawer -->
     <transition name="fade">
-      <!-- Backdrop above header for full contrast; drawer stays on top -->
-      <div v-if="isMenuOpen" class="fixed inset-0 z-[75] bg-black/70 backdrop-blur-[1px]" @click="isMenuOpen=false"></div>
+      <!-- Backdrop below header but above page; aside stays on top -->
+      <div v-if="isMenuOpen" class="fixed inset-0 z-40 bg-black/60 backdrop-blur-[1px]" @click="isMenuOpen=false"></div>
     </transition>
     <transition name="slide">
-      <aside v-if="isMenuOpen" role="dialog" aria-modal="true" class="fixed top-0 left-0 h-full w-72 bg-[#0b1020]/95 border-r border-white/10 p-4 z-[80] shadow-2xl flex flex-col">
+      <aside v-if="isMenuOpen" class="fixed top-0 left-0 h-full w-72 bg-[#0b1020]/95 border-r border-white/10 p-4 z-[70] shadow-2xl flex flex-col">
         <div class="flex items-center justify-between mb-4">
           <div class="flex items-center gap-2">
             <img src="/icon.svg" class="h-6 w-6" />
@@ -111,22 +111,8 @@
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-6 h-6"><path d="M6 18L18 6M6 6l12 12"/></svg>
           </button>
         </div>
-        <!-- Company field (mobile only, mirrors topbar) -->
-        <div class="mb-3">
-          <div v-if="role==='super_admin'">
-            <label class="text-xs text-slate-400 px-1">Azienda</label>
-            <select v-model="selectedCompanyId" @change="onCompanyChange"
-                    class="company-select mt-1 w-full bg-white/10 border border-white/10 rounded-lg px-3 py-2 text-sm text-slate-100">
-              <option v-for="c in companies" :key="c.id" :value="String(c.id)">{{ c.name }}</option>
-            </select>
-          </div>
-          <div v-else class="text-sm text-slate-200">
-            <span class="opacity-70">Azienda:</span>
-            <span class="truncate inline-block align-bottom max-w-full">{{ currentCompany?.name || '-' }}</span>
-          </div>
-        </div>
         <nav class="grid gap-2 overflow-y-auto pr-1 flex-1 min-h-0">
-          <div v-for="g in visibleMenuGroups" :key="g.label">
+          <div v-for="g in menuGroups" :key="g.label">
             <div class="text-[11px] uppercase tracking-wide text-slate-400 px-2">{{ g.label }}</div>
             <RouterLink
               v-for="t in g.items"
@@ -155,7 +141,6 @@
 import { onMounted, ref, computed, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import api from '../services/api';
-import { isPathEnabled } from '../config/features';
 import { connectNotifications, unreadCount, items as notifItems, markAllRead, canRequestNotificationPermission, requestNotificationPermission } from '../services/notifications';
 
 const route = useRoute();
@@ -166,26 +151,17 @@ type Tab = { label: string; path: string };
 type Section = { key: 'home' | 'anagrafiche' | 'logistica' | 'edilizia' | 'risorse-umane' | 'commerciale' | 'amministrativa' | 'impostazioni'; label: string; base: string };
 
 const role = ref<string>('');
-const features = ref<Record<string, Record<string, boolean>> | null>(null);
 
-const sections = computed<Section[]>(() => {
-  const base: Section[] = [
-    { key: 'home', label: 'Home', base: '/dashboard' },
-    { key: 'anagrafiche', label: 'Anagrafiche', base: '/anagrafiche/clienti' },
-    { key: 'logistica', label: 'Logistica', base: '/logistica/giacenze' },
-    { key: 'edilizia', label: 'Edilizia', base: '/edilizia/sal' },
-    { key: 'risorse-umane', label: 'Risorse umane', base: '/risorse-umane/ferie-permessi' },
-    { key: 'commerciale', label: 'Direzione commerciale', base: '/direzione-commerciale/bpapp' },
-    { key: 'amministrativa', label: 'Direzione amministrativa', base: '/direzione-amministrativa/piano-finanziario' },
-    { key: 'impostazioni', label: 'Impostazioni', base: role.value === 'super_admin' ? '/all-settings' : '/users' },
-  ];
-  // Hide sections with no visible tabs (except home and impostazioni, which always show)
-  return base.filter(s => {
-    if (s.key === 'home' || s.key === 'impostazioni') return true;
-    const tabs = tabsForSection(s.key).filter(t => isPathEnabled(features.value as any, t.path));
-    return tabs.length > 0;
-  });
-});
+const sections = computed<Section[]>(() => [
+  { key: 'home', label: 'Home', base: '/dashboard' },
+  { key: 'anagrafiche', label: 'Anagrafiche', base: '/anagrafiche/clienti' },
+  { key: 'logistica', label: 'Logistica', base: '/logistica/giacenze' },
+  { key: 'edilizia', label: 'Edilizia', base: '/edilizia/sal' },
+  { key: 'risorse-umane', label: 'Risorse umane', base: '/risorse-umane/ferie-permessi' },
+  { key: 'commerciale', label: 'Direzione commerciale', base: '/direzione-commerciale/bpapp' },
+  { key: 'amministrativa', label: 'Direzione amministrativa', base: '/direzione-amministrativa/piano-finanziario' },
+  { key: 'impostazioni', label: 'Impostazioni', base: role.value === 'super_admin' ? '/all-settings' : '/users' },
+]);
 
 function sectionFromPath(path: string): Section['key'] {
   if (path.startsWith('/anagrafiche')) return 'anagrafiche';
@@ -237,20 +213,19 @@ function tabsForSection(key: Section['key']): Tab[] {
     case 'amministrativa':
       return [
         { label: 'Piano Finanziario', path: '/direzione-amministrativa/piano-finanziario' },
-        { label: 'Marginalità', path: '/direzione-amministrativa/marginalita' },
+        { label: 'Marginalit�', path: '/direzione-amministrativa/marginalita' },
         { label: 'Flusso di Cassa', path: '/direzione-amministrativa/flusso-di-cassa' },
         { label: 'Scadenzari', path: '/direzione-amministrativa/scadenzari' },
       ];
     case 'impostazioni':
-      // All Settings always visible to super_admin; Users controlled by features
       return [
         ...(role.value === 'super_admin' ? [{ label: 'All Settings', path: '/all-settings' } as Tab] : []),
-        ...(isPathEnabled(features.value as any, '/users') ? [{ label: 'Utenti', path: '/users' } as Tab] : []),
+        { label: 'Utenti', path: '/users' },
       ];
   }
 }
 
-const sectionTabs = computed<Tab[]>(() => tabsForSection(currentSection.value).filter(t => isPathEnabled(features.value as any, t.path)));
+const sectionTabs = computed<Tab[]>(() => tabsForSection(currentSection.value));
 
 const isMenuOpen = ref(false);
 const notifOpen = ref(false);
@@ -283,164 +258,3 @@ async function askNotifPermission() {
 }
 
 async function loadMe() {
-  const { data } = await api.get('/auth/me');
-  role.value = data?.role;
-}
-
-async function loadCurrentCompany() {
-  try {
-    const { data } = await api.get('/auth/current-company');
-    currentCompany.value = data;
-    if (!selectedCompanyId.value) {
-      selectedCompanyId.value = String(data.id);
-      localStorage.setItem('companyId', selectedCompanyId.value);
-    }
-  } catch {
-    // ignore
-  }
-}
-
-async function loadFeatures() {
-  try {
-    const { data } = await api.get('/auth/company-features');
-    features.value = data || {};
-  } catch {
-    features.value = {} as any;
-  }
-}
-
-async function loadCompaniesIfAllowed() {
-  if (role.value !== 'super_admin') return;
-  const { data } = await api.get('/auth/companies');
-  companies.value = data || [];
-  const saved = localStorage.getItem('companyId');
-  if (saved && companies.value.some(c => String(c.id) === saved)) {
-    selectedCompanyId.value = saved;
-  } else if (companies.value[0]) {
-    selectedCompanyId.value = String(companies.value[0].id);
-  }
-  if (selectedCompanyId.value) localStorage.setItem('companyId', selectedCompanyId.value);
-}
-
-function onCompanyChange() {
-  if (selectedCompanyId.value) localStorage.setItem('companyId', selectedCompanyId.value);
-  // Refresh current company label
-  loadCurrentCompany();
-  loadFeatures();
-}
-
-onMounted(async () => {
-  await loadMe();
-  await loadCompaniesIfAllowed();
-  await loadCurrentCompany();
-  await loadFeatures();
-  connectNotifications();
-  // Show CTA if we can ask for notifications permission
-  showNotifCTA.value = canRequestNotificationPermission();
-});
-
-// Prevent background scrolling when the mobile menu is open
-watch(isMenuOpen, (open) => {
-  try {
-    document.body.style.overflow = open ? 'hidden' : '';
-  } catch {}
-});
-
-// Also close the drawer on any route change (extra safety)
-watch(() => route.path, () => { isMenuOpen.value = false; });
-
-function logout() {
-  try { localStorage.removeItem('token'); } catch {}
-  try { sessionStorage.removeItem('token'); } catch {}
-  try { localStorage.removeItem('companyId'); } catch {}
-  router.push('/');
-}
-
-// Explicit grouped menu for mobile to avoid any rendering edge-cases
-const menuGroups = computed(() => {
-  const groups: Array<{ label: string; items: Tab[] }> = [
-    { label: 'Home', items: [{ label: 'Dashboard', path: '/dashboard' }] },
-    {
-      label: 'Anagrafiche',
-      items: [
-        { label: 'Clienti', path: '/anagrafiche/clienti' },
-        { label: 'Fornitori', path: '/anagrafiche/fornitori' },
-        { label: 'Articoli', path: '/anagrafiche/articoli' },
-        { label: 'Operatori', path: '/anagrafiche/operatori' },
-      ],
-    },
-    {
-      label: 'Risorse umane',
-      items: [
-        { label: 'Ferie & Permessi', path: '/risorse-umane/ferie-permessi' },
-        { label: 'Entrata/Uscita', path: '/risorse-umane/entrata-uscita' },
-        { label: 'Turni', path: '/risorse-umane/turni' },
-      ],
-    },
-    {
-      label: 'Logistica',
-      items: [
-        { label: 'Giacenze', path: '/logistica/giacenze' },
-        { label: 'Inventario', path: '/logistica/inventario' },
-        { label: 'Magazzini', path: '/logistica/magazzini' },
-        { label: 'Movimenti', path: '/logistica/movimenti' },
-      ],
-    },
-    {
-      label: 'Edilizia',
-      items: [
-        { label: 'SAL', path: '/edilizia/sal' },
-        { label: 'Materiali di cantiere', path: '/edilizia/materiali-cantiere' },
-        { label: 'Manodopera di cantiere', path: '/edilizia/manodopera-cantiere' },
-      ],
-    },
-    {
-      label: 'Direzione commerciale',
-      items: [
-        { label: 'BPApp', path: '/direzione-commerciale/bpapp' },
-      ],
-    },
-    {
-      label: 'Direzione amministrativa',
-      items: [
-        { label: 'Piano Finanziario', path: '/direzione-amministrativa/piano-finanziario' },
-        { label: 'Marginalità', path: '/direzione-amministrativa/marginalita' },
-        { label: 'Flusso di Cassa', path: '/direzione-amministrativa/flusso-di-cassa' },
-        { label: 'Scadenzari', path: '/direzione-amministrativa/scadenzari' },
-      ],
-    },
-    {
-      label: 'Impostazioni',
-      items: [
-        ...(role.value === 'super_admin' ? [{ label: 'All Settings', path: '/all-settings' } as Tab] : []),
-        { label: 'Utenti', path: '/users' },
-      ],
-    },
-  ];
-  return groups;
-});
-
-const visibleMenuGroups = computed(() => {
-  const filtered = menuGroups.value.map(g => ({
-    label: g.label,
-    items: g.items.filter(t => isPathEnabled(features.value as any, t.path))
-  }));
-  return filtered.filter(g => g.items.length > 0 || g.label === 'Home' || g.label === 'Impostazioni');
-});
-</script>
-
-<style scoped>
-.fade-enter-active, .fade-leave-active { transition: opacity .2s ease; }
-.fade-enter-from, .fade-leave-to { opacity: 0; }
-.slide-enter-active, .slide-leave-active { transition: transform .25s ease; }
-.slide-enter-from, .slide-leave-to { transform: translateX(-100%); }
-</style>
-
-<!-- Global styles for native select dropdown contrast -->
-<style>
-/* Ensure readable options in the OS/native dropdown list */
-.company-select { color-scheme: dark; }
-.company-select option { color: #0f172a; background-color: #ffffff; }
-</style>
-
-

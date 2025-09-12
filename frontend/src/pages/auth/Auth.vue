@@ -126,23 +126,53 @@ const activeTabClass =
 async function login() {
   loading.value = true;
   error.value = '';
-  try {
-    const { default: api } = await import('../../services/api');
-    const { data } = await api.post('/auth/login', { email: email.value, password: password.value, remember: remember.value });
-    if (!data?.accessToken) throw new Error('Credenziali non valide');
-    if (remember.value) {
-      localStorage.setItem('token', data.accessToken);
-    } else {
-      sessionStorage.setItem('token', data.accessToken);
-      localStorage.removeItem('token');
+  const { default: api } = await import('../../services/api');
+
+  const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+  const maxRetries = 3;
+  let attempt = 0;
+
+  while (attempt < maxRetries) {
+    try {
+      const { data } = await api.post('/auth/login', {
+        email: email.value,
+        password: password.value,
+        remember: remember.value,
+      });
+      if (!data?.accessToken) throw new Error('Credenziali non valide');
+      if (remember.value) {
+        localStorage.setItem('token', data.accessToken);
+      } else {
+        sessionStorage.setItem('token', data.accessToken);
+        localStorage.removeItem('token');
+      }
+      const redirect = (route.query.redirect as string) || '/dashboard';
+      router.push(redirect);
+      return;
+    } catch (e: any) {
+      const status = e?.response?.status;
+      if (status === 503 && attempt < maxRetries - 1) {
+        // Transient DB outage. Show friendly message and retry shortly.
+        const waitMs = [1000, 2000, 4000][attempt] ?? 2000;
+        let remaining = Math.ceil(waitMs / 1000);
+        error.value = `Database temporaneamente non disponibile. Nuovo tentativo tra ${remaining}s...`;
+        while (remaining > 0) {
+          await sleep(1000);
+          remaining -= 1;
+          if (remaining > 0) {
+            error.value = `Database temporaneamente non disponibile. Nuovo tentativo tra ${remaining}s...`;
+          }
+        }
+        attempt += 1;
+        continue;
+      }
+      // Non-transient or last attempt failed
+      error.value = e?.response?.data?.error || e?.message || 'Errore di login';
+      break;
     }
-    const redirect = (route.query.redirect as string) || '/dashboard';
-    router.push(redirect);
-  } catch (e: any) {
-    error.value = e?.response?.data?.error || e?.message || 'Errore di login';
-  } finally {
-    loading.value = false;
   }
+
+  loading.value = false;
 }
 
 async function register() {

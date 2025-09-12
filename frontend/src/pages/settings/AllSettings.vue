@@ -36,6 +36,10 @@
             <div class="text-sm text-slate-400">ID: {{ c.id }}</div>
             <div class="flex items-center gap-2">
               <button
+                class="px-3 py-1 rounded border border-sky-500/40 text-sky-300 hover:bg-sky-500/10 text-sm"
+                @click.stop="openFeatures(c)"
+              >Abilitazioni</button>
+              <button
                 class="px-3 py-1 rounded border text-sm"
                 :class="c.suspended ? 'border-emerald-500/40 text-emerald-300 hover:bg-emerald-500/10' : 'border-amber-500/40 text-amber-300 hover:bg-amber-500/10'"
                 @click.stop="toggleSuspend(c)"
@@ -98,6 +102,9 @@
         </div>
       </div>
     </transition>
+
+    <!-- Company Features Modal -->
+    <CompanyFeaturesModal :open="featuresOpen" :company="featuresCompany" @close="featuresOpen=false" @saved="/* noop */ void 0" />
   </div>
 </template>
 
@@ -106,6 +113,7 @@ import { ref } from 'vue';
 import Topbar from '../../components/Topbar.vue';
 import ListFilters from '../../components/ListFilters.vue';
 import api from '../../services/api';
+import CompanyFeaturesModal from '../../components/CompanyFeaturesModal.vue';
 
 const companies = ref<Array<{ id: number; name: string; suspended?: boolean }>>([]);
 const expanded = ref<Set<number>>(new Set());
@@ -119,6 +127,9 @@ const createError = ref('');
 const createForm = ref<{ company_name: string; email: string; password: string; name: string }>({
   company_name: '', email: '', password: '', name: ''
 });
+
+const featuresOpen = ref(false);
+const featuresCompany = ref<{ id: number; name: string } | null>(null);
 
 function formatTime(iso?: string) {
   if (!iso) return '—';
@@ -221,6 +232,11 @@ async function saveCreateCompany() {
   } finally {
     creating.value = false;
   }
+}
+
+function openFeatures(c: { id: number; name: string }) {
+  featuresCompany.value = { id: c.id, name: c.name };
+  featuresOpen.value = true;
 }
 </script>
 

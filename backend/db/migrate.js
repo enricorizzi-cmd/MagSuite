@@ -18,6 +18,10 @@ const pool = new Pool({
   connectionString,
   ssl: useSSL ? { ca, rejectUnauthorized: true, minVersion: 'TLSv1.2' } : false,
   enableChannelBinding: useSSL,
+  max: Number(process.env.PGPOOL_MAX) || 3,
+  connectionTimeoutMillis: Number(process.env.PG_CONNECTION_TIMEOUT_MS) || 10000,
+  keepAlive: true,
+  keepAliveInitialDelayMillis: Number(process.env.PG_KEEPALIVE_DELAY_MS) || 30000,
 });
 
 async function run() {

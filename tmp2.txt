@@ -1,0 +1,142 @@
+  const { data } = await api.get('/auth/me');
+  role.value = data?.role;
+}
+
+async function loadCurrentCompany() {
+  try {
+    const { data } = await api.get('/auth/current-company');
+    currentCompany.value = data;
+    if (!selectedCompanyId.value) {
+      selectedCompanyId.value = String(data.id);
+      localStorage.setItem('companyId', selectedCompanyId.value);
+    }
+  } catch {
+    // ignore
+  }
+}
+
+async function loadCompaniesIfAllowed() {
+  if (role.value !== 'super_admin') return;
+  const { data } = await api.get('/auth/companies');
+  companies.value = data || [];
+  const saved = localStorage.getItem('companyId');
+  if (saved && companies.value.some(c => String(c.id) === saved)) {
+    selectedCompanyId.value = saved;
+  } else if (companies.value[0]) {
+    selectedCompanyId.value = String(companies.value[0].id);
+  }
+  if (selectedCompanyId.value) localStorage.setItem('companyId', selectedCompanyId.value);
+}
+
+function onCompanyChange() {
+  if (selectedCompanyId.value) localStorage.setItem('companyId', selectedCompanyId.value);
+  // Refresh current company label
+  loadCurrentCompany();
+}
+
+onMounted(async () => {
+  await loadMe();
+  await loadCompaniesIfAllowed();
+  await loadCurrentCompany();
+  connectNotifications();
+  // Show CTA if we can ask for notifications permission
+  showNotifCTA.value = canRequestNotificationPermission();
+});
+
+// Prevent background scrolling when the mobile menu is open
+watch(isMenuOpen, (open) => {
+  try {
+    document.body.style.overflow = open ? 'hidden' : '';
+  } catch {}
+});
+
+// Also close the drawer on any route change (extra safety)
+watch(() => route.path, () => { isMenuOpen.value = false; });
+
+function logout() {
+  try { localStorage.removeItem('token'); } catch {}
+  try { sessionStorage.removeItem('token'); } catch {}
+  try { localStorage.removeItem('companyId'); } catch {}
+  router.push('/');
+}
+
+// Explicit grouped menu for mobile to avoid any rendering edge-cases
+const menuGroups = computed(() => {
+  const groups: Array<{ label: string; items: Tab[] }> = [
+    { label: 'Home', items: [{ label: 'Dashboard', path: '/dashboard' }] },
+    {
+      label: 'Anagrafiche',
+      items: [
+        { label: 'Clienti', path: '/anagrafiche/clienti' },
+        { label: 'Fornitori', path: '/anagrafiche/fornitori' },
+        { label: 'Articoli', path: '/anagrafiche/articoli' },
+        { label: 'Operatori', path: '/anagrafiche/operatori' },
+      ],
+    },
+    {
+      label: 'Risorse umane',
+      items: [
+        { label: 'Ferie & Permessi', path: '/risorse-umane/ferie-permessi' },
+        { label: 'Entrata/Uscita', path: '/risorse-umane/entrata-uscita' },
+        { label: 'Turni', path: '/risorse-umane/turni' },
+      ],
+    },
+    {
+      label: 'Logistica',
+      items: [
+        { label: 'Giacenze', path: '/logistica/giacenze' },
+        { label: 'Inventario', path: '/logistica/inventario' },
+        { label: 'Magazzini', path: '/logistica/magazzini' },
+        { label: 'Movimenti', path: '/logistica/movimenti' },
+      ],
+    },
+    {
+      label: 'Edilizia',
+      items: [
+        { label: 'SAL', path: '/edilizia/sal' },
+        { label: 'Materiali di cantiere', path: '/edilizia/materiali-cantiere' },
+        { label: 'Manodopera di cantiere', path: '/edilizia/manodopera-cantiere' },
+      ],
+    },
+    {
+      label: 'Direzione commerciale',
+      items: [
+        { label: 'BPApp', path: '/direzione-commerciale/bpapp' },
+      ],
+    },
+    {
+      label: 'Direzione amministrativa',
+      items: [
+        { label: 'Piano Finanziario', path: '/direzione-amministrativa/piano-finanziario' },
+        { label: 'Marginalità', path: '/direzione-amministrativa/marginalita' },
+        { label: 'Flusso di Cassa', path: '/direzione-amministrativa/flusso-di-cassa' },
+        { label: 'Scadenzari', path: '/direzione-amministrativa/scadenzari' },
+      ],
+    },
+    {
+      label: 'Impostazioni',
+      items: [
+        ...(role.value === 'super_admin' ? [{ label: 'All Settings', path: '/all-settings' } as Tab] : []),
+        { label: 'Utenti', path: '/users' },
+      ],
+    },
+  ];
+  return groups;
+});
+</script>
+
+<style scoped>
+.fade-enter-active, .fade-leave-active { transition: opacity .2s ease; }
+.fade-enter-from, .fade-leave-to { opacity: 0; }
+.slide-enter-active, .slide-leave-active { transition: transform .25s ease; }
+.slide-enter-from, .slide-leave-to { transform: translateX(-100%); }
+</style>
+
+<!-- Global styles for native select dropdown contrast -->
+<style>
+/* Ensure readable options in the OS/native dropdown list */
+.company-select { color-scheme: dark; }
+.company-select option { color: #0f172a; background-color: #ffffff; }
+</style>
+
+

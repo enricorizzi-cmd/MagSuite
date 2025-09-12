@@ -24,6 +24,10 @@ import Operatori from './pages/anagrafiche/Operatori.vue';
 import SAL from './pages/edilizia/SAL.vue';
 import MaterialiCantiere from './pages/edilizia/MaterialiCantiere.vue';
 import ManodoperaCantiere from './pages/edilizia/ManodoperaCantiere.vue';
+// Risorse umane
+import FeriePermessi from './pages/risorse-umane/FeriePermessi.vue';
+import EntrataUscita from './pages/risorse-umane/EntrataUscita.vue';
+import Turni from './pages/risorse-umane/Turni.vue';
 
 const routes: Array<RouteRecordRaw> = [
   { path: '/', name: 'auth', component: Auth },
@@ -44,6 +48,10 @@ const routes: Array<RouteRecordRaw> = [
   { path: '/edilizia/sal', name: 'sal', component: SAL },
   { path: '/edilizia/materiali-cantiere', name: 'materiali-cantiere', component: MaterialiCantiere },
   { path: '/edilizia/manodopera-cantiere', name: 'manodopera-cantiere', component: ManodoperaCantiere },
+  // Risorse umane
+  { path: '/risorse-umane/ferie-permessi', name: 'ferie-permessi', component: FeriePermessi },
+  { path: '/risorse-umane/entrata-uscita', name: 'entrata-uscita', component: EntrataUscita },
+  { path: '/risorse-umane/turni', name: 'turni', component: Turni },
   // Direzione commerciale (placeholder section)
   { path: '/direzione-commerciale/bpapp', name: 'bpapp', component: BPApp },
   // Direzione amministrativa

@@ -148,7 +148,7 @@ const router = useRouter();
 
 // Sections and tabs
 type Tab = { label: string; path: string };
-type Section = { key: 'home' | 'anagrafiche' | 'logistica' | 'edilizia' | 'commerciale' | 'amministrativa' | 'impostazioni'; label: string; base: string };
+type Section = { key: 'home' | 'anagrafiche' | 'logistica' | 'edilizia' | 'risorse-umane' | 'commerciale' | 'amministrativa' | 'impostazioni'; label: string; base: string };
 
 const role = ref<string>('');
 
@@ -157,6 +157,7 @@ const sections = computed<Section[]>(() => [
   { key: 'anagrafiche', label: 'Anagrafiche', base: '/anagrafiche/clienti' },
   { key: 'logistica', label: 'Logistica', base: '/logistica/giacenze' },
   { key: 'edilizia', label: 'Edilizia', base: '/edilizia/sal' },
+  { key: 'risorse-umane', label: 'Risorse umane', base: '/risorse-umane/ferie-permessi' },
   { key: 'commerciale', label: 'Direzione commerciale', base: '/direzione-commerciale/bpapp' },
   { key: 'amministrativa', label: 'Direzione amministrativa', base: '/direzione-amministrativa/piano-finanziario' },
   { key: 'impostazioni', label: 'Impostazioni', base: role.value === 'super_admin' ? '/all-settings' : '/users' },
@@ -166,6 +167,7 @@ function sectionFromPath(path: string): Section['key'] {
   if (path.startsWith('/anagrafiche')) return 'anagrafiche';
   if (path.startsWith('/logistica')) return 'logistica';
   if (path.startsWith('/edilizia')) return 'edilizia';
+  if (path.startsWith('/risorse-umane')) return 'risorse-umane';
   if (path.startsWith('/direzione-commerciale')) return 'commerciale';
   if (path.startsWith('/direzione-amministrativa')) return 'amministrativa';
   if (path === '/users' || path === '/all-settings') return 'impostazioni';
@@ -197,6 +199,12 @@ function tabsForSection(key: Section['key']): Tab[] {
         { label: 'SAL', path: '/edilizia/sal' },
         { label: 'Materiali di cantiere', path: '/edilizia/materiali-cantiere' },
         { label: 'Manodopera di cantiere', path: '/edilizia/manodopera-cantiere' },
+      ];
+    case 'risorse-umane':
+      return [
+        { label: 'Ferie & Permessi', path: '/risorse-umane/ferie-permessi' },
+        { label: 'Entrata/Uscita', path: '/risorse-umane/entrata-uscita' },
+        { label: 'Turni', path: '/risorse-umane/turni' },
       ];
     case 'commerciale':
       return [
@@ -323,6 +331,14 @@ const menuGroups = computed(() => {
         { label: 'Fornitori', path: '/anagrafiche/fornitori' },
         { label: 'Articoli', path: '/anagrafiche/articoli' },
         { label: 'Operatori', path: '/anagrafiche/operatori' },
+      ],
+    },
+    {
+      label: 'Risorse umane',
+      items: [
+        { label: 'Ferie & Permessi', path: '/risorse-umane/ferie-permessi' },
+        { label: 'Entrata/Uscita', path: '/risorse-umane/entrata-uscita' },
+        { label: 'Turni', path: '/risorse-umane/turni' },
       ],
     },
     {

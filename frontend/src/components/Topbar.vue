@@ -101,7 +101,7 @@
       <div v-if="isMenuOpen" class="fixed inset-0 z-40 bg-black/60 backdrop-blur-[1px]" @click="isMenuOpen=false"></div>
     </transition>
     <transition name="slide">
-      <aside v-if="isMenuOpen" class="fixed top-0 left-0 h-full w-72 bg-[#0b1020]/95 border-r border-white/10 p-4 z-50 shadow-2xl flex flex-col">
+      <aside v-if="isMenuOpen" class="fixed top-0 left-0 h-full w-72 bg-[#0b1020]/95 border-r border-white/10 p-4 z-[70] shadow-2xl flex flex-col">
         <div class="flex items-center justify-between mb-4">
           <div class="flex items-center gap-2">
             <img src="/icon.svg" class="h-6 w-6" />

@@ -15,28 +15,56 @@
             <button class="px-3 py-1.5 rounded-lg text-sm bg-white/10 hover:bg-white/20 text-slate-200" @click="exportItems('xlsx')">Export XLSX</button>
           </div>
         </div>
-        <ListFilters
+        <ListFiltersTable
           :items="rows"
-          :new-label="'Nuovo articolo'"
+          :fields="itemFields"
+          new-label="Nuovo articolo"
           @new="openCreate"
-          v-slot="{ filtered }"
-        >
-          <div v-if="filtered.length === 0" class="text-slate-400">Nessun risultato.</div>
-          <div v-else class="overflow-x-auto border border-white/10 rounded-lg">
-            <table class="min-w-full text-sm">
-              <thead class="bg-white/5 text-slate-300">
-                <tr>
-                  <th v-for="c in columns" :key="c.key" class="px-3 py-2" :class="c.align==='right' ? 'text-right' : 'text-left'">{{ c.label }}</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="i in filtered" :key="i.id" class="border-t border-white/10">
-                  <td v-for="c in columns" :key="c.key" class="px-3 py-2" :class="cellClass(c.key, c.align)">{{ renderCell(i, c.key) }}</td>
-                </tr>
-              </tbody>
-            </table>
+          @edit="openEdit"
+        />
+
+        <!-- Create/Edit item modal -->
+        <transition name="fade">
+          <div v-if="itemModal.open" class="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
+            <div class="w-full max-w-lg bg-[#0b1020] border border-white/10 rounded-xl p-4">
+              <div class="flex items-center mb-3">
+                <h2 class="text-lg font-semibold">{{ itemModal.mode==='create' ? 'Nuovo articolo' : 'Modifica articolo' }}</h2>
+                <button class="ml-auto p-2 rounded hover:bg-white/10" @click="closeItemModal" aria-label="Chiudi">✕</button>
+              </div>
+              <div class="grid gap-3 sm:grid-cols-2">
+                <label class="text-sm text-slate-300 sm:col-span-2">Nome
+                  <input v-model="itemForm.name" type="text" class="mt-1 w-full bg-white/10 border border-white/10 rounded px-2 py-1.5 text-sm text-slate-200" />
+                </label>
+                <label class="text-sm text-slate-300">SKU
+                  <input v-model="itemForm.sku" type="text" class="mt-1 w-full bg-white/10 border border-white/10 rounded px-2 py-1.5 text-sm text-slate-200" />
+                </label>
+                <label class="text-sm text-slate-300">Tipo
+                  <input v-model="itemForm.type" type="text" class="mt-1 w-full bg-white/10 border border-white/10 rounded px-2 py-1.5 text-sm text-slate-200" />
+                </label>
+                <label class="text-sm text-slate-300">Categoria
+                  <input v-model="itemForm.category" type="text" class="mt-1 w-full bg-white/10 border border-white/10 rounded px-2 py-1.5 text-sm text-slate-200" />
+                </label>
+                <label class="text-sm text-slate-300">Fornitore
+                  <input v-model="itemForm.supplier" type="text" class="mt-1 w-full bg-white/10 border border-white/10 rounded px-2 py-1.5 text-sm text-slate-200" />
+                </label>
+                <label class="text-sm text-slate-300 flex items-center gap-2">
+                  <input v-model="itemForm.lotti" type="checkbox" class="rounded" /> Lotti
+                </label>
+                <label class="text-sm text-slate-300 flex items-center gap-2">
+                  <input v-model="itemForm.seriali" type="checkbox" class="rounded" /> Seriali
+                </label>
+              </div>
+              <div v-if="itemModal.error" class="mt-2 text-sm text-rose-400">{{ itemModal.error }}</div>
+              <div class="mt-4 flex items-center gap-2">
+                <button class="px-3 py-1.5 rounded-lg text-sm bg-white/10 hover:bg-white/20 text-slate-200" @click="closeItemModal">Annulla</button>
+                <button class="ml-auto px-3 py-1.5 rounded-lg text-sm bg-fuchsia-600 hover:bg-fuchsia-500 text-white" :disabled="itemModal.saving" @click="saveItemModal">
+                  <span v-if="itemModal.saving">Salvataggio…</span>
+                  <span v-else>Salva</span>
+                </button>
+              </div>
+            </div>
           </div>
-        </ListFilters>
+        </transition>
 
         <!-- Pagination -->
         <div class="mt-3 flex items-center gap-3">
@@ -59,7 +87,7 @@
 <script setup lang="ts">
 import { onMounted, ref, computed } from 'vue';
 import Topbar from '../../components/Topbar.vue';
-import ListFilters from '../../components/ListFilters.vue';
+import ListFiltersTable from '../../components/ListFiltersTable.vue';
 import api from '../../services/api';
 
 type ItemRow = {
@@ -75,6 +103,33 @@ const page = ref(1);
 const limit = ref(20);
 const total = ref(0);
 const totalPages = computed(() => Math.max(1, Math.ceil(total.value / limit.value)));
+
+// Campi in ordine: usati sia per i filtri che per le colonne
+const itemFields = [
+  { key: 'sku', label: 'SKU', type: 'string' },
+  { key: 'name', label: 'Nome', type: 'string' },
+  { key: 'barcode', label: 'Barcode', type: 'string' },
+  { key: 'code', label: 'Codice', type: 'string' },
+  { key: 'description', label: 'Descrizione', type: 'string' },
+  { key: 'type', label: 'Tipo', type: 'string' },
+  { key: 'category', label: 'Categoria', type: 'string' },
+  { key: 'group', label: 'Gruppo', type: 'string' },
+  { key: 'class', label: 'Classe', type: 'string' },
+  { key: 'manufacturer', label: 'Produttore', type: 'string' },
+  { key: 'distributor', label: 'Distributore', type: 'string' },
+  { key: 'supplier', label: 'Fornitore', type: 'string' },
+  { key: 'notes', label: 'Note', type: 'string' },
+  { key: 'size', label: 'Taglia', type: 'string' },
+  { key: 'color', label: 'Colore', type: 'string' },
+  { key: 'purchase_price', label: 'Prezzo acquisto', type: 'number' },
+  { key: 'avg_weighted_price', label: 'Costo medio', type: 'number' },
+  { key: 'min_stock', label: 'Scorta min', type: 'number' },
+  { key: 'rotation_index', label: 'Indice rotazione', type: 'number' },
+  { key: 'last_purchase_date', label: 'Ultimo acquisto', type: 'string' },
+  { key: 'lotti', label: 'Lotti', type: 'boolean' },
+  { key: 'seriali', label: 'Seriali', type: 'boolean' },
+  { key: 'quantity_on_hand', label: 'Giacenza', type: 'number' },
+];
 
 const fields = [
   { key: 'sku', label: 'SKU', type: 'string' },
@@ -212,6 +267,51 @@ async function exportItems(format: 'csv'|'xlsx') {
   } catch (e: any) {
     alert(e?.response?.data?.error || e?.message || 'Errore export');
   }
+}
+
+// Modal Articolo (crea/modifica)
+const itemModal = ref<{ open: boolean; mode: 'create'|'edit'; id?: number|null; saving: boolean; error: string }>({ open: false, mode: 'create', id: null, saving: false, error: '' });
+const itemForm = ref<{ name: string; sku: string; type: string; category: string; supplier: string; lotti: boolean; seriali: boolean }>({
+  name: '', sku: '', type: '', category: '', supplier: '', lotti: false, seriali: false
+});
+
+function openEdit(row: any) {
+  itemModal.value = { open: true, mode: 'edit', id: row.id, saving: false, error: '' };
+  itemForm.value = {
+    name: row.name || '',
+    sku: row.sku || '',
+    type: row.type || '',
+    category: row.category || '',
+    supplier: row.supplier || '',
+    lotti: !!row.lotti,
+    seriali: !!row.seriali,
+  };
+}
+function closeItemModal() { itemModal.value.open = false; }
+async function saveItemModal() {
+  try {
+    itemModal.value.saving = true;
+    itemModal.value.error = '';
+    const payload: any = { ...itemForm.value };
+    if (itemModal.value.mode === 'create') {
+      if (!payload.sku) delete payload.sku;
+      await api.post('/items', payload);
+    } else if (itemModal.value.mode === 'edit' && itemModal.value.id) {
+      await api.put(`/items/${itemModal.value.id}`, payload);
+    }
+    itemModal.value.open = false;
+    await load();
+  } catch (e: any) {
+    itemModal.value.error = e?.response?.data?.error || e?.message || 'Errore salvataggio articolo';
+  } finally {
+    itemModal.value.saving = false;
+  }
+}
+
+// Reindirizza la creazione all'uso dello stesso modal
+function openCreate() {
+  itemModal.value = { open: true, mode: 'create', id: null, saving: false, error: '' };
+  itemForm.value = { name: '', sku: '', type: '', category: '', supplier: '', lotti: false, seriali: false };
 }
 
 // Create Item modal state + actions

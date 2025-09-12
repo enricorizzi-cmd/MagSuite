@@ -314,31 +314,7 @@ function openCreate() {
   itemForm.value = { name: '', sku: '', type: '', category: '', supplier: '', lotti: false, seriali: false };
 }
 
-// Create Item modal state + actions
-const creating = ref(false);
-const createError = ref('');
-const createForm = ref<{ name: string; sku: string; type: string; category: string; supplier: string; lotti: boolean; seriali: boolean }>({
-  name: '', sku: '', type: '', category: '', supplier: '', lotti: false, seriali: false
-});
-
-function openCreate() {
-  createError.value = '';
-  createForm.value = { name: '', sku: '', type: '', category: '', supplier: '', lotti: false, seriali: false };
-  creating.value = true;
-}
-function closeCreate() { creating.value = false; }
-async function saveCreate() {
-  try {
-    createError.value = '';
-    const payload: any = { ...createForm.value };
-    if (!payload.sku) delete payload.sku; // backend can auto-generate
-    await api.post('/items', payload);
-    creating.value = false;
-    await load();
-  } catch (e: any) {
-    createError.value = e?.response?.data?.error || e?.message || 'Errore creazione articolo';
-  }
-}
+// (Legacy create modal removed)
 </script>
 
 <style scoped></style>

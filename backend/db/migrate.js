@@ -45,9 +45,22 @@ if (!ca) {
   }
 }
 
-const useSSL = process.env.PGSSLMODE !== 'disable';
+// Determine SSL mode from env or connection string
+let sslmode = (process.env.PGSSLMODE || 'require').toLowerCase();
+if (connectionString) {
+  try {
+    const m = /[?&]sslmode=([^&]+)/i.exec(connectionString);
+    if (m && m[1]) sslmode = decodeURIComponent(m[1]).toLowerCase();
+  } catch (_) {}
+}
+const useSSL = sslmode !== 'disable';
 
-const rejectUnauthorized = (process.env.PGSSL_REJECT_UNAUTHORIZED || 'true') !== 'false';
+let rejectUnauthorized = (process.env.PGSSL_REJECT_UNAUTHORIZED || 'true') !== 'false';
+if (sslmode === 'no-verify' || sslmode === 'allow' || sslmode === 'prefer') {
+  rejectUnauthorized = false;
+} else if (sslmode === 'verify-ca' || sslmode === 'verify-full') {
+  rejectUnauthorized = true;
+}
 const sslConfig = useSSL
   ? {
       ca: ca ? (Array.isArray(ca) ? ca : [ca]) : undefined,

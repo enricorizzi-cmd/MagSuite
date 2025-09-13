@@ -81,18 +81,22 @@ if (usePgMem) {
   if (caPemEnv) {
     ca = caPemEnv;
   }
-  // 2) Otherwise accept base64-encoded certs from env
+  // 2) If SUPABASE_CA_CERT is provided as raw PEM, use it as-is
+  if (!ca && process.env.SUPABASE_CA_CERT && /-----BEGIN CERTIFICATE-----/.test(process.env.SUPABASE_CA_CERT)) {
+    ca = process.env.SUPABASE_CA_CERT;
+  }
+  // 3) Otherwise accept base64-encoded certs from env
   if (!ca) {
     const caB64Env = process.env.DB_CA_CERT_B64 || process.env.SUPABASE_CA_CERT || null;
     if (caB64Env) {
       try {
-        ca = Buffer.from(caB64Env, 'base64').toString('utf8');
+        ca = Buffer.from(String(caB64Env).replace(/\s+/g, ''), 'base64').toString('utf8');
       } catch (_) {
         // ignore
       }
     }
   }
-  // 3) Finally, try reading from a file path if provided
+  // 4) Finally, try reading from a file path if provided
   if (!ca) {
     try {
       ca = fs.readFileSync(caPath, 'utf8');
@@ -115,9 +119,18 @@ if (usePgMem) {
 
   // Conservative pool to play nice with external poolers (e.g., Supabase 6543)
   // and improve resilience on cold starts / transient network hiccups.
+  const rejectUnauthorized = (process.env.PGSSL_REJECT_UNAUTHORIZED || 'true') !== 'false';
+  const sslConfig = useSSL
+    ? {
+        ca: ca ? (Array.isArray(ca) ? ca : [ca]) : undefined,
+        rejectUnauthorized,
+        minVersion: 'TLSv1.2',
+      }
+    : false;
+
   pool = new Pool({
     ...baseConfig,
-    ssl: useSSL ? { ca, rejectUnauthorized: true, minVersion: 'TLSv1.2' } : false,
+    ssl: sslConfig,
     enableChannelBinding: useSSL,
     max: Number(process.env.PGPOOL_MAX) || 5,
     idleTimeoutMillis: Number(process.env.PG_IDLE_TIMEOUT_MS) || 0,

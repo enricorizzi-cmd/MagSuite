@@ -11,18 +11,22 @@ const caPemEnv = process.env.DB_CA_CERT_PEM || process.env.DB_CA_CERT || null;
 if (caPemEnv) {
   ca = caPemEnv;
 }
-// 2) Otherwise accept base64-encoded certs from env
+// 2) If SUPABASE_CA_CERT is provided as raw PEM, use it as-is
+if (!ca && process.env.SUPABASE_CA_CERT && /-----BEGIN CERTIFICATE-----/.test(process.env.SUPABASE_CA_CERT)) {
+  ca = process.env.SUPABASE_CA_CERT;
+}
+// 3) Otherwise accept base64-encoded certs from env
 if (!ca) {
   const caB64Env = process.env.DB_CA_CERT_B64 || process.env.SUPABASE_CA_CERT || null;
   if (caB64Env) {
     try {
-      ca = Buffer.from(caB64Env, 'base64').toString('utf8');
+      ca = Buffer.from(String(caB64Env).replace(/\s+/g, ''), 'base64').toString('utf8');
     } catch (_) {
       // ignore
     }
   }
 }
-// 3) Finally, try reading from a file path if provided
+// 4) Finally, try reading from a file path if provided
 if (!ca) {
   try {
     ca = fs.readFileSync(caPath, 'utf8');
@@ -33,9 +37,18 @@ if (!ca) {
 
 const useSSL = process.env.PGSSLMODE !== 'disable';
 
+const rejectUnauthorized = (process.env.PGSSL_REJECT_UNAUTHORIZED || 'true') !== 'false';
+const sslConfig = useSSL
+  ? {
+      ca: ca ? (Array.isArray(ca) ? ca : [ca]) : undefined,
+      rejectUnauthorized,
+      minVersion: 'TLSv1.2',
+    }
+  : false;
+
 const pool = new Pool({
   connectionString,
-  ssl: useSSL ? { ca, rejectUnauthorized: true, minVersion: 'TLSv1.2' } : false,
+  ssl: sslConfig,
   enableChannelBinding: useSSL,
   max: Number(process.env.PGPOOL_MAX) || 3,
   connectionTimeoutMillis: Number(process.env.PG_CONNECTION_TIMEOUT_MS) || 10000,

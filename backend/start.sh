@@ -20,19 +20,19 @@ if [ -n "$SUPABASE_CA_CERT" ]; then
     fi
   done
 
-  if echo "$SUPABASE_CA_CERT" | base64 -d > "$CERT_PATH" 2>/dev/null; then
+  # If the env already contains a PEM, write it as-is; otherwise treat as base64
+  if printf %s "$SUPABASE_CA_CERT" | grep -q "-----BEGIN CERTIFICATE-----"; then
+    printf %s "$SUPABASE_CA_CERT" > "$CERT_PATH" 2>/dev/null || true
+  else
+    # Strip whitespace before decoding to handle UI-inserted spaces/newlines
+    printf %s "$SUPABASE_CA_CERT" | tr -d '\r\n\t ' | base64 -d > "$CERT_PATH" 2>/dev/null || true
+  fi
+
+  if [ -s "$CERT_PATH" ]; then
     export DB_CA_PATH="$CERT_PATH"
     export NODE_EXTRA_CA_CERTS="$CERT_PATH"
   else
-    # If write failed on first dir, retry once with /tmp/secrets explicitly
-    TMP_DIR="/tmp/secrets"
-    mkdir -p "$TMP_DIR" 2>/dev/null || true
-    if echo "$SUPABASE_CA_CERT" | base64 -d > "$TMP_DIR/supabase-ca.crt" 2>/dev/null; then
-      export DB_CA_PATH="$TMP_DIR/supabase-ca.crt"
-      export NODE_EXTRA_CA_CERTS="$TMP_DIR/supabase-ca.crt"
-    else
-      echo "Warning: Could not decode/write SUPABASE_CA_CERT. Continuing without custom CA." >&2
-    fi
+    echo "Warning: Could not decode/write SUPABASE_CA_CERT. Continuing without custom CA." >&2
   fi
 fi
 

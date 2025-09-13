@@ -6,10 +6,29 @@ const connectionString = process.env.DATABASE_URL || 'postgres://postgres:postgr
 const caPath = process.env.DB_CA_PATH || '/etc/secrets/supabase-ca.crt';
 
 let ca;
-try {
-  ca = fs.readFileSync(caPath, 'utf8');
-} catch (err) {
-  // Custom CA not provided; rely on default trust store
+// 1) Prefer explicit PEM content from environment
+const caPemEnv = process.env.DB_CA_CERT_PEM || process.env.DB_CA_CERT || null;
+if (caPemEnv) {
+  ca = caPemEnv;
+}
+// 2) Otherwise accept base64-encoded certs from env
+if (!ca) {
+  const caB64Env = process.env.DB_CA_CERT_B64 || process.env.SUPABASE_CA_CERT || null;
+  if (caB64Env) {
+    try {
+      ca = Buffer.from(caB64Env, 'base64').toString('utf8');
+    } catch (_) {
+      // ignore
+    }
+  }
+}
+// 3) Finally, try reading from a file path if provided
+if (!ca) {
+  try {
+    ca = fs.readFileSync(caPath, 'utf8');
+  } catch (err) {
+    // Custom CA not provided; rely on default trust store
+  }
 }
 
 const useSSL = process.env.PGSSLMODE !== 'disable';

@@ -9,7 +9,8 @@
                     "lint":  "eslint . --max-warnings=0",
                     "test":  "jest",
                     "migrate":  "node db/migrate.js",
-                    "audit:supabase": "node scripts/audit-supabase.js"
+                    "audit:supabase": "node scripts/audit-supabase.js",
+                    "audit:render": "node scripts/audit-render.js"
                 },
     "dependencies":  {
                          "bcryptjs":  "^3.0.2",

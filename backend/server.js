@@ -120,6 +120,33 @@ async function start(port = process.env.PORT || 3000) {
     res.json({ status: 'ok' });
   });
 
+  // Non-sensitive configuration health: only presence flags, never values
+  app.get('/health/config', (req, res) => {
+    const has = (k) => Boolean(process.env[k]);
+    const present = (arr) => arr.some((k) => has(k));
+    res.json({
+      env: {
+        DATABASE_URL: has('DATABASE_URL'),
+        PGBLOCK: present(['PGHOST','PGUSER','PGDATABASE']),
+        ACCESS_SECRET: has('ACCESS_SECRET'),
+        REFRESH_SECRET: has('REFRESH_SECRET'),
+        SSO_SECRET: has('SSO_SECRET'),
+        API_KEY: has('API_KEY'),
+        FILE_ENCRYPTION_KEY: has('FILE_ENCRYPTION_KEY'),
+        SUPABASE_URL: has('SUPABASE_URL'),
+        SUPABASE_ANON_KEY: has('SUPABASE_ANON_KEY'),
+        SUPABASE_SERVICE_ROLE: has('SUPABASE_SERVICE_ROLE'),
+        SUPABASE_CA_CERT_or_DB_CA_PATH: present(['SUPABASE_CA_CERT','DB_CA_PATH']),
+        CORS_ORIGIN: has('CORS_ORIGIN'),
+        VAPID_PUBLIC: has('VAPID_PUBLIC'),
+        VAPID_PRIVATE: has('VAPID_PRIVATE'),
+        SENTRY_DSN: has('SENTRY_DSN'),
+        PGSSLMODE: process.env.PGSSLMODE || null,
+        PORT: process.env.PORT || '3000',
+      },
+    });
+  });
+
   // Public routes
   app.use('/auth', authRouter);
 

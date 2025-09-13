@@ -1,0 +1,32 @@
+services:
+  - type: web
+    name: magsuite-backend
+    env: docker
+    plan: starter
+    region: frankfurt
+    dockerfilePath: backend/Dockerfile
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: ACCESS_SECRET
+        sync: false
+      - key: REFRESH_SECRET
+        sync: false
+      - key: SSO_SECRET
+        sync: false
+      - key: API_KEY
+        sync: false
+      - key: FILE_ENCRYPTION_KEY
+        sync: false
+      - key: CORS_ORIGIN
+        sync: false
+      - key: SUPABASE_CA_CERT
+        sync: false
+      - key: VAPID_PUBLIC
+        sync: false
+      - key: VAPID_PRIVATE
+        sync: false
+      - key: SENTRY_DSN
+        sync: false

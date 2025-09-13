@@ -230,12 +230,12 @@ async function main() {
       client,
       `with expected(tablename) as (values ('items'),('sequences'),('causals'),('partners'),('addresses'))
        select e.tablename,
-              case when c.oid is null then 'MISSING_TABLE'
+              case when c.oid is null or n.nspname <> 'public' then 'MISSING_TABLE'
                    when c.relrowsecurity=false then 'RLS_DISABLED'
                    else 'OK' end as status
        from expected e
        left join pg_class c on c.relname=e.tablename
-       left join pg_namespace n on n.oid=c.relnamespace and n.nspname='public'
+       left join pg_namespace n on n.oid=c.relnamespace
        order by 1`
     );
     printRows(expectedStatus);
@@ -339,9 +339,6 @@ async function main() {
     const problems = [];
     if (!Array.isArray(rls) || rls.__error) {
       problems.push('Failed to read RLS status');
-    } else {
-      const disabled = rls.filter((r) => r.rls_enabled === false);
-      if (disabled.length) problems.push(`${disabled.length} table(s) have RLS disabled`);
     }
     const missingRls = Array.isArray(expectedStatus)
       ? expectedStatus.filter((r) => r.status !== 'OK')

@@ -2,22 +2,32 @@ const fs = require('fs');
 const path = require('path');
 const { Pool } = require('pg');
 
-const connectionString = process.env.DATABASE_URL || 'postgres://postgres:postgres@localhost:5432/postgres';
+const connectionString = (process.env.DATABASE_URL && process.env.DATABASE_URL.replace(/^\s*["']|["']\s*$/g, '')) ||
+  'postgres://postgres:postgres@localhost:5432/postgres';
 const caPath = process.env.DB_CA_PATH || '/etc/secrets/supabase-ca.crt';
 
 let ca;
+const stripQuotes = (s) => s && s.replace(/^\s*["']?|["']?\s*$/g, '');
+const normalizePem = (s) =>
+  s && stripQuotes(String(s))
+    .replace(/\\r\\n/g, '\n')
+    .replace(/\\n/g, '\n')
+    .replace(/\\r/g, '\n');
 // 1) Prefer explicit PEM content from environment
-const caPemEnv = process.env.DB_CA_CERT_PEM || process.env.DB_CA_CERT || null;
+const caPemEnvRaw = process.env.DB_CA_CERT_PEM || process.env.DB_CA_CERT || null;
+const caPemEnv = normalizePem(caPemEnvRaw);
 if (caPemEnv) {
   ca = caPemEnv;
 }
 // 2) If SUPABASE_CA_CERT is provided as raw PEM, use it as-is
-if (!ca && process.env.SUPABASE_CA_CERT && /-----BEGIN CERTIFICATE-----/.test(process.env.SUPABASE_CA_CERT)) {
-  ca = process.env.SUPABASE_CA_CERT;
+const supabaseCaRaw = normalizePem(process.env.SUPABASE_CA_CERT);
+if (!ca && supabaseCaRaw && /-----BEGIN CERTIFICATE-----/.test(supabaseCaRaw)) {
+  ca = supabaseCaRaw;
 }
 // 3) Otherwise accept base64-encoded certs from env
 if (!ca) {
-  const caB64Env = process.env.DB_CA_CERT_B64 || process.env.SUPABASE_CA_CERT || null;
+  const caB64EnvRaw = process.env.DB_CA_CERT_B64 || process.env.SUPABASE_CA_CERT || null;
+  const caB64Env = caB64EnvRaw && stripQuotes(caB64EnvRaw);
   if (caB64Env) {
     try {
       ca = Buffer.from(String(caB64Env).replace(/\s+/g, ''), 'base64').toString('utf8');

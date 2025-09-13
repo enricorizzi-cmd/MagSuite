@@ -20,12 +20,16 @@ if [ -n "$SUPABASE_CA_CERT" ]; then
     fi
   done
 
+  # Sanitize the env value: trim whitespace and surrounding quotes
+  RAW_CA=$(printf %s "$SUPABASE_CA_CERT")
+  SAN_CA=$(printf %s "$RAW_CA" | sed -e 's/^"//' -e 's/"$//' -e "s/^'//" -e "s/'$//")
+
   # If the env already contains a PEM, write it as-is; otherwise treat as base64
-  if printf %s "$SUPABASE_CA_CERT" | grep -q "-----BEGIN CERTIFICATE-----"; then
-    printf %s "$SUPABASE_CA_CERT" > "$CERT_PATH" 2>/dev/null || true
+  if printf %s "$SAN_CA" | grep -q "-----BEGIN CERTIFICATE-----"; then
+    printf %s "$SAN_CA" > "$CERT_PATH" 2>/dev/null || true
   else
-    # Strip whitespace before decoding to handle UI-inserted spaces/newlines
-    printf %s "$SUPABASE_CA_CERT" | tr -d '\r\n\t ' | base64 -d > "$CERT_PATH" 2>/dev/null || true
+    # Strip whitespace before decoding to handle UI-inserted spaces/newlines and quotes
+    printf %s "$SAN_CA" | tr -d '\r\n\t ' | sed -e 's/^"//' -e 's/"$//' -e "s/^'//" -e "s/'$//" | base64 -d > "$CERT_PATH" 2>/dev/null || true
   fi
 
   if [ -s "$CERT_PATH" ]; then

@@ -56,6 +56,30 @@ supabase login   # authenticate the CLI
 supabase start   # start local services
 ```
 
+#### Supabase Audit (DB & RLS)
+
+A utility is provided to audit your Supabase/Postgres configuration against the repository migrations (RLS, policies, indexes, constraints, and migration drift).
+
+- Prerequisites: set a valid `DATABASE_URL` (or `PGHOST/PGPORT/PGUSER/PGPASSWORD/PGDATABASE`). For Supabase, set `PGSSLMODE=require`. If your project requires a custom CA, set `DB_CA_PATH` to the certificate path (optionally `NODE_EXTRA_CA_CERTS` too).
+
+Run the audit:
+
+```bash
+cd backend
+# Option A: using env file
+node --env-file=.env scripts/audit-supabase.js
+# Option B: directly via npm script (expects env already set in the shell)
+DATABASE_URL=postgres://... PGSSLMODE=require npm run audit:supabase
+```
+
+The report lists:
+- Tables with RLS disabled
+- Policies defined on public tables
+- Expected RLS tables status (items, sequences, causals, partners, addresses)
+- company_id nullability and default expressions
+- Indexes on stock_movements
+- Migration drift (local files vs applied in DB)
+
 ## Node Dependencies
 
 Both the backend and frontend include dependencies managed via their own `package.json` files. Install with `npm ci` inside each folder. See `backend/package.json` and `frontend/package.json` for details.

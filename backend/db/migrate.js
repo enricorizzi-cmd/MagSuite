@@ -30,7 +30,12 @@ if (!ca) {
   const caB64Env = caB64EnvRaw && stripQuotes(caB64EnvRaw);
   if (caB64Env) {
     try {
-      ca = Buffer.from(String(caB64Env).replace(/\s+/g, ''), 'base64').toString('utf8');
+      const sanitized = String(caB64Env).replace(/\s+/g, '');
+      const padded = sanitized.padEnd(
+        sanitized.length + ((4 - (sanitized.length % 4)) % 4),
+        '='
+      );
+      ca = Buffer.from(padded, 'base64').toString('utf8');
     } catch (_) {
       // ignore
     }

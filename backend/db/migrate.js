@@ -1,6 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const { Pool } = require('pg');
+const { rootCertificates } = require('tls');
 
 const connectionString = (process.env.DATABASE_URL && process.env.DATABASE_URL.replace(/^\s*["']|["']\s*$/g, '')) ||
   'postgres://postgres:postgres@localhost:5432/postgres';
@@ -30,9 +31,14 @@ if (!ca) {
   const caB64Env = caB64EnvRaw && stripQuotes(caB64EnvRaw);
   if (caB64Env) {
     try {
-      ca = Buffer.from(String(caB64Env).replace(/\s+/g, ''), 'base64').toString('utf8');
-    } catch (_) {
-      // ignore
+      const sanitized = String(caB64Env).replace(/\s+/g, '');
+      const padded = sanitized.padEnd(
+        sanitized.length + ((4 - (sanitized.length % 4)) % 4),
+        '='
+      );
+      ca = Buffer.from(padded, 'base64').toString('utf8');
+    } catch (e) {
+      console.warn('Failed to decode base64 CA cert:', e.message);
     }
   }
 }
@@ -63,7 +69,7 @@ if (sslmode === 'no-verify' || sslmode === 'allow' || sslmode === 'prefer') {
 }
 const sslConfig = useSSL
   ? {
-      ca: ca ? (Array.isArray(ca) ? ca : [ca]) : undefined,
+      ca: ca ? [...rootCertificates, ...(Array.isArray(ca) ? ca : [ca])] : undefined,
       rejectUnauthorized,
       minVersion: 'TLSv1.2',
     }

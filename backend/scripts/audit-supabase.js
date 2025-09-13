@@ -224,11 +224,11 @@ async function main() {
     printRows(policies, 'No policies found');
 
     // Expected RLS tables
-    printSection('Expected RLS tables status');
     const expectedTables = ['items','sequences','causals','partners','addresses'];
+    const valuesList = expectedTables.map(t => `('${t}')`).join(',');
     const expectedStatus = await runQuery(
       client,
-      `with expected(tablename) as (values ('items'),('sequences'),('causals'),('partners'),('addresses'))
+      `with expected(tablename) as (values ${valuesList})
        select e.tablename,
               case when c.oid is null or n.nspname <> 'public' then 'MISSING_TABLE'
                    when c.relrowsecurity=false then 'RLS_DISABLED'

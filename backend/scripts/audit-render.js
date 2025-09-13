@@ -34,7 +34,7 @@ function api(path) {
   });
 }
 
-function flag(val) { return Boolean(val) ? 'set' : 'missing'; }
+  function flag(val) { return val ? 'set' : 'missing'; }
 
 async function main() {
   const service = await api('');

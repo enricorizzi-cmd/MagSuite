@@ -93,6 +93,12 @@ The backend relies on a few variables at runtime:
 - `BATCH_STRATEGY` – `FIFO` (default) or `FEFO` for batch handling (optional)
 - `DB_CA_PATH` – path to the CA certificate used to verify the database TLS connection
 - `NODE_EXTRA_CA_CERTS` – optional, adds the same CA to Node's global trust store
+- `SUPABASE_URL` – Supabase project URL
+- `SUPABASE_ANON_KEY` – public Supabase key (server-side only if needed)
+- `SUPABASE_SERVICE_ROLE` – service-role key for privileged Supabase operations
+- `VAPID_PUBLIC` / `VAPID_PRIVATE` – VAPID keys for Web Push
+- `SENTRY_DSN` – Sentry project DSN for error tracking
+- `CORS_ORIGIN` – comma-separated list of allowed origins
 
 On Render, add them via **Environment → Add Environment Variable**:
 
@@ -106,6 +112,16 @@ FILE_ENCRYPTION_KEY=replace-me-file-key
 ALERT_EMAIL=alerts@example.com
 BATCH_STRATEGY=FIFO
 DB_CA_PATH=/etc/secrets/supabase-ca.crt
+# Supabase
+SUPABASE_URL=https://project.supabase.co
+SUPABASE_ANON_KEY=replace-me
+SUPABASE_SERVICE_ROLE=replace-me
+# Web Push
+VAPID_PUBLIC=replace-me
+VAPID_PRIVATE=replace-me
+# Observability & security
+SENTRY_DSN=https://example.ingest.sentry.io/project
+CORS_ORIGIN=https://example.com
 # Optional: extend Node's global trust store
 NODE_EXTRA_CA_CERTS=/etc/secrets/supabase-ca.crt
 ```
@@ -189,7 +205,7 @@ cd ../frontend && npm run dev
 Deploying on [Render](https://render.com) requires the following configuration:
 
 - **Dockerfile path:** `backend/Dockerfile` (with the repository root as the build context)
-- **Environment variables:** `DATABASE_URL`, `ACCESS_SECRET`, `REFRESH_SECRET`, `API_KEY`, `SSO_SECRET`, `FILE_ENCRYPTION_KEY`, `ALERT_EMAIL` (optional), `BATCH_STRATEGY` (optional), `DB_CA_PATH`, optionally `NODE_EXTRA_CA_CERTS`, and optionally `VITE_API_URL` for the frontend API base URL
+- **Environment variables:** `DATABASE_URL`, `ACCESS_SECRET`, `REFRESH_SECRET`, `SSO_SECRET`, `API_KEY`, `FILE_ENCRYPTION_KEY`, `ALERT_EMAIL` (optional), `BATCH_STRATEGY` (optional), `DB_CA_PATH`, `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE`, `VAPID_PUBLIC`, `VAPID_PRIVATE`, `SENTRY_DSN`, `CORS_ORIGIN`, optionally `NODE_EXTRA_CA_CERTS`, and optionally `VITE_API_URL` (frontend), `VITE_API_KEY`, `VITE_COMPANY_ID`
 - **Secret file:** Optionally provide a `supabase-ca.crt` and mount it at `/etc/secrets/supabase-ca.crt` (referenced by `DB_CA_PATH`)
 
 ## Usage

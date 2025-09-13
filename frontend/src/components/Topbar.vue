@@ -155,7 +155,7 @@
 import { onMounted, ref, computed, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import api from '../services/api';
-import { isPathEnabled } from '../config/features';
+import { isPathEnabled, mergeWithDefaults } from '../config/features';
 import { connectNotifications, unreadCount, items as notifItems, markAllRead, canRequestNotificationPermission, requestNotificationPermission } from '../services/notifications';
 
 const route = useRoute();
@@ -303,9 +303,9 @@ async function loadCurrentCompany() {
 async function loadFeatures() {
   try {
     const { data } = await api.get('/auth/company-features');
-    features.value = data || {};
+    features.value = mergeWithDefaults(data);
   } catch {
-    features.value = {} as any;
+    features.value = mergeWithDefaults(null);
   }
 }
 

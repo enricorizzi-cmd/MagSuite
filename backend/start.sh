@@ -9,18 +9,30 @@ CERT_DIR=${CERT_DIR:-/etc/secrets}
 CERT_PATH="$CERT_DIR/supabase-ca.crt"
 
 if [ -n "$SUPABASE_CA_CERT" ]; then
-  if ! mkdir -p "$CERT_DIR" 2>/dev/null; then
-    # Read-only root FS (e.g., Render); use a writable temp directory instead
-    CERT_DIR=/tmp/secrets
-    CERT_PATH="$CERT_DIR/supabase-ca.crt"
-    mkdir -p "$CERT_DIR"
-  fi
+  # Try /etc/secrets first; if not writable, fall back to /tmp/secrets
+  for d in "$CERT_DIR" "/tmp/secrets"; do
+    mkdir -p "$d" 2>/dev/null || true
+    if ( : >"$d/.writetest" ) 2>/dev/null; then
+      rm -f "$d/.writetest" 2>/dev/null || true
+      CERT_DIR="$d"
+      CERT_PATH="$CERT_DIR/supabase-ca.crt"
+      break
+    fi
+  done
 
   if echo "$SUPABASE_CA_CERT" | base64 -d > "$CERT_PATH" 2>/dev/null; then
     export DB_CA_PATH="$CERT_PATH"
     export NODE_EXTRA_CA_CERTS="$CERT_PATH"
   else
-    echo "Warning: Could not decode/write SUPABASE_CA_CERT. Continuing without custom CA." >&2
+    # If write failed on first dir, retry once with /tmp/secrets explicitly
+    TMP_DIR="/tmp/secrets"
+    mkdir -p "$TMP_DIR" 2>/dev/null || true
+    if echo "$SUPABASE_CA_CERT" | base64 -d > "$TMP_DIR/supabase-ca.crt" 2>/dev/null; then
+      export DB_CA_PATH="$TMP_DIR/supabase-ca.crt"
+      export NODE_EXTRA_CA_CERTS="$TMP_DIR/supabase-ca.crt"
+    else
+      echo "Warning: Could not decode/write SUPABASE_CA_CERT. Continuing without custom CA." >&2
+    fi
   fi
 fi
 

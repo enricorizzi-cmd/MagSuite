@@ -20,14 +20,14 @@ const router = express.Router();
   
   // Enable RLS and create policies
   await db.query('ALTER TABLE inventories ENABLE ROW LEVEL SECURITY');
-  await db.query(`CREATE POLICY IF NOT EXISTS inventories_select ON inventories
+  await db.query(`CREATE POLICY inventories_select ON inventories
     FOR SELECT USING (company_id = current_setting('app.current_company_id', true)::int)`);
-  await db.query(`CREATE POLICY IF NOT EXISTS inventories_insert ON inventories
+  await db.query(`CREATE POLICY inventories_insert ON inventories
     FOR INSERT WITH CHECK (company_id = current_setting('app.current_company_id', true)::int)`);
-  await db.query(`CREATE POLICY IF NOT EXISTS inventories_update ON inventories
+  await db.query(`CREATE POLICY inventories_update ON inventories
     FOR UPDATE USING (company_id = current_setting('app.current_company_id', true)::int)
     WITH CHECK (company_id = current_setting('app.current_company_id', true)::int)`);
-  await db.query(`CREATE POLICY IF NOT EXISTS inventories_delete ON inventories
+  await db.query(`CREATE POLICY inventories_delete ON inventories
     FOR DELETE USING (company_id = current_setting('app.current_company_id', true)::int)`);
 })();
 

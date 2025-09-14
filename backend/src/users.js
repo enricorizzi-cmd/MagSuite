@@ -14,14 +14,14 @@ const router = express.Router();
   
   // Enable RLS and create policies
   await db.query('ALTER TABLE user_settings ENABLE ROW LEVEL SECURITY');
-  await db.query(`CREATE POLICY IF NOT EXISTS user_settings_select ON user_settings
+  await db.query(`CREATE POLICY user_settings_select ON user_settings
     FOR SELECT USING (company_id = current_setting('app.current_company_id', true)::int)`);
-  await db.query(`CREATE POLICY IF NOT EXISTS user_settings_insert ON user_settings
+  await db.query(`CREATE POLICY user_settings_insert ON user_settings
     FOR INSERT WITH CHECK (company_id = current_setting('app.current_company_id', true)::int)`);
-  await db.query(`CREATE POLICY IF NOT EXISTS user_settings_update ON user_settings
+  await db.query(`CREATE POLICY user_settings_update ON user_settings
     FOR UPDATE USING (company_id = current_setting('app.current_company_id', true)::int)
     WITH CHECK (company_id = current_setting('app.current_company_id', true)::int)`);
-  await db.query(`CREATE POLICY IF NOT EXISTS user_settings_delete ON user_settings
+  await db.query(`CREATE POLICY user_settings_delete ON user_settings
     FOR DELETE USING (company_id = current_setting('app.current_company_id', true)::int)`);
 })();
 

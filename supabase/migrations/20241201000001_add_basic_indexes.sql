@@ -1,72 +1,42 @@
--- Simple performance indexes for MagSuite
--- Only creates indexes on tables and columns that definitely exist
+-- Ultra-simple performance indexes for MagSuite
+-- Only creates indexes on columns that definitely exist in the base schema
 
--- Basic indexes on core tables (safe to create)
+-- Basic indexes on items (from 20240701000000_create_core_tables.sql)
 CREATE INDEX IF NOT EXISTS idx_items_id ON items(id);
 CREATE INDEX IF NOT EXISTS idx_items_name ON items(name);
+CREATE INDEX IF NOT EXISTS idx_items_sku ON items(sku);
 
--- Only create company_id indexes if the column exists
-DO $$
-BEGIN
-    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'items' AND column_name = 'company_id') THEN
-        CREATE INDEX IF NOT EXISTS idx_items_company_id ON items(company_id);
-    END IF;
-END $$;
-
--- Basic indexes on documents
+-- Basic indexes on documents (from 20240701000000_create_core_tables.sql)
 CREATE INDEX IF NOT EXISTS idx_documents_id ON documents(id);
 CREATE INDEX IF NOT EXISTS idx_documents_created_at ON documents(created_at);
 
--- Only create company_id indexes if the column exists
-DO $$
-BEGIN
-    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'documents' AND column_name = 'company_id') THEN
-        CREATE INDEX IF NOT EXISTS idx_documents_company_id ON documents(company_id);
-    END IF;
-END $$;
+-- Basic indexes on warehouses (from 20240701000000_create_core_tables.sql)
+CREATE INDEX IF NOT EXISTS idx_warehouses_id ON warehouses(id);
+CREATE INDEX IF NOT EXISTS idx_warehouses_name ON warehouses(name);
 
--- Basic indexes on users
-CREATE INDEX IF NOT EXISTS idx_users_id ON users(id);
-
--- Only create company_id indexes if the column exists
-DO $$
-BEGIN
-    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'users' AND column_name = 'company_id') THEN
-        CREATE INDEX IF NOT EXISTS idx_users_company_id ON users(company_id);
-    END IF;
-END $$;
-
--- Basic indexes on stock_movements
+-- Basic indexes on stock_movements (from 20240708000000_add_lots_serials_stock_movements.sql)
 CREATE INDEX IF NOT EXISTS idx_stock_movements_id ON stock_movements(id);
 CREATE INDEX IF NOT EXISTS idx_stock_movements_item_id ON stock_movements(item_id);
 CREATE INDEX IF NOT EXISTS idx_stock_movements_warehouse_id ON stock_movements(warehouse_id);
+CREATE INDEX IF NOT EXISTS idx_stock_movements_moved_at ON stock_movements(moved_at);
 
--- Only create company_id indexes if the column exists
-DO $$
-BEGIN
-    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'stock_movements' AND column_name = 'company_id') THEN
-        CREATE INDEX IF NOT EXISTS idx_stock_movements_company_id ON stock_movements(company_id);
-    END IF;
-END $$;
+-- Basic indexes on lots (from 20240708000000_add_lots_serials_stock_movements.sql)
+CREATE INDEX IF NOT EXISTS idx_lots_id ON lots(id);
+CREATE INDEX IF NOT EXISTS idx_lots_item_id ON lots(item_id);
 
--- Basic indexes on partners
+-- Basic indexes on serials (from 20240708000000_add_lots_serials_stock_movements.sql)
+CREATE INDEX IF NOT EXISTS idx_serials_id ON serials(id);
+CREATE INDEX IF NOT EXISTS idx_serials_item_id ON serials(item_id);
+
+-- Basic indexes on users (from 20240515120000_create_auth_tables.sql)
+CREATE INDEX IF NOT EXISTS idx_users_id ON users(id);
+CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
+
+-- Basic indexes on partners (from 20240717000000_create_partner_tables.sql)
 CREATE INDEX IF NOT EXISTS idx_partners_id ON partners(id);
+CREATE INDEX IF NOT EXISTS idx_partners_name ON partners(name);
+CREATE INDEX IF NOT EXISTS idx_partners_type ON partners(type);
 
--- Only create company_id indexes if the column exists
-DO $$
-BEGIN
-    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'partners' AND column_name = 'company_id') THEN
-        CREATE INDEX IF NOT EXISTS idx_partners_company_id ON partners(company_id);
-    END IF;
-END $$;
-
--- Basic indexes on warehouses
-CREATE INDEX IF NOT EXISTS idx_warehouses_id ON warehouses(id);
-
--- Only create company_id indexes if the column exists
-DO $$
-BEGIN
-    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'warehouses' AND column_name = 'company_id') THEN
-        CREATE INDEX IF NOT EXISTS idx_warehouses_company_id ON warehouses(company_id);
-    END IF;
-END $$;
+-- Basic indexes on addresses (from 20240717000000_create_partner_tables.sql)
+CREATE INDEX IF NOT EXISTS idx_addresses_id ON addresses(id);
+CREATE INDEX IF NOT EXISTS idx_addresses_partner_id ON addresses(partner_id);

@@ -173,7 +173,28 @@ async function load() {
     }));
     total.value = typeof data?.total === 'number' ? data.total : 0;
   } catch (e: any) {
-    error.value = e?.response?.data?.error || e?.message || 'Errore caricamento';
+    console.error('Error loading items:', e);
+    // Provide more specific error messages
+    if (e?.response?.status === 500) {
+      const errorData = e?.response?.data;
+      if (errorData?.error === 'Tabella mancante nel database') {
+        error.value = 'Configurazione database incompleta. Contattare l\'amministratore.';
+      } else if (errorData?.error === 'Violazione vincolo chiave esterna') {
+        error.value = 'Errore di integrità dei dati. Contattare l\'amministratore.';
+      } else if (errorData?.error === 'Violazione vincolo unicità') {
+        error.value = 'Dati duplicati rilevati. Contattare l\'amministratore.';
+      } else {
+        error.value = errorData?.error || 'Errore nel recupero articoli';
+      }
+    } else if (e?.response?.status === 401) {
+      error.value = 'Sessione scaduta. Effettuare nuovamente l\'accesso.';
+    } else if (e?.response?.status === 403) {
+      error.value = 'Accesso negato. Contattare l\'amministratore.';
+    } else if (e?.code === 'NETWORK_ERROR' || !e?.response) {
+      error.value = 'Errore di connessione. Verificare la connessione di rete.';
+    } else {
+      error.value = e?.response?.data?.error || e?.message || 'Errore nel recupero articoli';
+    }
   } finally {
     loading.value = false;
   }

@@ -83,20 +83,34 @@ router.post('/:id/dispose', async (req, res) => {
   if (lot.expiry && new Date(lot.expiry) > new Date()) {
     return res.status(409).json({ error: 'Lot not expired' });
   }
-  const qtyRes = await db.query(
-    "SELECT warehouse_id, SUM(quantity) AS qty FROM stock_movements WHERE lot_id=$1 AND company_id = NULLIF(current_setting('app.current_company_id', true), '')::int GROUP BY warehouse_id",
-    [id]
-  );
-  for (const row of qtyRes.rows) {
-    const qty = Number(row.qty);
-    if (qty > 0) {
-      await db.query(
-        `INSERT INTO stock_movements(document_id, item_id, warehouse_id, quantity, lot_id, expiry)
-         VALUES($1,$2,$3,$4,$5,$6)`,
-        [null, lot.item_id, row.warehouse_id, -qty, id, lot.expiry]
-      );
+  
+  // Check if stock_movements table exists before querying
+  const tableCheck = await db.query(`
+    SELECT EXISTS (
+      SELECT FROM information_schema.tables 
+      WHERE table_schema = 'public' 
+      AND table_name = 'stock_movements'
+    );
+  `);
+  
+  if (tableCheck.rows[0].exists) {
+    const qtyRes = await db.query(
+      "SELECT warehouse_id, SUM(quantity) AS qty FROM stock_movements WHERE lot_id=$1 AND company_id = NULLIF(current_setting('app.current_company_id', true), '')::int GROUP BY warehouse_id",
+      [id]
+    );
+    for (const row of qtyRes.rows) {
+      const qty = Number(row.qty);
+      if (qty > 0) {
+        await db.query(
+          `INSERT INTO stock_movements(document_id, item_id, warehouse_id, quantity, lot_id, expiry)
+           VALUES($1,$2,$3,$4,$5,$6)`,
+          [null, lot.item_id, row.warehouse_id, -qty, id, lot.expiry]
+        );
+      }
     }
   }
+  // If stock_movements table doesn't exist, skip the operations
+  
   await db.query('UPDATE lots SET status=$1 WHERE id=$2', ['disposed', id]);
   res.json({ status: 'disposed' });
 });

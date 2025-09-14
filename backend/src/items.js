@@ -77,58 +77,72 @@ router.get('/', async (req, res) => {
   const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
 
   try {
-    const result = await db.query(
-      `SELECT i.id, i.name, i.sku, i.lotti, i.seriali,
-              i.barcode, i.code, i.description, i.type, i.category, i."group", i.class,
-              i.manufacturer, i.distributor, i.supplier, i.notes, i.size, i.color,
-              i.purchase_price, i.avg_weighted_price, i.min_stock, i.rotation_index, i.last_purchase_date,
-              COALESCE(s.qty, 0) AS quantity_on_hand
-         FROM items i
-         LEFT JOIN (
-           SELECT sm.item_id, SUM(sm.quantity) AS qty
-           FROM stock_movements sm
-           JOIN items ii ON ii.id = sm.item_id
-           WHERE ii.company_id = $1
-           GROUP BY sm.item_id
-         ) s ON s.item_id = i.id
-        ${where}
-        ORDER BY i.id LIMIT $${params.length + 1} OFFSET $${params.length + 2}`,
-      [...params, limit, offset]
-    );
-    const totalRes = await db.query(
-      `SELECT COUNT(*) FROM items i ${where}`,
-      params
-    );
-    return res.json({ items: result.rows, total: parseInt(totalRes.rows[0].count, 10) });
-  } catch (err) {
-    // If stock_movements (or other joined tables) are missing, fall back to a simpler query
-    const code = err && (err.code || err.sqlState);
-    const msg = err && (err.message || '');
-    if (code === '42P01' || /stock_movements/i.test(msg)) {
-      try {
-        const result = await db.query(
-          `SELECT i.id, i.name, i.sku, i.lotti, i.seriali,
-                  i.barcode, i.code, i.description, i.type, i.category, i."group", i.class,
-                  i.manufacturer, i.distributor, i.supplier, i.notes, i.size, i.color,
-                  i.purchase_price, i.avg_weighted_price, i.min_stock, i.rotation_index, i.last_purchase_date,
-                  0::numeric AS quantity_on_hand
-             FROM items i
-            ${where}
-            ORDER BY i.id LIMIT $${params.length + 1} OFFSET $${params.length + 2}`,
-          [...params, limit, offset]
-        );
-        const totalRes = await db.query(
-          `SELECT COUNT(*) FROM items i ${where}`,
-          params
-        );
-        return res.json({ items: result.rows, total: parseInt(totalRes.rows[0].count, 10) });
-      } catch (e2) {
-        console.error('GET /items fallback failed', e2);
-        return res.status(500).json({ error: 'Errore nel recupero articoli' });
-      }
+    // First check if stock_movements table exists
+    const tableCheck = await db.query(`
+      SELECT EXISTS (
+        SELECT FROM information_schema.tables 
+        WHERE table_schema = 'public' 
+        AND table_name = 'stock_movements'
+      );
+    `);
+    
+    const stockMovementsExists = tableCheck.rows[0].exists;
+    
+    if (stockMovementsExists) {
+      // Use the full query with stock movements
+      const result = await db.query(
+        `SELECT i.id, i.name, i.sku, i.lotti, i.seriali,
+                i.barcode, i.code, i.description, i.type, i.category, i."group", i.class,
+                i.manufacturer, i.distributor, i.supplier, i.notes, i.size, i.color,
+                i.purchase_price, i.avg_weighted_price, i.min_stock, i.rotation_index, i.last_purchase_date,
+                COALESCE(s.qty, 0) AS quantity_on_hand
+           FROM items i
+           LEFT JOIN (
+             SELECT sm.item_id, SUM(sm.quantity) AS qty
+             FROM stock_movements sm
+             JOIN items ii ON ii.id = sm.item_id
+             WHERE ii.company_id = $1
+             GROUP BY sm.item_id
+           ) s ON s.item_id = i.id
+          ${where}
+          ORDER BY i.id LIMIT $${params.length + 1} OFFSET $${params.length + 2}`,
+        [...params, limit, offset]
+      );
+      const totalRes = await db.query(
+        `SELECT COUNT(*) FROM items i ${where}`,
+        params
+      );
+      return res.json({ items: result.rows, total: parseInt(totalRes.rows[0].count, 10) });
+    } else {
+      // Use simplified query without stock movements
+      const result = await db.query(
+        `SELECT i.id, i.name, i.sku, i.lotti, i.seriali,
+                i.barcode, i.code, i.description, i.type, i.category, i."group", i.class,
+                i.manufacturer, i.distributor, i.supplier, i.notes, i.size, i.color,
+                i.purchase_price, i.avg_weighted_price, i.min_stock, i.rotation_index, i.last_purchase_date,
+                0::numeric AS quantity_on_hand
+           FROM items i
+          ${where}
+          ORDER BY i.id LIMIT $${params.length + 1} OFFSET $${params.length + 2}`,
+        [...params, limit, offset]
+      );
+      const totalRes = await db.query(
+        `SELECT COUNT(*) FROM items i ${where}`,
+        params
+      );
+      return res.json({ items: result.rows, total: parseInt(totalRes.rows[0].count, 10) });
     }
+  } catch (err) {
     console.error('GET /items failed', err);
-    return res.status(500).json({ error: 'Errore nel recupero articoli' });
+    // Provide more specific error information
+    const errorMessage = err.code === '42P01' ? 'Tabella mancante nel database' : 
+                        err.code === '23503' ? 'Violazione vincolo chiave esterna' :
+                        err.code === '23505' ? 'Violazione vincolo unicità' :
+                        'Errore nel recupero articoli';
+    return res.status(500).json({ 
+      error: errorMessage,
+      details: process.env.NODE_ENV === 'development' ? err.message : undefined
+    });
   }
 });
 
@@ -397,39 +411,78 @@ router.get('/export', async (req, res) => {
   if (classKey) { params.push(classKey); conditions.push(`i.class = $${params.length}`); }
   if (supplier) { params.push(supplier); conditions.push(`i.supplier = $${params.length}`); }
   const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
-  const result = await db.query(
-    `SELECT i.id, i.name, i.sku, i.barcode, i.code, i.description, i.type, i.category, i."group", i.class,
-            i.manufacturer, i.distributor, i.supplier, i.notes, i.size, i.color,
-            i.purchase_price, i.avg_weighted_price, i.min_stock, i.rotation_index, i.last_purchase_date,
-            COALESCE(s.qty, 0) AS quantity_on_hand
-       FROM items i
-       LEFT JOIN (
-         SELECT sm.item_id, SUM(sm.quantity) AS qty
-         FROM stock_movements sm
-         JOIN items ii ON ii.id = sm.item_id
-         WHERE ii.company_id = $1
-         GROUP BY sm.item_id
-       ) s ON s.item_id = i.id
-      ${where}
-      ORDER BY i.id LIMIT $${params.length + 1} OFFSET $${params.length + 2}`,
-    [...params, limit, offset]
-  );
-  const format = (req.query.format || 'csv').toLowerCase();
-  if (format === 'xlsx') {
-    const ExcelJS = require('exceljs');
-    const wb = new ExcelJS.Workbook();
-    const ws = wb.addWorksheet('Items');
-    ws.addRow(columns);
+  
+  try {
+    // Check if stock_movements table exists for export
+    const tableCheck = await db.query(`
+      SELECT EXISTS (
+        SELECT FROM information_schema.tables 
+        WHERE table_schema = 'public' 
+        AND table_name = 'stock_movements'
+      );
+    `);
+    
+    const stockMovementsExists = tableCheck.rows[0].exists;
+    let result;
+    
+    if (stockMovementsExists) {
+      result = await db.query(
+        `SELECT i.id, i.name, i.sku, i.barcode, i.code, i.description, i.type, i.category, i."group", i.class,
+                i.manufacturer, i.distributor, i.supplier, i.notes, i.size, i.color,
+                i.purchase_price, i.avg_weighted_price, i.min_stock, i.rotation_index, i.last_purchase_date,
+                COALESCE(s.qty, 0) AS quantity_on_hand
+           FROM items i
+           LEFT JOIN (
+             SELECT sm.item_id, SUM(sm.quantity) AS qty
+             FROM stock_movements sm
+             JOIN items ii ON ii.id = sm.item_id
+             WHERE ii.company_id = $1
+             GROUP BY sm.item_id
+           ) s ON s.item_id = i.id
+          ${where}
+          ORDER BY i.id LIMIT $${params.length + 1} OFFSET $${params.length + 2}`,
+        [...params, limit, offset]
+      );
+    } else {
+      result = await db.query(
+        `SELECT i.id, i.name, i.sku, i.barcode, i.code, i.description, i.type, i.category, i."group", i.class,
+                i.manufacturer, i.distributor, i.supplier, i.notes, i.size, i.color,
+                i.purchase_price, i.avg_weighted_price, i.min_stock, i.rotation_index, i.last_purchase_date,
+                0::numeric AS quantity_on_hand
+           FROM items i
+          ${where}
+          ORDER BY i.id LIMIT $${params.length + 1} OFFSET $${params.length + 2}`,
+        [...params, limit, offset]
+      );
+    }
+    
+    const format = (req.query.format || 'csv').toLowerCase();
+    if (format === 'xlsx') {
+      const ExcelJS = require('exceljs');
+      const wb = new ExcelJS.Workbook();
+      const ws = wb.addWorksheet('Items');
+      ws.addRow(columns);
+      result.rows.forEach((row) => {
+        ws.addRow(columns.map((c) => row[c]));
+      });
+      res.type('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+      const buffer = await wb.xlsx.writeBuffer();
+      return res.send(Buffer.from(buffer));
+    }
+    const lines = [columns.join(',')];
     result.rows.forEach((row) => {
-      ws.addRow(columns.map((c) => row[c]));
+      lines.push(columns.map((c) => row[c]).join(','));
     });
-    res.type('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-    const buffer = await wb.xlsx.writeBuffer();
-    return res.send(Buffer.from(buffer));
+    res.type('text/csv').send(lines.join('\n'));
+  } catch (err) {
+    console.error('GET /items/export failed', err);
+    const errorMessage = err.code === '42P01' ? 'Tabella mancante nel database' : 
+                        err.code === '23503' ? 'Violazione vincolo chiave esterna' :
+                        err.code === '23505' ? 'Violazione vincolo unicità' :
+                        'Errore nell\'export articoli';
+    return res.status(500).json({ 
+      error: errorMessage,
+      details: process.env.NODE_ENV === 'development' ? err.message : undefined
+    });
   }
-  const lines = [columns.join(',')];
-  result.rows.forEach((row) => {
-    lines.push(columns.map((c) => row[c]).join(','));
-  });
-  res.type('text/csv').send(lines.join('\n'));
 });

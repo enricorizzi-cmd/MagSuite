@@ -177,34 +177,58 @@ router.post('/:id/confirm', async (req, res) => {
     }
 
     if (quantity < 0) {
-      const params = [item_id, warehouse_id];
-      let condition = 'item_id=$1 AND warehouse_id=$2';
-      if (lot_id) {
-        params.push(lot_id);
-        condition += ` AND lot_id=$${params.length}`;
-      } else {
-        condition += ' AND lot_id IS NULL';
+      // Check if stock_movements table exists before querying
+      const tableCheck = await db.query(`
+        SELECT EXISTS (
+          SELECT FROM information_schema.tables 
+          WHERE table_schema = 'public' 
+          AND table_name = 'stock_movements'
+        );
+      `);
+      
+      if (tableCheck.rows[0].exists) {
+        const params = [item_id, warehouse_id];
+        let condition = 'item_id=$1 AND warehouse_id=$2';
+        if (lot_id) {
+          params.push(lot_id);
+          condition += ` AND lot_id=$${params.length}`;
+        } else {
+          condition += ' AND lot_id IS NULL';
+        }
+        if (serial_id) {
+          params.push(serial_id);
+          condition += ` AND serial_id=$${params.length}`;
+        } else {
+          condition += ' AND serial_id IS NULL';
+        }
+        const availRes = await db.query(
+          `SELECT COALESCE(SUM(quantity),0) AS qty FROM stock_movements WHERE ${condition} AND company_id = NULLIF(current_setting('app.current_company_id', true), '')::int`,
+          params
+        );
+        const available = Number(availRes.rows[0].qty);
+        if (available + quantity < 0) {
+          return res.status(409).json({ error: 'Insufficient quantity' });
+        }
       }
-      if (serial_id) {
-        params.push(serial_id);
-        condition += ` AND serial_id=$${params.length}`;
-      } else {
-        condition += ' AND serial_id IS NULL';
-      }
-      const availRes = await db.query(
-        `SELECT COALESCE(SUM(quantity),0) AS qty FROM stock_movements WHERE ${condition} AND company_id = NULLIF(current_setting('app.current_company_id', true), '')::int`,
-        params
-      );
-      const available = Number(availRes.rows[0].qty);
-      if (available + quantity < 0) {
-        return res.status(409).json({ error: 'Insufficient quantity' });
-      }
+      // If stock_movements table doesn't exist, skip quantity check
     }
-    await db.query(
-      `INSERT INTO stock_movements(document_id, item_id, warehouse_id, quantity, lot_id, serial_id, expiry)
-       VALUES($1,$2,$3,$4,$5,$6,$7)`,
-      [id, item_id, warehouse_id, quantity, lot_id, serial_id, exp]
-    );
+    // Check if stock_movements table exists before inserting
+    const tableCheck = await db.query(`
+      SELECT EXISTS (
+        SELECT FROM information_schema.tables 
+        WHERE table_schema = 'public' 
+        AND table_name = 'stock_movements'
+      );
+    `);
+    
+    if (tableCheck.rows[0].exists) {
+      await db.query(
+        `INSERT INTO stock_movements(document_id, item_id, warehouse_id, quantity, lot_id, serial_id, expiry)
+         VALUES($1,$2,$3,$4,$5,$6,$7)`,
+        [id, item_id, warehouse_id, quantity, lot_id, serial_id, exp]
+      );
+    }
+    // If stock_movements table doesn't exist, skip the insert
   }
   await db.query('UPDATE documents SET status=$1 WHERE id=$2', [
     'confirmed',

@@ -15,7 +15,9 @@
                     "deploy:validate": "node scripts/deployment-validator.js",
                     "deploy:rollback": "node scripts/rollback-helper.js",
                     "deploy:render": "node scripts/render-helper.js",
-                    "deploy:auto": "node scripts/deployment-automation.js"
+                    "deploy:auto": "node scripts/deployment-automation.js",
+                    "mcp:setup": "node scripts/setup-mcp.js",
+                    "mcp:test": "node scripts/test-mcp.js"
                 },
     "dependencies":  {
                          "bcryptjs":  "^3.0.2",

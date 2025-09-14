@@ -85,10 +85,10 @@
                 <label class="block text-xs text-slate-400 mb-1">Email admin</label>
                 <input v-model="createForm.email" class="w-full bg-white/10 border border-white/10 rounded-lg px-3 py-2 text-sm" placeholder="admin@example.com" />
               </div>
-              <div>
-                <label class="block text-xs text-slate-400 mb-1">Password admin</label>
-                <input v-model="createForm.password" type="password" class="w-full bg-white/10 border border-white/10 rounded-lg px-3 py-2 text-sm" placeholder="Min 8 caratteri, maiuscole, numeri e simboli" />
-              </div>
+               <div>
+                 <label class="block text-xs text-slate-400 mb-1">Password admin</label>
+                 <input v-model="createForm.password" type="password" autocomplete="new-password" class="w-full bg-white/10 border border-white/10 rounded-lg px-3 py-2 text-sm" placeholder="Min 8 caratteri, maiuscole, numeri e simboli" />
+               </div>
             </div>
             <div>
               <label class="block text-xs text-slate-400 mb-1">Nome admin (opzionale)</label>

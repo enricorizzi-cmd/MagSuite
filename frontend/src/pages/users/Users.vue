@@ -121,10 +121,10 @@
               <option value="suspended">sospeso</option>
             </select>
           </div>
-          <div>
-            <label class="block text-xs text-slate-400 mb-1">Nuova password (opzionale)</label>
-            <input v-model="form.password" type="password" class="w-full bg-white/10 border border-white/10 rounded-lg px-3 py-2 text-sm" placeholder="Min 8 caratteri, maiuscole, numeri e simboli" />
-          </div>
+           <div>
+             <label class="block text-xs text-slate-400 mb-1">Nuova password (opzionale)</label>
+             <input v-model="form.password" type="password" autocomplete="new-password" class="w-full bg-white/10 border border-white/10 rounded-lg px-3 py-2 text-sm" placeholder="Min 8 caratteri, maiuscole, numeri e simboli" />
+           </div>
           <div class="flex justify-between items-center gap-2 pt-2">
             <button class="px-3 py-2 rounded-lg text-sm bg-rose-700/30 hover:bg-rose-700/50 text-rose-200" :disabled="saving" @click="confirmDelete">Elimina utente</button>
             <div class="flex gap-2">

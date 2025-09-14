@@ -32,12 +32,12 @@
                    class="w-full px-3 py-2 rounded-lg bg-white/10 border border-white/10 text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-fuchsia-500/60 focus:border-fuchsia-400/60"
                    placeholder="you@company.com" />
           </div>
-          <div>
-            <label class="block text-sm mb-1">Password</label>
-            <input v-model="password" type="password" required
-                   class="w-full px-3 py-2 rounded-lg bg-white/10 border border-white/10 text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-fuchsia-500/60 focus:border-fuchsia-400/60"
-                   placeholder="••••••••" />
-          </div>
+           <div>
+             <label class="block text-sm mb-1">Password</label>
+             <input v-model="password" type="password" required autocomplete="current-password"
+                    class="w-full px-3 py-2 rounded-lg bg-white/10 border border-white/10 text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-fuchsia-500/60 focus:border-fuchsia-400/60"
+                    placeholder="••••••••" />
+           </div>
           
           <div class="flex items-center justify-between text-sm">
             <label class="inline-flex items-center gap-2 select-none">
@@ -81,13 +81,13 @@
                    class="w-full px-3 py-2 rounded-lg bg-white/10 border border-white/10 text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-fuchsia-500/60 focus:border-fuchsia-400/60"
                    placeholder="admin@azienda.it" />
           </div>
-          <div>
-            <label class="block text-sm mb-1">Password</label>
-            <input v-model="password" type="password" required
-                   class="w-full px-3 py-2 rounded-lg bg-white/10 border border-white/10 text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-fuchsia-500/60 focus:border-fuchsia-400/60"
-                   placeholder="Almeno 8 caratteri, simboli, numeri" />
-            <p class="text-xs text-slate-400 mt-1">Maiuscole, minuscole, numero e simbolo.</p>
-          </div>
+           <div>
+             <label class="block text-sm mb-1">Password</label>
+             <input v-model="password" type="password" required autocomplete="new-password"
+                    class="w-full px-3 py-2 rounded-lg bg-white/10 border border-white/10 text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-fuchsia-500/60 focus:border-fuchsia-400/60"
+                    placeholder="Almeno 8 caratteri, simboli, numeri" />
+             <p class="text-xs text-slate-400 mt-1">Maiuscole, minuscole, numero e simbolo.</p>
+           </div>
           <button class="btn-arcade w-full" type="submit" :disabled="loading || (companyMode==='existing' && companyName && companyChecked && !companyExists)">
             {{ companyMode==='new' ? 'Crea azienda e account' : 'Crea account' }}
           </button>

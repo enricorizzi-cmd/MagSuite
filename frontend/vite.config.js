@@ -28,6 +28,11 @@ export default defineConfig({
       }
     })
   ],
+  server: {
+    headers: {
+      'Content-Security-Policy': "default-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; connect-src 'self' https:; img-src 'self' data: https:; script-src 'self' 'unsafe-inline';"
+    }
+  },
   test: {
     environment: 'jsdom',
     include: ['tests/**/*.test.ts']

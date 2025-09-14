@@ -74,7 +74,7 @@ router.get('/', async (req, res) => {
   if (groupKey) { params.push(groupKey); conditions.push(`i."group" = $${params.length}`); }
   if (classKey) { params.push(classKey); conditions.push(`i.class = $${params.length}`); }
   if (supplier) { params.push(supplier); conditions.push(`i.supplier = $${params.length}`); }
-  const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
+  const whereClause = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
 
   try {
     // First check if stock_movements table exists
@@ -104,12 +104,12 @@ router.get('/', async (req, res) => {
              WHERE ii.company_id = $1
              GROUP BY sm.item_id
            ) s ON s.item_id = i.id
-          ${where}
+          ${whereClause}
           ORDER BY i.id LIMIT $${params.length + 1} OFFSET $${params.length + 2}`,
         [...params, limit, offset]
       );
       const totalRes = await db.query(
-        `SELECT COUNT(*) FROM items i ${where}`,
+        `SELECT COUNT(*) FROM items i ${whereClause}`,
         params
       );
       return res.json({ items: result.rows, total: parseInt(totalRes.rows[0].count, 10) });
@@ -122,12 +122,12 @@ router.get('/', async (req, res) => {
                 i.purchase_price, i.avg_weighted_price, i.min_stock, i.rotation_index, i.last_purchase_date,
                 0::numeric AS quantity_on_hand
            FROM items i
-          ${where}
+          ${whereClause}
           ORDER BY i.id LIMIT $${params.length + 1} OFFSET $${params.length + 2}`,
         [...params, limit, offset]
       );
       const totalRes = await db.query(
-        `SELECT COUNT(*) FROM items i ${where}`,
+        `SELECT COUNT(*) FROM items i ${whereClause}`,
         params
       );
       return res.json({ items: result.rows, total: parseInt(totalRes.rows[0].count, 10) });

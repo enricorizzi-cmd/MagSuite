@@ -1,8 +1,12 @@
 const express = require('express');
+const compression = require('compression');
 const {
   router: authRouter,
   authenticateToken,
 } = require('./src/auth');
+const { apiLimiter, authLimiter, uploadLimiter, helmetConfig } = require('./src/middleware/security');
+const { checkDatabase, checkCache, checkStorage, getSystemInfo } = require('./src/health');
+const cache = require('./src/cache');
 const items = require('./src/items');
 const documents = require('./src/documents');
 const lots = require('./src/lots');
@@ -89,6 +93,9 @@ const path = require('path');
 })();
 
 async function start(port = process.env.PORT || 3000) {
+  // Initialize cache
+  cache.initRedis();
+  
   await db
     .connect()
     .then((client) => client.release())
@@ -108,6 +115,15 @@ async function start(port = process.env.PORT || 3000) {
   // lazily-initialized modules do not block startup
 
   const app = express();
+
+  // Security middleware
+  app.use(helmetConfig);
+  app.use(compression());
+  
+  // Rate limiting
+  app.use('/api/auth', authLimiter);
+  app.use('/api/storage', uploadLimiter);
+  app.use('/api', apiLimiter);
   app.use(express.json());
   app.use((req, res, next) => {
     logger.info(`${req.method} ${req.url}`);
@@ -116,8 +132,39 @@ async function start(port = process.env.PORT || 3000) {
 
   app.use(express.static('public'));
 
-  app.get('/health', (req, res) => {
-    res.json({ status: 'ok' });
+  // Health check endpoints
+  app.get('/health', async (req, res) => {
+    const [database, cacheStatus, storage, systemInfo] = await Promise.all([
+      checkDatabase(),
+      checkCache(),
+      checkStorage(),
+      getSystemInfo()
+    ]);
+    
+    const health = {
+      status: 'ok',
+      timestamp: new Date().toISOString(),
+      services: {
+        database,
+        cache: cacheStatus,
+        storage
+      },
+      system: systemInfo
+    };
+    
+    const isHealthy = database.status === 'healthy' && 
+                     storage.status === 'healthy';
+    
+    res.status(isHealthy ? 200 : 503).json(health);
+  });
+
+  app.get('/readyz', async (req, res) => {
+    const database = await checkDatabase();
+    const isReady = database.status === 'healthy';
+    res.status(isReady ? 200 : 503).json({ 
+      status: isReady ? 'ready' : 'not ready',
+      database 
+    });
   });
 
   // Non-sensitive configuration health: only presence flags, never values

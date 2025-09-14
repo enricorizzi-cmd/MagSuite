@@ -10,6 +10,8 @@ services:
     envVars:
       - key: DATABASE_URL
         sync: false
+      - key: REDIS_URL
+        sync: false
       - key: ACCESS_SECRET
         sync: false
       - key: REFRESH_SECRET
@@ -30,3 +32,9 @@ services:
         sync: false
       - key: SENTRY_DSN
         sync: false
+      - key: PGPOOL_MAX
+        value: "20"
+      - key: PG_IDLE_TIMEOUT_MS
+        value: "30000"
+      - key: PG_CONNECTION_TIMEOUT_MS
+        value: "10000"

@@ -5,8 +5,31 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: magsuite_test
+      # Performance tuning
+      POSTGRES_SHARED_BUFFERS: 256MB
+      POSTGRES_EFFECTIVE_CACHE_SIZE: 1GB
+      POSTGRES_WORK_MEM: 4MB
+      POSTGRES_MAINTENANCE_WORK_MEM: 64MB
     ports:
       - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    command: >
+      postgres
+      -c shared_buffers=256MB
+      -c effective_cache_size=1GB
+      -c work_mem=4MB
+      -c maintenance_work_mem=64MB
+      -c random_page_cost=1.1
+      -c effective_io_concurrency=200
+
+  redis:
+    image: redis:7-alpine
+    command: redis-server --maxmemory 256mb --maxmemory-policy allkeys-lru --save 900 1 --save 300 10
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
 
   backend:
     build:
@@ -14,6 +37,7 @@ services:
       dockerfile: backend/Dockerfile
     depends_on:
       - postgres
+      - redis
     environment:
       NODE_ENV: production
       PGHOST: postgres
@@ -22,7 +46,11 @@ services:
       PGDATABASE: magsuite_test
       PGPORT: 5432
       PGSSLMODE: disable
+      PGPOOL_MAX: 20
+      PG_IDLE_TIMEOUT_MS: 30000
+      PG_CONNECTION_TIMEOUT_MS: 10000
       DATABASE_URL: "postgres://postgres:postgres@postgres:5432/magsuite_test"
+      REDIS_URL: "redis://redis:6379"
       ALERT_EMAIL: alerts@example.com
       SUPABASE_CA_CERT: ${SUPABASE_CA_CERT}
       ACCESS_SECRET: dev-access-secret
@@ -32,6 +60,7 @@ services:
       FILE_ENCRYPTION_KEY: "UNy4xMqI+z6nKU+Evx74w8saB1ZaozdN0IUs6dD0Jt8="
     ports:
       - "3000:3000"
+    restart: unless-stopped
 
   frontend:
     build: ./frontend
@@ -39,3 +68,8 @@ services:
       - backend
     ports:
       - "5173:80"
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  redis_data:

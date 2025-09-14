@@ -1,33 +1,35 @@
 import { createRouter, createWebHistory, RouteRecordRaw } from 'vue-router';
-import Auth from './pages/auth/Auth.vue';
-import Dashboard from './pages/dashboard/Dashboard.vue';
-import AllSettings from './pages/settings/AllSettings.vue';
-import Users from './pages/users/Users.vue';
+
+// Lazy load components for better performance
+const Auth = () => import('./pages/auth/Auth.vue');
+const Dashboard = () => import('./pages/dashboard/Dashboard.vue');
+const AllSettings = () => import('./pages/settings/AllSettings.vue');
+const Users = () => import('./pages/users/Users.vue');
 // Logistica
-import Giacenze from './pages/logistica/Giacenze.vue';
-import Inventario from './pages/logistica/Inventario.vue';
-import Magazzini from './pages/logistica/Magazzini.vue';
-import Movimenti from './pages/logistica/Movimenti.vue';
+const Giacenze = () => import('./pages/logistica/Giacenze.vue');
+const Inventario = () => import('./pages/logistica/Inventario.vue');
+const Magazzini = () => import('./pages/logistica/Magazzini.vue');
+const Movimenti = () => import('./pages/logistica/Movimenti.vue');
 // Direzione commerciale
-import BPApp from './pages/direzione-commerciale/BPApp.vue';
+const BPApp = () => import('./pages/direzione-commerciale/BPApp.vue');
 // Direzione amministrativa
-import PianoFinanziario from './pages/direzione-amministrativa/PianoFinanziario.vue';
-import Marginalita from './pages/direzione-amministrativa/Marginalita.vue';
-import FlussoDiCassa from './pages/direzione-amministrativa/FlussoDiCassa.vue';
-import Scadenzari from './pages/direzione-amministrativa/Scadenzari.vue';
+const PianoFinanziario = () => import('./pages/direzione-amministrativa/PianoFinanziario.vue');
+const Marginalita = () => import('./pages/direzione-amministrativa/Marginalita.vue');
+const FlussoDiCassa = () => import('./pages/direzione-amministrativa/FlussoDiCassa.vue');
+const Scadenzari = () => import('./pages/direzione-amministrativa/Scadenzari.vue');
 // Anagrafiche
-import Clienti from './pages/anagrafiche/Clienti.vue';
-import Fornitori from './pages/anagrafiche/Fornitori.vue';
-import Articoli from './pages/anagrafiche/Articoli.vue';
-import Operatori from './pages/anagrafiche/Operatori.vue';
+const Clienti = () => import('./pages/anagrafiche/Clienti.vue');
+const Fornitori = () => import('./pages/anagrafiche/Fornitori.vue');
+const Articoli = () => import('./pages/anagrafiche/Articoli.vue');
+const Operatori = () => import('./pages/anagrafiche/Operatori.vue');
 // Edilizia
-import SAL from './pages/edilizia/SAL.vue';
-import MaterialiCantiere from './pages/edilizia/MaterialiCantiere.vue';
-import ManodoperaCantiere from './pages/edilizia/ManodoperaCantiere.vue';
+const SAL = () => import('./pages/edilizia/SAL.vue');
+const MaterialiCantiere = () => import('./pages/edilizia/MaterialiCantiere.vue');
+const ManodoperaCantiere = () => import('./pages/edilizia/ManodoperaCantiere.vue');
 // Risorse umane
-import FeriePermessi from './pages/risorse-umane/FeriePermessi.vue';
-import EntrataUscita from './pages/risorse-umane/EntrataUscita.vue';
-import Turni from './pages/risorse-umane/Turni.vue';
+const FeriePermessi = () => import('./pages/risorse-umane/FeriePermessi.vue');
+const EntrataUscita = () => import('./pages/risorse-umane/EntrataUscita.vue');
+const Turni = () => import('./pages/risorse-umane/Turni.vue');
 
 const routes: Array<RouteRecordRaw> = [
   { path: '/', name: 'auth', component: Auth },

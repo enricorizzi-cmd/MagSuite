@@ -1,6 +1,6 @@
-const db = require('../db');
-const cache = require('../cache');
-const logger = require('../logger');
+const db = require('./db');
+const cache = require('./cache');
+const logger = require('./logger');
 
 async function checkDatabase() {
   try {

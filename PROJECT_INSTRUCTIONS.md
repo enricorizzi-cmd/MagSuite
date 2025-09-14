@@ -72,9 +72,9 @@
 
 **Deploy su Render**
 
-* Servizi separati: `web` (hosting FE statico o Node che serve `/dist`) e `backend`.
+* Servizio unico Node che builda il frontend (Vite) e serve API + asset statici.
 * **Healthcheck**: `GET /healthz` (liveness) e `GET /readyz` (readiness) → 200 OK.
-* **Env backend** (prod):
+* **Env prod** (tutte nello stesso servizio):
 
   * `DATABASE_URL` (Postgres con `?sslmode=require`)
   * `ACCESS_SECRET`, `REFRESH_SECRET`, `SSO_SECRET`
@@ -83,7 +83,7 @@
   * `VAPID_PUBLIC`, `VAPID_PRIVATE`
   * `SENTRY_DSN`, `CORS_ORIGIN`
   * `BATCH_STRATEGY` (es. `FIFO`), `DB_CA_PATH`, `NODE_EXTRA_CA_CERTS` (opz.)
-* **Env frontend** (prod): `VITE_API_URL`, opzionali `VITE_API_KEY`, `VITE_COMPANY_ID`
+  * `VITE_API_URL` (build-time), opzionali `VITE_API_KEY`, `VITE_COMPANY_ID`
 * No secrets in client; no script postinstall lenti. Auto-deploy da `main` via Deploy Hook.
 
 **CI/CD (GitHub Actions)**

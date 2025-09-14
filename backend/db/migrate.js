@@ -74,15 +74,31 @@ const sslConfig = useSSL
     }
   : false;
 
-const pool = new Pool({
-  connectionString,
-  ssl: sslConfig,
-  enableChannelBinding: useSSL,
-  max: Number(process.env.PGPOOL_MAX) || 3,
-  connectionTimeoutMillis: Number(process.env.PG_CONNECTION_TIMEOUT_MS) || 10000,
-  keepAlive: true,
-  keepAliveInitialDelayMillis: Number(process.env.PG_KEEPALIVE_DELAY_MS) || 30000,
-});
+function createPool(overrideRejectUnauthorized) {
+  const effectiveSsl = useSSL
+    ? {
+        ...sslConfig,
+        rejectUnauthorized:
+          typeof overrideRejectUnauthorized === 'boolean'
+            ? overrideRejectUnauthorized
+            : sslConfig && typeof sslConfig === 'object'
+            ? sslConfig.rejectUnauthorized
+            : undefined,
+      }
+    : false;
+
+  return new Pool({
+    connectionString,
+    ssl: effectiveSsl,
+    enableChannelBinding: useSSL,
+    max: Number(process.env.PGPOOL_MAX) || 3,
+    connectionTimeoutMillis: Number(process.env.PG_CONNECTION_TIMEOUT_MS) || 10000,
+    keepAlive: true,
+    keepAliveInitialDelayMillis: Number(process.env.PG_KEEPALIVE_DELAY_MS) || 30000,
+  });
+}
+
+let pool = createPool();
 
 async function run() {
   let dir = path.join(__dirname, '..', 'supabase', 'migrations');
@@ -91,6 +107,22 @@ async function run() {
     const alt = path.join(__dirname, '..', '..', 'supabase', 'migrations');
     if (fs.existsSync(alt)) dir = alt;
   }
+  // Probe connectivity; if TLS verification blocks with a self-signed chain,
+  // fallback to no-verify to support Supabase pooled endpoints.
+  try {
+    await pool.query('SELECT 1');
+  } catch (err) {
+    if (err && err.code === 'SELF_SIGNED_CERT_IN_CHAIN') {
+      console.warn('[migrate] TLS verify failed with self-signed chain; retrying with no-verify');
+      try { await pool.end(); } catch (_) {}
+      pool = createPool(false);
+      // second probe throws if still failing
+      await pool.query('SELECT 1');
+    } else {
+      throw err;
+    }
+  }
+
   const files = fs.readdirSync(dir).filter(f => f.endsWith('.sql')).sort();
   await pool.query('CREATE TABLE IF NOT EXISTS schema_migrations (filename text primary key)');
   for (const file of files) {

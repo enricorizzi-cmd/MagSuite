@@ -152,19 +152,43 @@ if (usePgMem) {
       }
     : false;
 
-  pool = new Pool({
-    ...baseConfig,
-    ssl: sslConfig,
-    enableChannelBinding: useSSL,
-    max: Number(process.env.PGPOOL_MAX) || 5,
-    idleTimeoutMillis: Number(process.env.PG_IDLE_TIMEOUT_MS) || 0,
-    connectionTimeoutMillis: Number(process.env.PG_CONNECTION_TIMEOUT_MS) || 10000,
-    keepAlive: true,
-    keepAliveInitialDelayMillis: Number(process.env.PG_KEEPALIVE_DELAY_MS) || 30000,
-  });
+  function buildPool(overrideRejectUnauthorized) {
+    const effectiveSsl = useSSL
+      ? {
+          ...sslConfig,
+          rejectUnauthorized:
+            typeof overrideRejectUnauthorized === 'boolean'
+              ? overrideRejectUnauthorized
+              : sslConfig && typeof sslConfig === 'object'
+              ? sslConfig.rejectUnauthorized
+              : undefined,
+        }
+      : false;
+    return new Pool({
+      ...baseConfig,
+      ssl: effectiveSsl,
+      enableChannelBinding: useSSL,
+      max: Number(process.env.PGPOOL_MAX) || 5,
+      idleTimeoutMillis: Number(process.env.PG_IDLE_TIMEOUT_MS) || 0,
+      connectionTimeoutMillis: Number(process.env.PG_CONNECTION_TIMEOUT_MS) || 10000,
+      keepAlive: true,
+      keepAliveInitialDelayMillis: Number(process.env.PG_KEEPALIVE_DELAY_MS) || 30000,
+    });
+  }
 
-  pool.query('SELECT 1').catch((err) => {
-    console.error('Database connection failed', err);
+  pool = buildPool();
+
+  pool.query('SELECT 1').catch(async (err) => {
+    if (err && err.code === 'SELF_SIGNED_CERT_IN_CHAIN') {
+      console.warn('[db] TLS verify failed with self-signed chain; retrying with no-verify');
+      try { await pool.end(); } catch (_) {}
+      pool = buildPool(false);
+      try { await pool.query('SELECT 1'); } catch (e2) {
+        console.error('Database connection failed after fallback', e2);
+      }
+    } else {
+      console.error('Database connection failed', err);
+    }
   });
 }
 

@@ -182,7 +182,31 @@ if (usePgMem) {
     if (err && err.code === 'SELF_SIGNED_CERT_IN_CHAIN') {
       console.warn('[db] TLS verify failed with self-signed chain; retrying with no-verify');
       try { await pool.end(); } catch (_) {}
-      pool = buildPool(false);
+      // Rebuild using discrete connection fields to avoid url sslmode overrides
+      const url = process.env.DATABASE_URL && process.env.DATABASE_URL.replace(/^\s*["']|["']\s*$/g, '');
+      if (url) {
+        try {
+          const u = new URL(url);
+          pool = new Pool({
+            host: u.hostname,
+            port: Number(u.port) || 5432,
+            user: decodeURIComponent(u.username || ''),
+            password: decodeURIComponent(u.password || ''),
+            database: (u.pathname || '/postgres').slice(1),
+            ssl: { rejectUnauthorized: false, minVersion: 'TLSv1.2' },
+            enableChannelBinding: true,
+            max: Number(process.env.PGPOOL_MAX) || 5,
+            idleTimeoutMillis: Number(process.env.PG_IDLE_TIMEOUT_MS) || 0,
+            connectionTimeoutMillis: Number(process.env.PG_CONNECTION_TIMEOUT_MS) || 10000,
+            keepAlive: true,
+            keepAliveInitialDelayMillis: Number(process.env.PG_KEEPALIVE_DELAY_MS) || 30000,
+          });
+        } catch (_) {
+          pool = buildPool(false);
+        }
+      } else {
+        pool = buildPool(false);
+      }
       try { await pool.query('SELECT 1'); } catch (e2) {
         console.error('Database connection failed after fallback', e2);
       }

@@ -8,6 +8,7 @@ cd "$(dirname "$0")"
 CERT_DIR=${CERT_DIR:-/etc/secrets}
 CERT_PATH="$CERT_DIR/supabase-ca.crt"
 
+# If a SUPABASE_CA_CERT is provided via env, persist it for Node to pick up
 if [ -n "$SUPABASE_CA_CERT" ]; then
   # Try /etc/secrets first; if not writable, fall back to /tmp/secrets
   for d in "$CERT_DIR" "/tmp/secrets"; do
@@ -38,6 +39,21 @@ if [ -n "$SUPABASE_CA_CERT" ]; then
   else
     echo "Warning: Could not decode/write SUPABASE_CA_CERT. Continuing without custom CA." >&2
   fi
+fi
+
+# If PGSSLMODE requests no-verify, normalize DATABASE_URL accordingly and
+# ensure Node does not reject TLS during migrations.
+if [ "${PGSSLMODE}" = "no-verify" ]; then
+  if [ -n "$DATABASE_URL" ]; then
+    # Swap any existing sslmode=... to no-verify, or append if missing
+    case "$DATABASE_URL" in
+      *"sslmode="*) DATABASE_URL="$(printf %s "$DATABASE_URL" | sed -E 's/(sslmode=)[^&]*/\1no-verify/')" ;;
+      *"?"*) DATABASE_URL="${DATABASE_URL}&sslmode=no-verify" ;;
+      *) DATABASE_URL="${DATABASE_URL}?sslmode=no-verify" ;;
+    esac
+    export DATABASE_URL
+  fi
+  export NODE_TLS_REJECT_UNAUTHORIZED=0
 fi
 
 # Run database migrations before starting the server

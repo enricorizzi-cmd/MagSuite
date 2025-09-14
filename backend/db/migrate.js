@@ -77,14 +77,14 @@ const sslConfig = useSSL
 function createPool(overrideRejectUnauthorized) {
   const effectiveSsl = useSSL
     ? {
-        ...sslConfig,
-        rejectUnauthorized:
-          typeof overrideRejectUnauthorized === 'boolean'
-            ? overrideRejectUnauthorized
-            : sslConfig && typeof sslConfig === 'object'
-            ? sslConfig.rejectUnauthorized
-            : undefined,
-      }
+      ...sslConfig,
+      rejectUnauthorized:
+        typeof overrideRejectUnauthorized === 'boolean'
+          ? overrideRejectUnauthorized
+          : sslConfig && typeof sslConfig === 'object'
+          ? sslConfig.rejectUnauthorized
+          : undefined,
+    }
     : false;
 
   return new Pool({
@@ -115,8 +115,24 @@ async function run() {
     if (err && err.code === 'SELF_SIGNED_CERT_IN_CHAIN') {
       console.warn('[migrate] TLS verify failed with self-signed chain; retrying with no-verify');
       try { await pool.end(); } catch (_) {}
-      pool = createPool(false);
-      // second probe throws if still failing
+
+      // Build a config that ignores sslmode in the URL by passing discrete fields
+      // and disables verification explicitly (no CA to avoid chain errors).
+      const u = new URL(connectionString);
+      const alt = new Pool({
+        host: u.hostname,
+        port: Number(u.port) || 5432,
+        user: decodeURIComponent(u.username || ''),
+        password: decodeURIComponent(u.password || ''),
+        database: (u.pathname || '/postgres').slice(1),
+        ssl: { rejectUnauthorized: false, minVersion: 'TLSv1.2' },
+        enableChannelBinding: true,
+        max: Number(process.env.PGPOOL_MAX) || 3,
+        connectionTimeoutMillis: Number(process.env.PG_CONNECTION_TIMEOUT_MS) || 10000,
+        keepAlive: true,
+        keepAliveInitialDelayMillis: Number(process.env.PG_KEEPALIVE_DELAY_MS) || 30000,
+      });
+      pool = alt;
       await pool.query('SELECT 1');
     } else {
       throw err;

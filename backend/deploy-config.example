@@ -1,0 +1,18 @@
+# Deployment Configuration
+# Copy this file to .env.deploy and fill in your values
+
+# Render API Configuration
+RENDER_API_KEY=rnd_ublyTLPyPqnIHTRNnsi9w65975mn
+RENDER_SERVICE_ID=your-service-id-here
+
+# Application Configuration
+APP_BASE_URL=https://your-app.onrender.com
+NODE_ENV=production
+
+# Database Configuration (if needed for local testing)
+DATABASE_URL=your-database-url-here
+
+# Optional: Notification settings
+SLACK_WEBHOOK_URL=
+DISCORD_WEBHOOK_URL=
+EMAIL_ALERTS=alerts@yourdomain.com

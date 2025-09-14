@@ -38,3 +38,12 @@ services:
         value: "30000"
       - key: PG_CONNECTION_TIMEOUT_MS
         value: "10000"
+      # Deployment monitoring
+      - key: LOG_LEVEL
+        value: "info"
+      - key: RENDER_API_KEY
+        sync: false
+      - key: RENDER_SERVICE_ID
+        sync: false
+      - key: APP_BASE_URL
+        sync: false

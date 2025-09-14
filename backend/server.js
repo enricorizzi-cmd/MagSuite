@@ -5,7 +5,7 @@ const {
   authenticateToken,
 } = require('./src/auth');
 const { apiLimiter, authLimiter, uploadLimiter, helmetConfig } = require('./src/middleware/security');
-const { checkDatabase, checkCache, checkStorage, getSystemInfo } = require('./src/health');
+const { checkDatabase, checkCache, checkStorage, getSystemInfo, checkEnvironmentVariables } = require('./src/health');
 const cache = require('./src/cache');
 const items = require('./src/items');
 const documents = require('./src/documents');
@@ -93,25 +93,46 @@ const path = require('path');
 })();
 
 async function start(port = process.env.PORT || 3000) {
+  logger.deployment.info('Starting MagSuite backend server', {
+    port,
+    nodeEnv: process.env.NODE_ENV,
+    version: require('./package.json').version
+  });
+  
   // Initialize cache
   cache.initRedis();
   
   await db
     .connect()
     .then((client) => client.release())
-    .then(() => console.log('Database connection established'))
+    .then(() => {
+      logger.database.info('Database connection established');
+    })
     .catch((err) => {
-      console.error('Failed to connect to database', err);
+      logger.database.error('Failed to connect to database', {
+        error: err.message,
+        code: err.code,
+        stack: err.stack
+      });
       process.exit(1);
     });
 
   // Ensure tables for modules are ready before registering routes
-  await Promise.all([
-    items.ready,
-    documents.ready,
-    sequences.ready,
-    causals.ready,
-  ]);
+  try {
+    await Promise.all([
+      items.ready,
+      documents.ready,
+      sequences.ready,
+      causals.ready,
+    ]);
+    logger.deployment.info('All modules initialized successfully');
+  } catch (err) {
+    logger.deployment.error('Failed to initialize modules', {
+      error: err.message,
+      stack: err.stack
+    });
+    throw err;
+  }
   // lazily-initialized modules do not block startup
 
   const app = express();
@@ -126,7 +147,18 @@ async function start(port = process.env.PORT || 3000) {
   app.use('/api', apiLimiter);
   app.use(express.json());
   app.use((req, res, next) => {
-    logger.info(`${req.method} ${req.url}`);
+    const start = Date.now();
+    res.on('finish', () => {
+      const duration = Date.now() - start;
+      logger.info(`${req.method} ${req.url}`, {
+        method: req.method,
+        url: req.url,
+        statusCode: res.statusCode,
+        duration: `${duration}ms`,
+        userAgent: req.get('User-Agent'),
+        ip: req.ip || req.connection.remoteAddress
+      });
+    });
     next();
   });
 
@@ -134,11 +166,12 @@ async function start(port = process.env.PORT || 3000) {
 
   // Health check endpoints
   app.get('/health', async (req, res) => {
-    const [database, cacheStatus, storage, systemInfo] = await Promise.all([
+    const [database, cacheStatus, storage, systemInfo, envVars] = await Promise.all([
       checkDatabase(),
       checkCache(),
       checkStorage(),
-      getSystemInfo()
+      getSystemInfo(),
+      checkEnvironmentVariables()
     ]);
     
     const health = {
@@ -147,13 +180,22 @@ async function start(port = process.env.PORT || 3000) {
       services: {
         database,
         cache: cacheStatus,
-        storage
+        storage,
+        environment: envVars
       },
       system: systemInfo
     };
     
-    const isHealthy = database.status === 'healthy' && 
-                     storage.status === 'healthy';
+    // Determine overall health status
+    const criticalIssues = [
+      database.status !== 'healthy' && database.severity === 'critical',
+      storage.status !== 'healthy' && storage.severity === 'critical',
+      envVars.status !== 'healthy' && envVars.severity === 'critical'
+    ].filter(Boolean);
+    
+    const isHealthy = criticalIssues.length === 0;
+    health.status = isHealthy ? 'healthy' : 'unhealthy';
+    health.criticalIssues = criticalIssues.length;
     
     res.status(isHealthy ? 200 : 503).json(health);
   });
@@ -192,6 +234,68 @@ async function start(port = process.env.PORT || 3000) {
         PORT: process.env.PORT || '3000',
       },
     });
+  });
+
+  // Detailed diagnostics endpoint (for debugging)
+  app.get('/health/diagnostics', async (req, res) => {
+    const [database, cacheStatus, storage, systemInfo, envVars] = await Promise.all([
+      checkDatabase(),
+      checkCache(),
+      checkStorage(),
+      getSystemInfo(),
+      checkEnvironmentVariables()
+    ]);
+    
+    const diagnostics = {
+      timestamp: new Date().toISOString(),
+      overall: {
+        status: 'unknown',
+        criticalIssues: 0,
+        warnings: 0
+      },
+      services: {
+        database,
+        cache: cacheStatus,
+        storage,
+        environment: envVars
+      },
+      system: systemInfo,
+      recommendations: []
+    };
+    
+    // Count issues
+    const services = [database, storage, envVars];
+    services.forEach(service => {
+      if (service.status !== 'healthy') {
+        if (service.severity === 'critical') {
+          diagnostics.overall.criticalIssues++;
+        } else {
+          diagnostics.overall.warnings++;
+        }
+      }
+    });
+    
+    // Determine overall status
+    if (diagnostics.overall.criticalIssues > 0) {
+      diagnostics.overall.status = 'critical';
+    } else if (diagnostics.overall.warnings > 0) {
+      diagnostics.overall.status = 'warning';
+    } else {
+      diagnostics.overall.status = 'healthy';
+    }
+    
+    // Generate recommendations
+    if (database.status !== 'healthy' && database.suggestions) {
+      diagnostics.recommendations.push(...database.suggestions.map(s => `Database: ${s}`));
+    }
+    if (storage.status !== 'healthy' && storage.suggestions) {
+      diagnostics.recommendations.push(...storage.suggestions.map(s => `Storage: ${s}`));
+    }
+    if (envVars.status !== 'healthy') {
+      diagnostics.recommendations.push(`Environment: Set missing variables: ${envVars.required.missing.join(', ')}`);
+    }
+    
+    res.status(diagnostics.overall.status === 'critical' ? 503 : 200).json(diagnostics);
   });
 
   // Public routes
@@ -688,7 +792,12 @@ async function start(port = process.env.PORT || 3000) {
   });
 
   const server = app.listen(port, () => {
-    logger.info(`Server listening on port ${port}`);
+    logger.deployment.info(`Server listening on port ${port}`, {
+      port,
+      pid: process.pid,
+      uptime: process.uptime(),
+      memory: process.memoryUsage()
+    });
   });
 
   // Schedule daily backups; keep a handle to stop during shutdown/tests
@@ -707,11 +816,46 @@ async function start(port = process.env.PORT || 3000) {
     }
   });
 
+  // Global error handler
+  app.use((err, req, res, next) => {
+    logger.error('Unhandled error in request', {
+      error: err.message,
+      stack: err.stack,
+      url: req.url,
+      method: req.method,
+      ip: req.ip,
+      userAgent: req.get('User-Agent')
+    });
+    
+    // Don't leak error details in production
+    const isDevelopment = process.env.NODE_ENV === 'development';
+    res.status(500).json({
+      error: isDevelopment ? err.message : 'Internal server error',
+      ...(isDevelopment && { stack: err.stack })
+    });
+  });
+
+  // Handle 404s
+  app.use((req, res) => {
+    logger.warn('Route not found', {
+      url: req.url,
+      method: req.method,
+      ip: req.ip
+    });
+    res.status(404).json({ error: 'Route not found' });
+  });
+
   return server;
 }
 
 if (require.main === module) {
-  start();
+  start().catch((err) => {
+    logger.deployment.error('Failed to start server', {
+      error: err.message,
+      stack: err.stack
+    });
+    process.exit(1);
+  });
 }
 
 module.exports = { start };

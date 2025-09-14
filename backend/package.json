@@ -10,7 +10,12 @@
                     "test":  "jest",
                     "migrate":  "node db/migrate.js",
                     "audit:supabase": "node scripts/audit-supabase.js",
-                    "audit:render": "node scripts/audit-render.js"
+                    "audit:render": "node scripts/audit-render.js",
+                    "deploy:monitor": "node scripts/deployment-monitor.js",
+                    "deploy:validate": "node scripts/deployment-validator.js",
+                    "deploy:rollback": "node scripts/rollback-helper.js",
+                    "deploy:render": "node scripts/render-helper.js",
+                    "deploy:auto": "node scripts/deployment-automation.js"
                 },
     "dependencies":  {
                          "bcryptjs":  "^3.0.2",

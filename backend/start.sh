@@ -53,10 +53,21 @@ if [ "${PGSSLMODE}" = "no-verify" ]; then
     esac
     export DATABASE_URL
   fi
-  export NODE_TLS_REJECT_UNAUTHORIZED=0
 fi
 
-# Run database migrations before starting the server
-npm run migrate
+# Run database migrations with retry to avoid transient TLS hiccups
+set +e
+attempts=0
+until npm run migrate; do
+  code=$?
+  attempts=$((attempts+1))
+  if [ $attempts -ge 3 ]; then
+    echo "Migration failed after $attempts attempts (exit $code)" >&2
+    exit $code
+  fi
+  echo "Migration failed (exit $code). Retrying in 2s..." >&2
+  sleep 2
+done
+set -e
 
 exec "$@"

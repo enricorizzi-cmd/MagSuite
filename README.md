@@ -136,6 +136,8 @@ FILE_ENCRYPTION_KEY=replace-me-file-key
 ALERT_EMAIL=alerts@example.com
 BATCH_STRATEGY=FIFO
 DB_CA_PATH=/etc/secrets/supabase-ca.crt
+# Alternatively supply the certificate via base64
+# DB_CA_CERT_B64=$(base64 -w0 supabase-ca.crt)
 # Supabase
 SUPABASE_URL=https://project.supabase.co
 SUPABASE_ANON_KEY=replace-me
@@ -226,12 +228,21 @@ cd ../frontend && npm run dev
 
 ### Render
 
-Deploying on [Render](https://render.com) requires the following configuration:
+Deploy on [Render](https://render.com) using **two services**.
+
+#### Backend (Node)
 
 - **Dockerfile path:** `backend/Dockerfile` (build context = repo root)
 - **Health check path:** `/health`
-- **Environment variables:** `DATABASE_URL`, `ACCESS_SECRET`, `REFRESH_SECRET`, `SSO_SECRET`, `API_KEY`, `FILE_ENCRYPTION_KEY`, `ALERT_EMAIL` (optional), `BATCH_STRATEGY` (optional), `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE`, `VAPID_PUBLIC`, `VAPID_PRIVATE`, `SENTRY_DSN`, `CORS_ORIGIN`. If using Supabase pooling (6543) set `SUPABASE_CA_CERT` to the base64 of your DB CA. If using direct (5432), include `?sslmode=require` in `DATABASE_URL`.
-- **Blueprint (optional):** a starter `render.yaml` is included. You can import it in Render → New + → Blueprint from Repo. Fill secrets after import.
+- **Environment variables:** `DATABASE_URL`, `ACCESS_SECRET`, `REFRESH_SECRET`, `SSO_SECRET`, `API_KEY`, `FILE_ENCRYPTION_KEY`, `ALERT_EMAIL` (optional), `BATCH_STRATEGY` (optional), `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE`, `VAPID_PUBLIC`, `VAPID_PRIVATE`, `SENTRY_DSN`, `CORS_ORIGIN`, `DB_CA_CERT_B64` (base64 CA for Supabase pool), `DB_CA_PATH` / `NODE_EXTRA_CA_CERTS` if you mount a cert file. Missing the CA results in `SELF_SIGNED_CERT_IN_CHAIN` during migrations.
+
+#### Frontend (static)
+
+- **Build command:** `cd frontend && npm ci && npm run build`
+- **Publish directory:** `frontend/dist`
+- **Environment variables:** `VITE_API_URL`, `VAPID_PUBLIC`, `SENTRY_DSN` (optional)
+
+- **Blueprint (optional):** the included `render.yaml` defines both services. Import it via Render → New + → Blueprint from Repo and fill secrets after import.
 
 To audit a deployed service with Render API, create a Personal Access Token in Render (Account → API Keys) and run:
 

@@ -22,11 +22,25 @@ services:
         sync: false
       - key: CORS_ORIGIN
         sync: false
-      - key: SUPABASE_CA_CERT
+      - key: DB_CA_CERT_B64
         sync: false
       - key: VAPID_PUBLIC
         sync: false
       - key: VAPID_PRIVATE
+        sync: false
+      - key: SENTRY_DSN
+        sync: false
+  - type: web
+    name: magsuite-frontend
+    env: static
+    plan: starter
+    region: frankfurt
+    buildCommand: cd frontend && npm ci && npm run build
+    staticPublishPath: frontend/dist
+    envVars:
+      - key: VITE_API_URL
+        sync: false
+      - key: VAPID_PUBLIC
         sync: false
       - key: SENTRY_DSN
         sync: false

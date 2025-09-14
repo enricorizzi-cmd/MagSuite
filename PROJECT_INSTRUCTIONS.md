@@ -74,7 +74,7 @@
 
 * Servizi separati: `web` (hosting FE statico o Node che serve `/dist`) e `backend`.
 * **Healthcheck**: `GET /healthz` (liveness) e `GET /readyz` (readiness) → 200 OK.
-* **Env backend** (prod):
+* **Env backend**:
 
   * `DATABASE_URL` (Postgres con `?sslmode=require`)
   * `ACCESS_SECRET`, `REFRESH_SECRET`, `SSO_SECRET`
@@ -82,8 +82,13 @@
   * `SUPABASE_URL`, `SUPABASE_ANON_KEY` (se serve lato server), `SUPABASE_SERVICE_ROLE`
   * `VAPID_PUBLIC`, `VAPID_PRIVATE`
   * `SENTRY_DSN`, `CORS_ORIGIN`
-  * `BATCH_STRATEGY` (es. `FIFO`), `DB_CA_PATH`, `NODE_EXTRA_CA_CERTS` (opz.)
-* **Env frontend** (prod): `VITE_API_URL`, opzionali `VITE_API_KEY`, `VITE_COMPANY_ID`
+  * `BATCH_STRATEGY` (es. `FIFO`), `DB_CA_CERT_B64`/`SUPABASE_CA_CERT`, `DB_CA_PATH`, `NODE_EXTRA_CA_CERTS` (opz.)
+* **Env frontend** (build-time):
+
+  * `VITE_API_URL`
+  * `VAPID_PUBLIC`
+  * `SENTRY_DSN` (opz.)
+  * opzionali `VITE_API_KEY`, `VITE_COMPANY_ID`
 * No secrets in client; no script postinstall lenti. Auto-deploy da `main` via Deploy Hook.
 
 **CI/CD (GitHub Actions)**

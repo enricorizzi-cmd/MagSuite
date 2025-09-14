@@ -124,3 +124,4 @@ Se riscontri problemi:
 ---
 
 **TestSprite MCP è ora pronto per essere utilizzato nel tuo progetto MagSuite!** 🚀
+

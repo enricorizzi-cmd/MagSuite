@@ -219,3 +219,4 @@ Ora hai accesso diretto ai tuoi deployment su Render tramite Cursor. Puoi monito
 5. **🔧 Integra con i tuoi script**
 
 **RICORDA**: Riavvia Cursor per iniziare a usare i comandi MCP!
+

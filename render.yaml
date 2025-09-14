@@ -10,8 +10,8 @@ services:
     envVars:
       - key: DATABASE_URL
         sync: false
-      - key: REDIS_URL
-        sync: false
+      # - key: REDIS_URL  # Temporarily disabled for deploy
+      #   sync: false
       - key: ACCESS_SECRET
         sync: false
       - key: REFRESH_SECRET

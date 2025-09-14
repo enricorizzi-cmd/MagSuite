@@ -1,5 +1,5 @@
 const express = require('express');
-const compression = require('compression');
+// const compression = require('compression'); // Temporarily disabled for deploy
 const {
   router: authRouter,
   authenticateToken,
@@ -118,7 +118,7 @@ async function start(port = process.env.PORT || 3000) {
 
   // Security middleware
   app.use(helmetConfig);
-  app.use(compression());
+  // app.use(compression()); // Temporarily disabled for deploy
   
   // Rate limiting
   app.use('/api/auth', authLimiter);

@@ -23,6 +23,15 @@ async function checkDatabase() {
 
 async function checkCache() {
   try {
+    // If Redis is not configured, return healthy with no-cache mode
+    if (!process.env.REDIS_URL) {
+      return {
+        status: 'healthy',
+        mode: 'no-cache',
+        message: 'Redis not configured, running in no-cache mode'
+      };
+    }
+    
     const start = Date.now();
     await cache.set('health:check', 'ok', 10);
     const cached = await cache.get('health:check');
@@ -32,7 +41,8 @@ async function checkCache() {
       await cache.del('health:check');
       return {
         status: 'healthy',
-        responseTime: `${duration}ms`
+        responseTime: `${duration}ms`,
+        mode: 'redis'
       };
     }
     

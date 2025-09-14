@@ -9,6 +9,12 @@ function initRedis() {
   
   const redisUrl = process.env.REDIS_URL || 'redis://localhost:6379';
   
+  // Skip Redis initialization if no URL provided (for Render compatibility)
+  if (!process.env.REDIS_URL) {
+    logger.info('Redis not configured, running in no-cache mode');
+    return null;
+  }
+  
   try {
     redis = new Redis(redisUrl, {
       retryDelayOnFailover: 100,

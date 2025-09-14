@@ -8,8 +8,16 @@
       <div v-if="loading" class="text-slate-400">Caricamento…</div>
       <div v-else-if="error" class="text-rose-400">{{ error }}</div>
       <div v-else>
-        <!-- Filtri lato server (type, from, to, item) esposti anche nella UI) -->
-        <div class="flex flex-wrap items-end gap-3 mb-3">
+        <ListFiltersTable
+          :items="rows"
+          :fields="docFields"
+          new-label="Nuovo documento"
+          @new="openDocCreate"
+          @edit="openDocEdit"
+        />
+
+        <!-- Server-side filters (type, from, to, item) -->
+        <div class="mt-3 flex flex-wrap items-end gap-3 mb-3">
           <div>
             <label class="block text-xs text-slate-400 mb-1">Tipo</label>
             <select v-model="filters.type" class="bg-white/10 border border-white/10 rounded px-2 py-1 text-sm text-slate-200 min-w-[10rem]">
@@ -34,14 +42,6 @@
           </div>
           <button class="ml-auto px-3 py-1.5 rounded-lg text-sm bg-white/10 hover:bg-white/20 text-slate-200" @click="load">Applica</button>
         </div>
-
-        <ListFiltersTable
-          :items="rows"
-          :fields="docFields"
-          new-label="Nuovo documento"
-          @new="openDocCreate"
-          @edit="openDocEdit"
-        />
 
         <!-- Pagination (no total; next enabled if page full) -->
         <div class="mt-3 flex items-center gap-3">

@@ -13,8 +13,22 @@ const router = express.Router();
     differences JSONB DEFAULT '[]',
     delta JSONB DEFAULT '[]',
     approvals JSONB DEFAULT '[]',
-    audit JSONB DEFAULT '[]'
+    audit JSONB DEFAULT '[]',
+    company_id INTEGER NOT NULL DEFAULT NULLIF(current_setting('app.current_company_id', true), '')::int,
+    created_at TIMESTAMPTZ DEFAULT now()
   )`);
+  
+  // Enable RLS and create policies
+  await db.query('ALTER TABLE inventories ENABLE ROW LEVEL SECURITY');
+  await db.query(`CREATE POLICY IF NOT EXISTS inventories_select ON inventories
+    FOR SELECT USING (company_id = current_setting('app.current_company_id', true)::int)`);
+  await db.query(`CREATE POLICY IF NOT EXISTS inventories_insert ON inventories
+    FOR INSERT WITH CHECK (company_id = current_setting('app.current_company_id', true)::int)`);
+  await db.query(`CREATE POLICY IF NOT EXISTS inventories_update ON inventories
+    FOR UPDATE USING (company_id = current_setting('app.current_company_id', true)::int)
+    WITH CHECK (company_id = current_setting('app.current_company_id', true)::int)`);
+  await db.query(`CREATE POLICY IF NOT EXISTS inventories_delete ON inventories
+    FOR DELETE USING (company_id = current_setting('app.current_company_id', true)::int)`);
 })();
 
 router.get('/inventories', async (req, res) => {

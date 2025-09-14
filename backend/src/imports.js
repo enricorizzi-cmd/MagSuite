@@ -53,6 +53,19 @@ async function uploadMiddleware(req, res, next) {
     company_id INTEGER DEFAULT NULLIF(current_setting('app.current_company_id', true), '')::int,
     created_at TIMESTAMP DEFAULT NOW()
   )`);
+  
+  // Enable RLS and create policies
+  await db.query('ALTER TABLE import_logs ENABLE ROW LEVEL SECURITY');
+  await db.query(`CREATE POLICY IF NOT EXISTS import_logs_select ON import_logs
+    FOR SELECT USING (company_id = current_setting('app.current_company_id', true)::int)`);
+  await db.query(`CREATE POLICY IF NOT EXISTS import_logs_insert ON import_logs
+    FOR INSERT WITH CHECK (company_id = current_setting('app.current_company_id', true)::int)`);
+  await db.query(`CREATE POLICY IF NOT EXISTS import_logs_update ON import_logs
+    FOR UPDATE USING (company_id = current_setting('app.current_company_id', true)::int)
+    WITH CHECK (company_id = current_setting('app.current_company_id', true)::int)`);
+  await db.query(`CREATE POLICY IF NOT EXISTS import_logs_delete ON import_logs
+    FOR DELETE USING (company_id = current_setting('app.current_company_id', true)::int)`);
+  
   await db.query(`CREATE TABLE IF NOT EXISTS import_templates (
     id SERIAL PRIMARY KEY,
     type TEXT NOT NULL,
@@ -61,6 +74,18 @@ async function uploadMiddleware(req, res, next) {
     company_id INTEGER DEFAULT NULLIF(current_setting('app.current_company_id', true), '')::int,
     created_at TIMESTAMP DEFAULT NOW()
   )`);
+  
+  // Enable RLS and create policies
+  await db.query('ALTER TABLE import_templates ENABLE ROW LEVEL SECURITY');
+  await db.query(`CREATE POLICY IF NOT EXISTS import_templates_select ON import_templates
+    FOR SELECT USING (company_id = current_setting('app.current_company_id', true)::int)`);
+  await db.query(`CREATE POLICY IF NOT EXISTS import_templates_insert ON import_templates
+    FOR INSERT WITH CHECK (company_id = current_setting('app.current_company_id', true)::int)`);
+  await db.query(`CREATE POLICY IF NOT EXISTS import_templates_update ON import_templates
+    FOR UPDATE USING (company_id = current_setting('app.current_company_id', true)::int)
+    WITH CHECK (company_id = current_setting('app.current_company_id', true)::int)`);
+  await db.query(`CREATE POLICY IF NOT EXISTS import_templates_delete ON import_templates
+    FOR DELETE USING (company_id = current_setting('app.current_company_id', true)::int)`);
 })();
 
 async function parseBuffer(buffer, mapping = {}, type = null) {

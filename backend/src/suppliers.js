@@ -6,8 +6,21 @@ const router = express.Router();
 (async () => {
   await db.query(`CREATE TABLE IF NOT EXISTS suppliers (
     id SERIAL PRIMARY KEY,
-    name TEXT NOT NULL
+    name TEXT NOT NULL,
+    company_id INTEGER NOT NULL DEFAULT NULLIF(current_setting('app.current_company_id', true), '')::int
   )`);
+  
+  // Enable RLS and create policies
+  await db.query('ALTER TABLE suppliers ENABLE ROW LEVEL SECURITY');
+  await db.query(`CREATE POLICY IF NOT EXISTS suppliers_select ON suppliers
+    FOR SELECT USING (company_id = current_setting('app.current_company_id', true)::int)`);
+  await db.query(`CREATE POLICY IF NOT EXISTS suppliers_insert ON suppliers
+    FOR INSERT WITH CHECK (company_id = current_setting('app.current_company_id', true)::int)`);
+  await db.query(`CREATE POLICY IF NOT EXISTS suppliers_update ON suppliers
+    FOR UPDATE USING (company_id = current_setting('app.current_company_id', true)::int)
+    WITH CHECK (company_id = current_setting('app.current_company_id', true)::int)`);
+  await db.query(`CREATE POLICY IF NOT EXISTS suppliers_delete ON suppliers
+    FOR DELETE USING (company_id = current_setting('app.current_company_id', true)::int)`);
 })();
 
 router.get('/', async (req, res) => {
@@ -15,10 +28,10 @@ router.get('/', async (req, res) => {
   const page = Math.max(parseInt(req.query.page) || 1, 1);
   const offset = (page - 1) * limit;
   const result = await db.query(
-    'SELECT id, name FROM suppliers ORDER BY id LIMIT $1 OFFSET $2',
+    'SELECT id, name FROM suppliers WHERE company_id = NULLIF(current_setting(\'app.current_company_id\', true), \'\')::int ORDER BY id LIMIT $1 OFFSET $2',
     [limit, offset]
   );
-  const totalRes = await db.query('SELECT COUNT(*) FROM suppliers');
+  const totalRes = await db.query('SELECT COUNT(*) FROM suppliers WHERE company_id = NULLIF(current_setting(\'app.current_company_id\', true), \'\')::int');
   res.json({ items: result.rows, total: parseInt(totalRes.rows[0].count, 10) });
 });
 

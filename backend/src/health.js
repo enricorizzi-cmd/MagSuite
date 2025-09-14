@@ -65,12 +65,19 @@ async function checkStorage() {
     const path = require('path');
     const uploadRoot = path.join(__dirname, '..', '..', 'uploads');
     
-    // Check if upload directory exists and is writable
-    await fs.access(uploadRoot, fs.constants.W_OK);
+    // Create upload directory if it doesn't exist
+    try {
+      await fs.access(uploadRoot, fs.constants.W_OK);
+    } catch (accessErr) {
+      // Directory doesn't exist, create it
+      await fs.mkdir(uploadRoot, { recursive: true });
+      logger.info('Created upload directory:', uploadRoot);
+    }
     
     return {
       status: 'healthy',
-      path: uploadRoot
+      path: uploadRoot,
+      message: 'Upload directory ready'
     };
   } catch (err) {
     logger.error('Storage health check failed:', err);

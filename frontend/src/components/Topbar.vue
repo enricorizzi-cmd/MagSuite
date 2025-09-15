@@ -425,12 +425,9 @@ const menuGroups = computed(() => {
 });
 
 const visibleMenuGroups = computed(() => {
-  // Always show all menu items for mobile - features filtering is handled by isPathEnabled
-  // This ensures mobile menu is always visible regardless of feature loading state
-  return menuGroups.value.map(g => ({
-    label: g.label,
-    items: g.items.filter(t => isPathEnabled(features.value as any, t.path))
-  }));
+  // Mobile menu should always show all sections and subsections
+  // Avoid hiding due to feature misconfigurations or delayed loading
+  return menuGroups.value;
 });
 </script>
 

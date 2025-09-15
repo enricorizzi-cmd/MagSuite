@@ -5,9 +5,7 @@
       <h1 class="text-xl font-semibold mb-4">Utenti</h1>
       <p class="text-slate-300 mb-4">Utenti della tua azienda.</p>
       <div v-if="error" class="text-rose-400 text-sm mb-3">{{ error }}</div>
-      <div v-if="users.length === 0" class="text-slate-400">Nessun utente.</div>
       <ListFiltersTable
-        v-else
         :items="users"
         :fields="[
           { key: 'email', label: 'Email', type: 'string' },
@@ -18,6 +16,7 @@
         ]"
         :new-label="role==='super_admin' ? 'Nuovo utente' : ''"
         :show-new="role==='super_admin'"
+        empty-label="Nessun utente."
         @new="openCreate"
         @edit="openEdit"
       />

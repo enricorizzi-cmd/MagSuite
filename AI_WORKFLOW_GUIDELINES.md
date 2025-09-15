@@ -92,6 +92,11 @@ git commit -m "🔒 SEC: Add input validation to API endpoints"
 - ✅ Log errori ultimi 10 minuti
 - ✅ Metriche CPU/Memory
 
+### ⏱️ Regola ferrea di verifica deploy (auto-timeout)
+- Polling ogni 15 secondi dello stato deploy finché non è `live/healthy` o `failed`.
+- Non chiudere la task finché l’esito non è determinato (success/fail).
+- In caso di `build_in_progress` prolungato (>10 minuti) segnare come fail temporaneo e aprire azione di remediation.
+
 **Periodiche (ogni 3-5 deploy):**
 - 🔍 TestSprite codebase analysis
 - 🔍 Security scan completo

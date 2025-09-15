@@ -1,11 +1,23 @@
 {
-  "servers": {
+  "mcpServers": {
     "TestSprite": {
-      "type": "stdio",
       "command": "npx",
-      "args": ["@testsprite/testsprite-mcp@latest"],
+      "args": ["@testsprite/testsprite-mcp@latest", "server"],
       "env": {
         "API_KEY": "sk-user-7xMOVMnp1xdEDe_pW8LyuWz1HkgOnb7NdWq5XHqglleblyMklycEbkIeUG_2SrpW_IY6ZjV7VdinD4Gx_VboCsz_8ybgAe9iRcdG42Gc7ZZK5i5mfPV7oEuGq3hu_iEUdJ4"
+      }
+    },
+    "render": {
+      "url": "https://mcp.render.com/mcp",
+      "headers": {
+        "Authorization": "Bearer ${RENDER_API_KEY}"
+      }
+    },
+    "supabase": {
+      "command": "npx",
+      "args": ["-y", "@supabase/mcp-server-supabase", "--read-only", "--project-ref=mojuhmhubjnocogxxwbh"],
+      "env": {
+        "SUPABASE_ACCESS_TOKEN": "${SUPABASE_ACCESS_TOKEN}"
       }
     }
   }

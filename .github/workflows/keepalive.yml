@@ -1,0 +1,25 @@
+name: Keep MagSuite Alive
+
+on:
+  schedule:
+    - cron: '*/10 * * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: keepalive
+  cancel-in-progress: false
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Ping /health
+        run: |
+          curl -fsS -o /dev/null https://magsuite-0wj4.onrender.com/health
+      - name: Ping /readyz
+        run: |
+          curl -fsS -o /dev/null https://magsuite-0wj4.onrender.com/readyz
+
+
+

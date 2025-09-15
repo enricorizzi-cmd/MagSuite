@@ -1,0 +1,74 @@
+---
+description: Regole di workflow per Cursor in questo repository
+globs: ["**/*"]
+alwaysApply: true
+---
+## Scopo
+Queste regole definiscono come pianificare, implementare e consegnare il lavoro in questo repository in modo chiaro, tracciabile e sicuro.
+
+### Principi chiave
+- **Chiarezza**: obiettivi espliciti, comunicazione sintetica, risultati verificabili.
+- **Piccoli passi**: modifiche atomiche, commit frequenti, feedback rapido.
+- **Trasparenza**: stato aggiornato prima/dopo azioni significative.
+- **Automazione**: lint, test e build dove possibile; niente passaggi manuali fragili.
+- **Sicurezza**: zero segreti nel codice, attenzione a dati sensibili e comandi distruttivi.
+
+## Flusso di lavoro standard
+1. **Analisi iniziale**
+   - Raccogli il contesto leggendo i file rilevanti; evita supposizioni.
+   - Se necessario, fai una ricerca mirata per capire dove intervenire.
+2. **Pianificazione minima**
+   - Definisci TODO atomici e orientati al risultato; imposta il primo come "in_progress".
+   - Evita piani prolissi: solo i passi necessari per arrivare a valore.
+3. **Esecuzione**
+   - Procedi per piccoli batch; parallelizza letture/analisi quando indipendenti.
+   - Fornisci un breve aggiornamento di stato prima di azioni importanti e dopo blocchi risolti.
+4. **Modifiche ai file**
+   - Mantieni lo stile esistente: non cambiare indentazione, formattazione o parti non correlate.
+   - Limita la modifica al necessario per la feature/fix; nomi chiari e autoesplicativi.
+5. **Controlli di qualità**
+   - Esegui lint e test sulle parti toccate; correggi errori prima di procedere.
+   - Evita di ignorare warning critici o di introdurre debito tecnico.
+6. **Versionamento e PR**
+   - Usa branch descrittivi (es. feature/..., fix/...); commit messaggi chiari (imperativo, breve, motivo se utile).
+   - Apri PR piccole con descrizione del problema, della soluzione e dell'impatto.
+7. **Consegna e chiusura**
+   - Verifica criteri di accettazione; aggiorna documentazione se cambia il comportamento.
+   - Chiudi i TODO e fornisci un riepilogo conciso degli effetti della modifica.
+
+## Stile di comunicazione
+- Scrivi in italiano, sintetico ma completo quando serve contesto.
+- Usa titoli "##" e "###" per strutturare; elenchi puntati per i dettagli operativi.
+- Evidenzia con grassetto le decisioni e gli esiti chiave.
+- Cita file, directory, funzioni e classi con i backtick (es. `app/service/User.ts`).
+
+## Uso degli strumenti
+- Preferisci ricerche semantiche per esplorazione e ricerche esatte per simboli.
+- Comandi da terminale non interattivi; quando un comando paginerebbe, aggiungi `| cat`.
+- Processi lunghi vanno in background; evita comandi distruttivi senza conferma esplicita.
+
+## Regole per modifiche al codice
+- Nomi espliciti e consistenti; evita abbreviazioni opache.
+- Tipi espliciti per API pubbliche; evita cast insicuri e `any` generici.
+- Usa early return e gestisci gli errori con significato, senza swallowing.
+- Mantieni la complessità bassa; evita annidamenti profondi.
+- Commenta solo il "perché" di decisioni non ovvie; niente commenti rumorosi.
+- Non riformattare codice non toccato; limita il diff a ciò che serve.
+
+## Sicurezza e segreti
+- Non committare credenziali, token o dati sensibili; usa variabili d'ambiente.
+- Maschera dati sensibili in log e output.
+- Verifica le dipendenze e rimuovi ciò che non è usato.
+
+## Performance e ottimizzazione
+- Misura prima di ottimizzare; evita ottimizzazioni premature.
+- Documenta i trade-off quando scegli soluzioni non banali.
+
+## Documentazione
+- Aggiorna `README`, note di rilascio o commenti di modulo quando cambia il comportamento esterno.
+- Aggiungi esempi minimi per API nuove o modificate.
+
+## Definizione di Done
+- Obiettivo raggiunto e criteri di accettazione rispettati.
+- Lint/test verdi; build funzionante.
+- TODO chiusi e riepilogo finale fornito.

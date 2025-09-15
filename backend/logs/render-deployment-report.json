@@ -1,0 +1,109 @@
+{
+  "timestamp": "2025-09-14T23:59:26.369Z",
+  "serviceId": "srv-d2viim8gjchc73b9icgg",
+  "issues": [
+    {
+      "type": "service_status",
+      "severity": "critical",
+      "message": "Service status: undefined",
+      "details": {
+        "autoDeploy": "yes",
+        "autoDeployTrigger": "commit",
+        "branch": "main",
+        "createdAt": "2025-09-08T19:07:05.979425Z",
+        "dashboardUrl": "https://dashboard.render.com/web/srv-d2viim8gjchc73b9icgg",
+        "environmentId": "evm-d2unq0vdiees7397edlg",
+        "id": "srv-d2viim8gjchc73b9icgg",
+        "name": "MagSuite",
+        "notifyOnFail": "default",
+        "ownerId": "tea-d2unpph5pdvs73am5e4g",
+        "repo": "https://github.com/enricorizzi-cmd/MagSuite",
+        "rootDir": "",
+        "serviceDetails": {
+          "buildPlan": "starter",
+          "cache": {
+            "profile": "no-cache"
+          },
+          "env": "docker",
+          "envSpecificDetails": {
+            "dockerCommand": "",
+            "dockerContext": ".",
+            "dockerfilePath": "backend/Dockerfile"
+          },
+          "healthCheckPath": "/health",
+          "maintenanceMode": {
+            "enabled": false,
+            "uri": ""
+          },
+          "numInstances": 1,
+          "openPorts": null,
+          "plan": "free",
+          "previews": {
+            "generation": "off"
+          },
+          "pullRequestPreviewsEnabled": "no",
+          "region": "frankfurt",
+          "runtime": "docker",
+          "sshAddress": "srv-d2viim8gjchc73b9icgg@ssh.frankfurt.render.com",
+          "url": "https://magsuite-0wj4.onrender.com"
+        },
+        "slug": "magsuite-0wj4",
+        "suspended": "not_suspended",
+        "suspenders": [],
+        "type": "web_service",
+        "updatedAt": "2025-09-14T23:46:41.379636Z"
+      }
+    },
+    {
+      "type": "missing_env_var",
+      "severity": "critical",
+      "message": "Missing environment variable: DATABASE_URL",
+      "variable": "DATABASE_URL"
+    },
+    {
+      "type": "missing_env_var",
+      "severity": "critical",
+      "message": "Missing environment variable: ACCESS_SECRET",
+      "variable": "ACCESS_SECRET"
+    },
+    {
+      "type": "missing_env_var",
+      "severity": "critical",
+      "message": "Missing environment variable: REFRESH_SECRET",
+      "variable": "REFRESH_SECRET"
+    },
+    {
+      "type": "missing_env_var",
+      "severity": "critical",
+      "message": "Missing environment variable: API_KEY",
+      "variable": "API_KEY"
+    }
+  ],
+  "recommendations": [
+    {
+      "type": "check_service",
+      "message": "Service is not live, check service configuration",
+      "action": "Review service settings in Render dashboard"
+    },
+    {
+      "type": "set_env_var",
+      "message": "Set the missing environment variable: DATABASE_URL",
+      "action": "Use updateEnvironmentVariable('DATABASE_URL', 'your_value')"
+    },
+    {
+      "type": "set_env_var",
+      "message": "Set the missing environment variable: ACCESS_SECRET",
+      "action": "Use updateEnvironmentVariable('ACCESS_SECRET', 'your_value')"
+    },
+    {
+      "type": "set_env_var",
+      "message": "Set the missing environment variable: REFRESH_SECRET",
+      "action": "Use updateEnvironmentVariable('REFRESH_SECRET', 'your_value')"
+    },
+    {
+      "type": "set_env_var",
+      "message": "Set the missing environment variable: API_KEY",
+      "action": "Use updateEnvironmentVariable('API_KEY', 'your_value')"
+    }
+  ]
+}

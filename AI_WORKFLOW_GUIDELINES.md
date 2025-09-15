@@ -133,6 +133,19 @@ git commit -m "🔒 SEC: Add input validation to API endpoints"
   - **Accesso al database Supabase** tramite le env del medesimo servizio
 - Non creare servizi separati per frontend o backend. Il blueprint `render.yaml` e il `backend/Dockerfile` sono la fonte di verità per questa architettura.
 
+### 🔁 Regola ferrea post-attività (sempre)
+
+Al termine di ogni attività, seguire rigorosamente la sequenza:
+
+1. **Commit** delle modifiche
+2. **Push** del branch
+3. **Verifica deploy** (stato/health/log su Render)
+4. **Eventuali correzioni** se necessari problemi
+5. Nuovo **commit** + **push**
+6. Una volta verde: merge su `main` ⇒ **live**
+
+Questa sequenza è obbligatoria e non va saltata.
+
 ---
 
 **🤖 Questa linea guida è attiva e permanente. L'AI Assistant seguirà automaticamente questo workflow per tutte le operazioni di sviluppo.**

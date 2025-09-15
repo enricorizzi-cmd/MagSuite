@@ -240,6 +240,14 @@ Required configuration:
 - **Environment variables:** `DATABASE_URL`, `ACCESS_SECRET`, `REFRESH_SECRET`, `SSO_SECRET`, `API_KEY`, `FILE_ENCRYPTION_KEY`, `ALERT_EMAIL` (optional), `BATCH_STRATEGY` (optional), `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE`, `VAPID_PUBLIC`, `VAPID_PRIVATE`, `SENTRY_DSN`, `CORS_ORIGIN`, `VITE_API_URL`. If using Supabase pooling (6543) set `SUPABASE_CA_CERT` to the base64 of your DB CA. If using direct (5432), include `?sslmode=require` in `DATABASE_URL`.
 - **Blueprint (optional):** a starter `render.yaml` is included. It defines a single `web` service using the Dockerfile above. Import it in Render → New + → Blueprint from Repo and fill secrets after import.
 
+### Post-activity mandatory sequence
+
+After every change, always perform:
+
+1) commit → 2) push → 3) deploy verification (Render status/health/logs) → 4) fixes if needed → 5) commit + push → 6) merge to main → live.
+
+This sequence is mandatory for every task.
+
 To audit a deployed service with Render API, create a Personal Access Token in Render (Account → API Keys) and run:
 
 ```bash

@@ -2,7 +2,7 @@
 
 ## ✅ **Configurazione Completata!**
 
-Il Render MCP Server è stato configurato per Cursor con la tua API key `rnd_ublyTLPyPqnIHTRNnsi9w65975mn`.
+Il Render MCP Server è stato configurato per Cursor con la tua API key `${RENDER_API_KEY}`.
 
 ## 🔄 **Prossimi Passi**
 

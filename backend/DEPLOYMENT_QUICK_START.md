@@ -8,7 +8,7 @@
 cp deploy-config.example .env.deploy
 
 # Modifica con i tuoi valori
-RENDER_API_KEY=rnd_ublyTLPyPqnIHTRNnsi9w65975mn
+RENDER_API_KEY=<RENDER_API_KEY>
 RENDER_SERVICE_ID=il-tuo-service-id
 APP_BASE_URL=https://la-tua-app.onrender.com
 

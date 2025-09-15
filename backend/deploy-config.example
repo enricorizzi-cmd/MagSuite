@@ -2,7 +2,7 @@
 # Copy this file to .env.deploy and fill in your values
 
 # Render API Configuration
-RENDER_API_KEY=rnd_ublyTLPyPqnIHTRNnsi9w65975mn
+RENDER_API_KEY=
 RENDER_SERVICE_ID=your-service-id-here
 
 # Application Configuration

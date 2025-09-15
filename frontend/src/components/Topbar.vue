@@ -5,7 +5,7 @@
       <!-- Left: Logo + Menu (mobile) -->
       <div class="flex items-center gap-2 sm:gap-3">
         <!-- On mobile: use the "M" icon as the menu button -->
-        <button class="md:hidden p-1 -ml-1 rounded-lg hover:bg-white/10 text-slate-200" @click="isMenuOpen = !isMenuOpen" :aria-expanded="isMenuOpen ? 'true' : 'false'" aria-label="Apri menu">
+        <button class="md:hidden p-1 -ml-1 rounded-lg hover:bg-white/10 text-slate-200" @click="toggleMobileMenu" :aria-expanded="isMenuOpen ? 'true' : 'false'" aria-label="Apri menu">
           <img src="/icon.svg" alt="Apri menu" class="h-7 w-7" />
         </button>
         <!-- On desktop: show the static brand icon -->
@@ -126,14 +126,14 @@
           </div>
         </div>
         <nav class="grid gap-2 overflow-y-auto pr-1 flex-1 min-h-0">
-          <div v-for="g in visibleMenuGroups" :key="g.label">
-            <div class="text-[11px] uppercase tracking-wide text-slate-400 px-2">{{ g.label }}</div>
+          <div v-for="g in visibleMenuGroups" :key="g.label" class="mobile-menu-group">
+            <div class="text-[11px] uppercase tracking-wide text-slate-400 px-2 mobile-menu-group-label">{{ g.label }}</div>
             <RouterLink
               v-for="t in g.items"
               :key="t.path"
               :to="t.path"
               @click="isMenuOpen=false"
-              class="block px-3 py-2 rounded-lg text-slate-300 hover:text-white hover:bg-white/10"
+              class="block px-3 py-2 rounded-lg text-slate-300 hover:text-white hover:bg-white/10 mobile-menu-item"
               :class="{ 'bg-white/10 text-white': isActive(t.path) }"
             >
               {{ t.label }}
@@ -349,6 +349,12 @@ watch(isMenuOpen, (open) => {
 // Also close the drawer on any route change (extra safety)
 watch(() => route.path, () => { isMenuOpen.value = false; });
 
+function toggleMobileMenu() {
+  console.log('Mobile menu toggle clicked, current state:', isMenuOpen.value);
+  isMenuOpen.value = !isMenuOpen.value;
+  console.log('Mobile menu new state:', isMenuOpen.value);
+}
+
 function logout() {
   try { localStorage.removeItem('token'); } catch {}
   try { sessionStorage.removeItem('token'); } catch {}
@@ -417,15 +423,32 @@ const menuGroups = computed(() => {
       ],
     },
   ];
+  console.log('Mobile menu: Menu groups computed:', groups);
   return groups;
 });
 
 const visibleMenuGroups = computed(() => {
+  // If features are not loaded yet, show all menu items
+  if (!features.value) {
+    console.log('Mobile menu: Features not loaded, showing all menu items');
+    return menuGroups.value;
+  }
+  
   const filtered = menuGroups.value.map(g => ({
     label: g.label,
     items: g.items.filter(t => isPathEnabled(features.value as any, t.path))
   }));
-  return filtered.filter(g => g.items.length > 0 || g.label === 'Home' || g.label === 'Impostazioni');
+  
+  const result = filtered.filter(g => g.items.length > 0 || g.label === 'Home' || g.label === 'Impostazioni');
+  
+  // Fallback: if no groups are visible, at least show Home
+  if (result.length === 0) {
+    console.log('Mobile menu: No groups visible, showing fallback Home group');
+    return [{ label: 'Home', items: [{ label: 'Dashboard', path: '/dashboard' }] }];
+  }
+  
+  console.log('Mobile menu: Visible groups:', result);
+  return result;
 });
 </script>
 
@@ -434,6 +457,24 @@ const visibleMenuGroups = computed(() => {
 .fade-enter-from, .fade-leave-to { opacity: 0; }
 .slide-enter-active, .slide-leave-active { transition: transform .25s ease; }
 .slide-enter-from, .slide-leave-to { transform: translateX(-100%); }
+
+/* Ensure mobile menu items are always visible */
+.mobile-menu-group {
+  display: block !important;
+  visibility: visible !important;
+}
+
+.mobile-menu-group-label {
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+
+.mobile-menu-item {
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+}
 </style>
 
 <!-- Global styles for native select dropdown contrast -->

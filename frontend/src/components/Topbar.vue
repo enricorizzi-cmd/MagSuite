@@ -80,6 +80,36 @@
       </div>
     </div>
 
+    <!-- Sections (mobile) -->
+    <div class="md:hidden border-t border-white/10">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-10 flex items-center gap-2 overflow-x-auto">
+        <RouterLink
+          v-for="s in sections"
+          :key="s.key"
+          :to="s.base"
+          class="px-3 py-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-white/10 whitespace-nowrap"
+          :class="{ 'bg-white/10 text-white': currentSection === s.key }"
+        >
+          {{ s.label }}
+        </RouterLink>
+      </div>
+    </div>
+
+    <!-- Tabs (mobile) -->
+    <div class="md:hidden border-t border-white/10">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-10 flex items-center gap-2 overflow-x-auto">
+        <RouterLink
+          v-for="t in sectionTabs"
+          :key="t.path"
+          :to="t.path"
+          class="px-3 py-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-white/10 whitespace-nowrap"
+          :class="{ 'bg-white/10 text-white': isActive(t.path) }"
+        >
+          {{ t.label }}
+        </RouterLink>
+      </div>
+    </div>
+
     <!-- Second row: Tabs (desktop) -->
     <div class="hidden md:block border-t border-white/10">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-10 flex items-center gap-2 overflow-x-auto">

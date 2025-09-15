@@ -80,36 +80,6 @@
       </div>
     </div>
 
-    <!-- Sections (mobile) -->
-    <div class="md:hidden border-t border-white/10">
-      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-10 flex items-center gap-2 overflow-x-auto">
-        <RouterLink
-          v-for="s in sections"
-          :key="s.key"
-          :to="s.base"
-          class="px-3 py-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-white/10 whitespace-nowrap"
-          :class="{ 'bg-white/10 text-white': currentSection === s.key }"
-        >
-          {{ s.label }}
-        </RouterLink>
-      </div>
-    </div>
-
-    <!-- Tabs (mobile) -->
-    <div class="md:hidden border-t border-white/10">
-      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-10 flex items-center gap-2 overflow-x-auto">
-        <RouterLink
-          v-for="t in sectionTabs"
-          :key="t.path"
-          :to="t.path"
-          class="px-3 py-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-white/10 whitespace-nowrap"
-          :class="{ 'bg-white/10 text-white': isActive(t.path) }"
-        >
-          {{ t.label }}
-        </RouterLink>
-      </div>
-    </div>
-
     <!-- Second row: Tabs (desktop) -->
     <div class="hidden md:block border-t border-white/10">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-10 flex items-center gap-2 overflow-x-auto">
@@ -131,7 +101,7 @@
       <div v-if="isMenuOpen" class="fixed inset-0 z-[75] bg-black/70 backdrop-blur-[1px]" @click="isMenuOpen=false"></div>
     </transition>
     <transition name="slide">
-      <aside v-if="isMenuOpen" role="dialog" aria-modal="true" class="fixed top-0 left-0 h-full w-72 bg-[#0b1020]/95 border-r border-white/10 p-4 z-[80] shadow-2xl flex flex-col">
+      <aside v-if="isMenuOpen" role="dialog" aria-modal="true" class="fixed top-0 left-0 h-full w-full sm:w-80 bg-[#0b1020]/95 border-0 sm:border-r sm:border-white/10 p-4 z-[80] shadow-2xl flex flex-col">
         <div class="flex items-center justify-between mb-4">
           <div class="flex items-center gap-2">
             <img src="/icon.svg" class="h-6 w-6" />

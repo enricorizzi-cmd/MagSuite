@@ -10,33 +10,77 @@ const router = express.Router();
 // defaults to the value of the current company context so that items
 // are automatically scoped per tenant.
 const ready = (async () => {
-  await db.query(`CREATE TABLE IF NOT EXISTS items (
-    id SERIAL PRIMARY KEY,
-    name TEXT NOT NULL,
-    sku TEXT NOT NULL UNIQUE,
-    lotti BOOLEAN DEFAULT false,
-    seriali BOOLEAN DEFAULT false,
-    company_id INTEGER NOT NULL REFERENCES companies(id) DEFAULT NULLIF(current_setting('app.current_company_id', true), '')::int
-  )`);
-  // Extend schema with additional business fields (idempotent)
-  await db.query("ALTER TABLE items ADD COLUMN IF NOT EXISTS barcode TEXT");
-  await db.query("ALTER TABLE items ADD COLUMN IF NOT EXISTS code TEXT");
-  await db.query("ALTER TABLE items ADD COLUMN IF NOT EXISTS description TEXT");
-  await db.query("ALTER TABLE items ADD COLUMN IF NOT EXISTS type TEXT");
-  await db.query("ALTER TABLE items ADD COLUMN IF NOT EXISTS category TEXT");
-  await db.query("ALTER TABLE items ADD COLUMN IF NOT EXISTS \"group\" TEXT");
-  await db.query("ALTER TABLE items ADD COLUMN IF NOT EXISTS class TEXT");
-  await db.query("ALTER TABLE items ADD COLUMN IF NOT EXISTS manufacturer TEXT");
-  await db.query("ALTER TABLE items ADD COLUMN IF NOT EXISTS distributor TEXT");
-  await db.query("ALTER TABLE items ADD COLUMN IF NOT EXISTS supplier TEXT");
-  await db.query("ALTER TABLE items ADD COLUMN IF NOT EXISTS notes TEXT");
-  await db.query("ALTER TABLE items ADD COLUMN IF NOT EXISTS size TEXT");
-  await db.query("ALTER TABLE items ADD COLUMN IF NOT EXISTS color TEXT");
-  await db.query("ALTER TABLE items ADD COLUMN IF NOT EXISTS purchase_price NUMERIC");
-  await db.query("ALTER TABLE items ADD COLUMN IF NOT EXISTS avg_weighted_price NUMERIC DEFAULT 0");
-  await db.query("ALTER TABLE items ADD COLUMN IF NOT EXISTS min_stock INTEGER DEFAULT 0");
-  await db.query("ALTER TABLE items ADD COLUMN IF NOT EXISTS rotation_index NUMERIC DEFAULT 0");
-  await db.query("ALTER TABLE items ADD COLUMN IF NOT EXISTS last_purchase_date DATE");
+  try {
+    // First ensure companies table exists
+    await db.query(`
+      CREATE TABLE IF NOT EXISTS companies (
+        id SERIAL PRIMARY KEY,
+        name TEXT NOT NULL UNIQUE,
+        suspended BOOLEAN DEFAULT false,
+        created_at TIMESTAMPTZ DEFAULT now()
+      )
+    `);
+    
+    // Insert default company
+    await db.query(`
+      INSERT INTO companies (id, name) VALUES (1, 'Default Company') 
+      ON CONFLICT (id) DO NOTHING
+    `);
+    
+    await db.query(`CREATE TABLE IF NOT EXISTS items (
+      id SERIAL PRIMARY KEY,
+      name TEXT NOT NULL,
+      sku TEXT NOT NULL UNIQUE,
+      lotti BOOLEAN DEFAULT false,
+      seriali BOOLEAN DEFAULT false
+    )`);
+    
+    console.log('Items module initialized successfully');
+  } catch (error) {
+    console.error('Failed to initialize items module:', error);
+  }
+})();
+
+// Extend schema with additional business fields and multi-tenancy (idempotent)
+(async () => {
+  try {
+    // Ensure multi-tenant column exists
+    await db.query(
+      "ALTER TABLE items ADD COLUMN IF NOT EXISTS company_id INTEGER REFERENCES companies(id) DEFAULT 1"
+    );
+    await db.query("UPDATE items SET company_id = 1 WHERE company_id IS NULL");
+    await db.query("CREATE INDEX IF NOT EXISTS idx_items_company_id ON items(company_id)");
+
+    // Additional business fields
+    await db.query("ALTER TABLE items ADD COLUMN IF NOT EXISTS barcode TEXT");
+    await db.query("ALTER TABLE items ADD COLUMN IF NOT EXISTS code TEXT");
+    await db.query("ALTER TABLE items ADD COLUMN IF NOT EXISTS description TEXT");
+    await db.query("ALTER TABLE items ADD COLUMN IF NOT EXISTS type TEXT");
+    await db.query("ALTER TABLE items ADD COLUMN IF NOT EXISTS category TEXT");
+    await db.query("ALTER TABLE items ADD COLUMN IF NOT EXISTS \"group\" TEXT");
+    await db.query("ALTER TABLE items ADD COLUMN IF NOT EXISTS class TEXT");
+    await db.query("ALTER TABLE items ADD COLUMN IF NOT EXISTS manufacturer TEXT");
+    await db.query("ALTER TABLE items ADD COLUMN IF NOT EXISTS distributor TEXT");
+    await db.query("ALTER TABLE items ADD COLUMN IF NOT EXISTS supplier TEXT");
+    await db.query("ALTER TABLE items ADD COLUMN IF NOT EXISTS notes TEXT");
+    await db.query("ALTER TABLE items ADD COLUMN IF NOT EXISTS size TEXT");
+    await db.query("ALTER TABLE items ADD COLUMN IF NOT EXISTS color TEXT");
+    await db.query("ALTER TABLE items ADD COLUMN IF NOT EXISTS purchase_price NUMERIC");
+    await db.query(
+      "ALTER TABLE items ADD COLUMN IF NOT EXISTS avg_weighted_price NUMERIC DEFAULT 0"
+    );
+    await db.query(
+      "ALTER TABLE items ADD COLUMN IF NOT EXISTS min_stock INTEGER DEFAULT 0"
+    );
+    await db.query(
+      "ALTER TABLE items ADD COLUMN IF NOT EXISTS rotation_index NUMERIC DEFAULT 0"
+    );
+    await db.query(
+      "ALTER TABLE items ADD COLUMN IF NOT EXISTS last_purchase_date DATE"
+    );
+  } catch (err) {
+    logger.warn('Items schema extension skipped or partially applied', err.message);
+  }
 })();
 
 // Saved item views per company
@@ -46,7 +90,7 @@ const viewsReady = (async () => {
     name TEXT NOT NULL,
     filters JSONB NOT NULL DEFAULT '{}'::jsonb,
     columns JSONB DEFAULT '[]'::jsonb,
-    company_id INTEGER NOT NULL DEFAULT NULLIF(current_setting('app.current_company_id', true), '')::int,
+    company_id INTEGER REFERENCES companies(id) DEFAULT 1,
     created_at TIMESTAMPTZ DEFAULT now()
   )`);
 })();
@@ -157,7 +201,7 @@ router.get('/export', async (req, res) => {
   if (columns.length === 0) columns = allowed;
   const format = (req.query.format || 'csv').toLowerCase();
   const result = await db.query(
-    `SELECT ${columns.join(', ')} FROM items WHERE company_id = NULLIF(current_setting('app.current_company_id', true), '')::int ORDER BY id`
+    `SELECT ${columns.join(', ')} FROM items WHERE company_id = COALESCE(current_setting('app.current_company_id', true)::int, 1) ORDER BY id`
   );
 
   if (format === 'xlsx') {
@@ -230,7 +274,7 @@ router.get('/:id', async (req, res) => {
     return res.status(400).json({ error: 'Invalid id' });
   }
   const result = await db.query(
-    `SELECT id, name, sku, lotti, seriali FROM items WHERE id=$1 AND company_id = NULLIF(current_setting('app.current_company_id', true), '')::int`,
+    `SELECT id, name, sku, lotti, seriali FROM items WHERE id=$1 AND company_id = COALESCE(current_setting('app.current_company_id', true)::int, 1)`,
     [id]
   );
   if (result.rows.length === 0) {
@@ -246,7 +290,7 @@ router.put('/:id', async (req, res) => {
   }
   const { name, sku, lotti, seriali } = req.body;
   const oldRes = await db.query(
-    `SELECT id, name, sku, lotti, seriali FROM items WHERE id=$1 AND company_id = NULLIF(current_setting('app.current_company_id', true), '')::int`,
+    `SELECT id, name, sku, lotti, seriali FROM items WHERE id=$1 AND company_id = COALESCE(current_setting('app.current_company_id', true)::int, 1)`,
     [id]
   );
   if (oldRes.rows.length === 0) {
@@ -307,7 +351,7 @@ router.put('/:id', async (req, res) => {
   const setClause = fields.map((f, i) => `${f}=$${i + 1}`).join(', ');
   values.push(id);
   const result = await db.query(
-    `UPDATE items SET ${setClause} WHERE id=$${fields.length + 1} AND company_id = NULLIF(current_setting('app.current_company_id', true), '')::int RETURNING id, name, sku, lotti, seriali`,
+    `UPDATE items SET ${setClause} WHERE id=$${fields.length + 1} AND company_id = COALESCE(current_setting('app.current_company_id', true)::int, 1) RETURNING id, name, sku, lotti, seriali`,
     values
   );
   if (result.rows.length === 0) {
@@ -330,14 +374,14 @@ router.delete('/:id', async (req, res) => {
     return res.status(400).json({ error: 'Invalid id' });
   }
   const oldRes = await db.query(
-    `SELECT id, name, sku, lotti, seriali FROM items WHERE id=$1 AND company_id = NULLIF(current_setting('app.current_company_id', true), '')::int`,
+    `SELECT id, name, sku, lotti, seriali FROM items WHERE id=$1 AND company_id = COALESCE(current_setting('app.current_company_id', true)::int, 1)`,
     [id]
   );
   if (oldRes.rows.length === 0) {
     return res.status(404).json({ error: 'Not found' });
   }
   await db.query(
-    `DELETE FROM items WHERE id=$1 AND company_id = NULLIF(current_setting('app.current_company_id', true), '')::int`,
+    `DELETE FROM items WHERE id=$1 AND company_id = COALESCE(current_setting('app.current_company_id', true)::int, 1)`,
     [id]
   );
   audit.logAction(req.user.id, 'delete_item', { item: oldRes.rows[0] });
@@ -350,7 +394,7 @@ module.exports = { router, ready };
 router.get('/views', async (req, res) => {
   await viewsReady;
   const { rows } = await db.query(
-    `SELECT id, name, filters, columns FROM item_views WHERE company_id = NULLIF(current_setting('app.current_company_id', true), '')::int ORDER BY id`
+    `SELECT id, name, filters, columns FROM item_views WHERE company_id = COALESCE(current_setting('app.current_company_id', true)::int, 1) ORDER BY id`
   );
   res.json(rows);
 });
@@ -370,7 +414,7 @@ router.delete('/views/:id', async (req, res) => {
   await viewsReady;
   const id = Number(req.params.id);
   await db.query(
-    `DELETE FROM item_views WHERE id=$1 AND company_id = NULLIF(current_setting('app.current_company_id', true), '')::int`,
+    `DELETE FROM item_views WHERE id=$1 AND company_id = COALESCE(current_setting('app.current_company_id', true)::int, 1)`,
     [id]
   );
   res.status(204).end();

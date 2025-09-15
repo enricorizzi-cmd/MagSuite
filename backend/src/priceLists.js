@@ -10,15 +10,13 @@ async function ensureReady() {
     id SERIAL PRIMARY KEY,
     name TEXT NOT NULL,
     currency TEXT DEFAULT 'EUR',
-    company_id INTEGER NOT NULL DEFAULT NULLIF(current_setting('app.current_company_id', true), '')::int,
     created_at TIMESTAMPTZ DEFAULT now()
   )`);
   await db.query(`CREATE TABLE IF NOT EXISTS item_prices (
     price_list_id INTEGER REFERENCES price_lists(id) ON DELETE CASCADE,
     item_id INTEGER REFERENCES items(id) ON DELETE CASCADE,
     price NUMERIC NOT NULL,
-    PRIMARY KEY(price_list_id, item_id),
-    company_id INTEGER NOT NULL DEFAULT NULLIF(current_setting('app.current_company_id', true), '')::int
+    PRIMARY KEY(price_list_id, item_id)
   )`);
   initialized = true;
 }

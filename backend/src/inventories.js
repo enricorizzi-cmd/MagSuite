@@ -5,30 +5,39 @@ const { authenticateToken, rbac } = require('./auth');
 const router = express.Router();
 
 (async () => {
-  await db.query(`CREATE TABLE IF NOT EXISTS inventories (
-    id SERIAL PRIMARY KEY,
-    status TEXT NOT NULL,
-    scope JSONB,
-    counts JSONB DEFAULT '[]',
-    differences JSONB DEFAULT '[]',
-    delta JSONB DEFAULT '[]',
-    approvals JSONB DEFAULT '[]',
-    audit JSONB DEFAULT '[]',
-    company_id INTEGER NOT NULL DEFAULT NULLIF(current_setting('app.current_company_id', true), '')::int,
-    created_at TIMESTAMPTZ DEFAULT now()
-  )`);
-  
-  // Enable RLS and create policies
-  await db.query('ALTER TABLE inventories ENABLE ROW LEVEL SECURITY');
-  await db.query(`CREATE POLICY inventories_select ON inventories
-    FOR SELECT USING (company_id = current_setting('app.current_company_id', true)::int)`);
-  await db.query(`CREATE POLICY inventories_insert ON inventories
-    FOR INSERT WITH CHECK (company_id = current_setting('app.current_company_id', true)::int)`);
-  await db.query(`CREATE POLICY inventories_update ON inventories
-    FOR UPDATE USING (company_id = current_setting('app.current_company_id', true)::int)
-    WITH CHECK (company_id = current_setting('app.current_company_id', true)::int)`);
-  await db.query(`CREATE POLICY inventories_delete ON inventories
-    FOR DELETE USING (company_id = current_setting('app.current_company_id', true)::int)`);
+  try {
+    // Create inventories table (multi-tenant)
+    await db.query(`CREATE TABLE IF NOT EXISTS inventories (
+      id SERIAL PRIMARY KEY,
+      status TEXT NOT NULL,
+      scope JSONB,
+      counts JSONB DEFAULT '[]',
+      differences JSONB DEFAULT '[]',
+      delta JSONB DEFAULT '[]',
+      approvals JSONB DEFAULT '[]',
+      audit JSONB DEFAULT '[]',
+      company_id INTEGER REFERENCES companies(id) DEFAULT 1,
+      created_at TIMESTAMPTZ DEFAULT now()
+    )`);
+
+    // Ensure company_id exists and is populated (idempotent)
+    await db.query(`DO $$
+      BEGIN
+        IF NOT EXISTS (
+          SELECT 1 FROM information_schema.columns
+          WHERE table_name = 'inventories' AND column_name = 'company_id'
+        ) THEN
+          ALTER TABLE inventories ADD COLUMN company_id INTEGER REFERENCES companies(id) DEFAULT 1;
+        END IF;
+        UPDATE inventories SET company_id = 1 WHERE company_id IS NULL;
+      END $$`);
+
+    await db.query(`CREATE INDEX IF NOT EXISTS idx_inventories_company_id ON inventories(company_id)`);
+
+    console.log('Inventories module initialized successfully');
+  } catch (error) {
+    console.error('Failed to initialize inventories module:', error);
+  }
 })();
 
 router.get('/inventories', async (req, res) => {

@@ -6,15 +6,13 @@ const router = express.Router();
 (async () => {
   await db.query(`CREATE TABLE IF NOT EXISTS warehouses (
     id SERIAL PRIMARY KEY,
-    name TEXT NOT NULL,
-    company_id INTEGER NOT NULL DEFAULT NULLIF(current_setting('app.current_company_id', true), '')::int,
-    UNIQUE(company_id, name)
+    name TEXT NOT NULL UNIQUE
   )`);
 })();
 
 router.get('/', async (req, res) => {
   const result = await db.query(
-    "SELECT id, name FROM warehouses WHERE company_id = NULLIF(current_setting('app.current_company_id', true), '')::int ORDER BY id"
+    "SELECT id, name FROM warehouses ORDER BY id"
   );
   res.json({ items: result.rows });
 });

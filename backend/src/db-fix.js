@@ -20,15 +20,26 @@ async function fixDatabaseIssues() {
       ON CONFLICT (id) DO NOTHING
     `);
     
-    // 3. Fix items table - add missing columns
+    // 3. Ensure items table exists with company_id
+    await db.query(`
+      CREATE TABLE IF NOT EXISTS items (
+        id SERIAL PRIMARY KEY,
+        name TEXT NOT NULL,
+        sku TEXT,
+        lotti BOOLEAN DEFAULT false,
+        seriali BOOLEAN DEFAULT false,
+        uom TEXT,
+        mrp NUMERIC,
+        company_id INTEGER REFERENCES companies(id) DEFAULT 1,
+        created_at TIMESTAMPTZ DEFAULT now(),
+        updated_at TIMESTAMPTZ DEFAULT now()
+      )
+    `);
+    
+    // 4. Fix items table - add missing columns
     await db.query(`
       DO $$
       BEGIN
-        -- Add company_id if missing
-        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'items' AND column_name = 'company_id') THEN
-          ALTER TABLE items ADD COLUMN company_id INTEGER REFERENCES companies(id);
-        END IF;
-        
         -- Add sku if missing
         IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'items' AND column_name = 'sku') THEN
           ALTER TABLE items ADD COLUMN sku TEXT;
@@ -36,70 +47,64 @@ async function fixDatabaseIssues() {
           ALTER TABLE items ALTER COLUMN sku SET NOT NULL;
           ALTER TABLE items ADD CONSTRAINT items_sku_unique UNIQUE (sku);
         END IF;
+        
+        -- Add company_id if missing
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'items' AND column_name = 'company_id') THEN
+          ALTER TABLE items ADD COLUMN company_id INTEGER REFERENCES companies(id) DEFAULT 1;
+          UPDATE items SET company_id = 1 WHERE company_id IS NULL;
+        END IF;
       END $$
     `);
     
-    // 4. Update existing items to have company_id
-    await db.query(`
-      UPDATE items SET company_id = 1 WHERE company_id IS NULL
-    `);
+    // 5. Fix all other tables to include company_id
+    const tablesToFix = [
+      'customers', 'suppliers', 'warehouses', 'locations', 
+      'lots', 'sequences', 'causals', 'price_lists', 
+      'documents', 'transfers', 'inventories', 'imports'
+    ];
     
-    // 5. Make company_id NOT NULL for items
-    await db.query(`
-      ALTER TABLE items ALTER COLUMN company_id SET NOT NULL
-    `);
+    for (const tableName of tablesToFix) {
+      // Create table if it doesn't exist
+      await db.query(`
+        CREATE TABLE IF NOT EXISTS ${tableName} (
+          id SERIAL PRIMARY KEY,
+          name TEXT NOT NULL,
+          company_id INTEGER REFERENCES companies(id) DEFAULT 1,
+          created_at TIMESTAMPTZ DEFAULT now(),
+          updated_at TIMESTAMPTZ DEFAULT now()
+        )
+      `);
+      
+      // Add company_id if missing
+      await db.query(`
+        DO $$
+        BEGIN
+          IF NOT EXISTS (
+            SELECT 1 FROM information_schema.columns 
+            WHERE table_name = '${tableName}' AND column_name = 'company_id'
+          ) THEN
+            ALTER TABLE ${tableName} ADD COLUMN company_id INTEGER REFERENCES companies(id) DEFAULT 1;
+            UPDATE ${tableName} SET company_id = 1 WHERE company_id IS NULL;
+          END IF;
+        END $$
+      `);
+    }
     
-    // 6. Fix policies - drop and recreate to avoid duplicates
-    await db.query(`
-      DO $$
-      BEGIN
-        -- Drop existing policies if they exist
-        DROP POLICY IF EXISTS items_select_policy ON items;
-        DROP POLICY IF EXISTS items_insert_policy ON items;
-        DROP POLICY IF EXISTS items_update_policy ON items;
-        DROP POLICY IF EXISTS items_delete_policy ON items;
-        
-        -- Enable RLS
-        ALTER TABLE items ENABLE ROW LEVEL SECURITY;
-        
-        -- Create new policies
-        CREATE POLICY items_select_policy ON items
-          FOR SELECT USING (company_id = current_setting('app.current_company_id', true)::int);
-        CREATE POLICY items_insert_policy ON items
-          FOR INSERT WITH CHECK (company_id = current_setting('app.current_company_id', true)::int);
-        CREATE POLICY items_update_policy ON items
-          FOR UPDATE USING (company_id = current_setting('app.current_company_id', true)::int)
-          WITH CHECK (company_id = current_setting('app.current_company_id', true)::int);
-        CREATE POLICY items_delete_policy ON items
-          FOR DELETE USING (company_id = current_setting('app.current_company_id', true)::int);
-      END $$
-    `);
+    // 6. Create indexes for performance
+    const indexes = [
+      'CREATE INDEX IF NOT EXISTS idx_items_company_id ON items(company_id);',
+      'CREATE INDEX IF NOT EXISTS idx_customers_company_id ON customers(company_id);',
+      'CREATE INDEX IF NOT EXISTS idx_suppliers_company_id ON suppliers(company_id);',
+      'CREATE INDEX IF NOT EXISTS idx_warehouses_company_id ON warehouses(company_id);'
+    ];
     
-    // 7. Fix import_logs policies
-    await db.query(`
-      DO $$
-      BEGIN
-        -- Drop existing policies if they exist
-        DROP POLICY IF EXISTS import_logs_select ON import_logs;
-        DROP POLICY IF EXISTS import_logs_insert ON import_logs;
-        DROP POLICY IF EXISTS import_logs_update ON import_logs;
-        DROP POLICY IF EXISTS import_logs_delete ON import_logs;
-        
-        -- Enable RLS
-        ALTER TABLE import_logs ENABLE ROW LEVEL SECURITY;
-        
-        -- Create new policies
-        CREATE POLICY import_logs_select ON import_logs
-          FOR SELECT USING (company_id = current_setting('app.current_company_id', true)::int);
-        CREATE POLICY import_logs_insert ON import_logs
-          FOR INSERT WITH CHECK (company_id = current_setting('app.current_company_id', true)::int);
-        CREATE POLICY import_logs_update ON import_logs
-          FOR UPDATE USING (company_id = current_setting('app.current_company_id', true)::int)
-          WITH CHECK (company_id = current_setting('app.current_company_id', true)::int);
-        CREATE POLICY import_logs_delete ON import_logs
-          FOR DELETE USING (company_id = current_setting('app.current_company_id', true)::int);
-      END $$
-    `);
+    for (const indexSql of indexes) {
+      try {
+        await db.query(indexSql);
+      } catch (error) {
+        console.log(`Warning: Could not create index: ${error.message}`);
+      }
+    }
     
     console.log('Database fixes completed successfully');
     return true;

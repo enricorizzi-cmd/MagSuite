@@ -15,8 +15,7 @@ const router = express.Router();
     id SERIAL PRIMARY KEY,
     warehouse_id INT REFERENCES warehouses(id) ON DELETE CASCADE,
     name TEXT NOT NULL,
-    parent_id INT REFERENCES locations(id) ON DELETE CASCADE,
-    company_id INTEGER NOT NULL DEFAULT NULLIF(current_setting('app.current_company_id', true), '')::int
+    parent_id INT REFERENCES locations(id) ON DELETE CASCADE
   )`);
 })();
 

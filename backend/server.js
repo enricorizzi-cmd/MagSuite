@@ -41,6 +41,16 @@ const { fixDatabaseIssues } = require('./src/db-fix');
   console.log('Starting database initialization...');
   await fixDatabaseIssues();
   
+  // Force run migrations if needed
+  try {
+    console.log('Running database migrations...');
+    const { execSync } = require('child_process');
+    execSync('npm run migrate', { stdio: 'inherit' });
+    console.log('Migrations completed successfully');
+  } catch (error) {
+    console.log('Migration failed, continuing with database fixes:', error.message);
+  }
+  
   await db.query(`CREATE TABLE IF NOT EXISTS purchase_conditions (
     id SERIAL PRIMARY KEY,
     name TEXT NOT NULL,

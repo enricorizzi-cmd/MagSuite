@@ -58,6 +58,7 @@ fi
 # Run database migrations with retry to avoid transient TLS hiccups
 set +e
 attempts=0
+echo "Starting database migrations..."
 until npm run migrate; do
   code=$?
   attempts=$((attempts+1))
@@ -69,5 +70,6 @@ until npm run migrate; do
   sleep 2
 done
 set -e
+echo "Database migrations completed successfully"
 
 exec "$@"

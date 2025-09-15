@@ -9,14 +9,13 @@ const ready = (async () => {
     id SERIAL PRIMARY KEY,
     code TEXT NOT NULL,
     description TEXT,
-    sign INTEGER NOT NULL DEFAULT 1,
-    company_id INTEGER NOT NULL REFERENCES companies(id) DEFAULT NULLIF(current_setting('app.current_company_id', true), '')::int
+    sign INTEGER NOT NULL DEFAULT 1
   )`);
 })();
 
 router.get('/', async (req, res) => {
   const result = await db.query(
-    "SELECT * FROM causals WHERE company_id = NULLIF(current_setting('app.current_company_id', true), '')::int ORDER BY id"
+    "SELECT * FROM causals ORDER BY id"
   );
   res.json({ items: result.rows });
 });

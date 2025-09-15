@@ -8,14 +8,13 @@ const ready = (async () => {
     id SERIAL PRIMARY KEY,
     name TEXT NOT NULL,
     prefix TEXT DEFAULT '',
-    next_number INTEGER NOT NULL DEFAULT 1,
-    company_id INTEGER NOT NULL REFERENCES companies(id) DEFAULT NULLIF(current_setting('app.current_company_id', true), '')::int
+    next_number INTEGER NOT NULL DEFAULT 1
   )`);
 })();
 
 router.get('/', async (req, res) => {
   const result = await db.query(
-    "SELECT * FROM sequences WHERE company_id = NULLIF(current_setting('app.current_company_id', true), '')::int ORDER BY id"
+    "SELECT * FROM sequences ORDER BY id"
   );
   res.json({ items: result.rows });
 });

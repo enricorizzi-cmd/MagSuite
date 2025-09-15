@@ -11,29 +11,25 @@ const ready = (async () => {
     status TEXT NOT NULL DEFAULT 'draft',
     causal TEXT,
     created_at TIMESTAMPTZ DEFAULT now(),
-    lines JSONB DEFAULT '[]',
-    company_id INTEGER NOT NULL DEFAULT NULLIF(current_setting('app.current_company_id', true), '')::int
+    lines JSONB DEFAULT '[]'
   )`);
   await db.query(`CREATE TABLE IF NOT EXISTS warehouses (
     id SERIAL PRIMARY KEY,
-    name TEXT NOT NULL,
-    company_id INTEGER NOT NULL DEFAULT NULLIF(current_setting('app.current_company_id', true), '')::int
+    name TEXT NOT NULL
   )`);
   await db.query(`CREATE TABLE IF NOT EXISTS lots (
     id SERIAL PRIMARY KEY,
     item_id INT REFERENCES items(id),
     lot TEXT NOT NULL,
     expiry DATE,
-    status TEXT NOT NULL DEFAULT 'active',
-    company_id INTEGER NOT NULL DEFAULT NULLIF(current_setting('app.current_company_id', true), '')::int
+    status TEXT NOT NULL DEFAULT 'active'
   )`);
   await db.query(`CREATE TABLE IF NOT EXISTS serials (
     id SERIAL PRIMARY KEY,
     item_id INT REFERENCES items(id),
     serial TEXT NOT NULL,
     expiry DATE,
-    blocked BOOLEAN DEFAULT false,
-    company_id INTEGER NOT NULL DEFAULT NULLIF(current_setting('app.current_company_id', true), '')::int
+    blocked BOOLEAN DEFAULT false
   )`);
   await db.query(`CREATE TABLE IF NOT EXISTS stock_movements (
     id SERIAL PRIMARY KEY,
@@ -44,8 +40,7 @@ const ready = (async () => {
     lot_id INT REFERENCES lots(id),
     serial_id INT REFERENCES serials(id),
     expiry DATE,
-    moved_at TIMESTAMPTZ DEFAULT now(),
-    company_id INTEGER NOT NULL DEFAULT NULLIF(current_setting('app.current_company_id', true), '')::int
+    moved_at TIMESTAMPTZ DEFAULT now()
   )`);
   await db.query(
     "ALTER TABLE lots ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'active'"

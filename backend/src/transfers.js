@@ -11,14 +11,13 @@ const router = express.Router();
     dest_location_id INT REFERENCES locations(id),
     quantity NUMERIC NOT NULL,
     status TEXT DEFAULT 'draft',
-    document_id INT REFERENCES documents(id),
-    company_id INTEGER NOT NULL DEFAULT NULLIF(current_setting('app.current_company_id', true), '')::int
+    document_id INT REFERENCES documents(id)
   )`);
 })();
 
 router.get('/', async (req, res) => {
   const result = await db.query(
-    "SELECT * FROM transfers WHERE company_id = NULLIF(current_setting('app.current_company_id', true), '')::int ORDER BY id"
+    "SELECT * FROM transfers ORDER BY id"
   );
   res.json({ items: result.rows });
 });

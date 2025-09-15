@@ -9,8 +9,7 @@ const ready = (async () => {
     item_id INT REFERENCES items(id),
     lot TEXT NOT NULL,
     expiry DATE,
-    status TEXT NOT NULL DEFAULT 'active',
-    company_id INTEGER NOT NULL DEFAULT NULLIF(current_setting('app.current_company_id', true), '')::int
+    status TEXT NOT NULL DEFAULT 'active'
   )`);
 })();
 

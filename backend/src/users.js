@@ -9,25 +9,25 @@ const router = express.Router();
     name TEXT NOT NULL,
     role TEXT NOT NULL DEFAULT 'user',
     warehouse_id INTEGER REFERENCES warehouses(id),
-    company_id INTEGER NOT NULL DEFAULT NULLIF(current_setting('app.current_company_id', true), '')::int
+    company_id INTEGER REFERENCES companies(id) DEFAULT 1
   )`);
-  
-  // Enable RLS and create policies
-  await db.query('ALTER TABLE user_settings ENABLE ROW LEVEL SECURITY');
-  await db.query(`CREATE POLICY user_settings_select ON user_settings
-    FOR SELECT USING (company_id = current_setting('app.current_company_id', true)::int)`);
-  await db.query(`CREATE POLICY user_settings_insert ON user_settings
-    FOR INSERT WITH CHECK (company_id = current_setting('app.current_company_id', true)::int)`);
-  await db.query(`CREATE POLICY user_settings_update ON user_settings
-    FOR UPDATE USING (company_id = current_setting('app.current_company_id', true)::int)
-    WITH CHECK (company_id = current_setting('app.current_company_id', true)::int)`);
-  await db.query(`CREATE POLICY user_settings_delete ON user_settings
-    FOR DELETE USING (company_id = current_setting('app.current_company_id', true)::int)`);
+  // Ensure multi-tenancy column exists and is populated
+  await db.query(`DO $$
+    BEGIN
+      IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'user_settings' AND column_name = 'company_id'
+      ) THEN
+        ALTER TABLE user_settings ADD COLUMN company_id INTEGER REFERENCES companies(id) DEFAULT 1;
+      END IF;
+      UPDATE user_settings SET company_id = 1 WHERE company_id IS NULL;
+    END $$`);
+  await db.query(`CREATE INDEX IF NOT EXISTS idx_user_settings_company_id ON user_settings(company_id)`);
 })();
 
 router.get('/', async (req, res) => {
   const result = await db.query(
-    "SELECT id, name, role, warehouse_id FROM user_settings WHERE company_id = NULLIF(current_setting('app.current_company_id', true), '')::int ORDER BY id"
+    "SELECT id, name, role, warehouse_id FROM user_settings ORDER BY id"
   );
   const users = result.rows.map((row) => ({
     id: row.id,
@@ -41,7 +41,7 @@ router.get('/', async (req, res) => {
 router.get('/:id', async (req, res) => {
   const id = Number(req.params.id);
   const result = await db.query(
-    "SELECT id, name, role, warehouse_id FROM user_settings WHERE id=$1 AND company_id = NULLIF(current_setting('app.current_company_id', true), '')::int",
+    "SELECT id, name, role, warehouse_id FROM user_settings WHERE id=$1 AND company_id = COALESCE(NULLIF(current_setting('app.current_company_id', true), '')::int, 1)",
     [id]
   );
   const user = result.rows[0];
@@ -79,7 +79,7 @@ router.put('/:id', async (req, res) => {
     return res.status(400).json({ error: 'Name required' });
   }
   const result = await db.query(
-    "UPDATE user_settings SET name=$1, role=$2, warehouse_id=$3 WHERE id=$4 AND company_id = NULLIF(current_setting('app.current_company_id', true), '')::int RETURNING id, name, role, warehouse_id",
+    "UPDATE user_settings SET name=$1, role=$2, warehouse_id=$3 WHERE id=$4 AND company_id = COALESCE(NULLIF(current_setting('app.current_company_id', true), '')::int, 1) RETURNING id, name, role, warehouse_id",
     [name, role, warehouseId, id]
   );
   const user = result.rows[0];
@@ -95,7 +95,7 @@ router.put('/:id', async (req, res) => {
 router.delete('/:id', async (req, res) => {
   const id = Number(req.params.id);
   const result = await db.query(
-    "DELETE FROM user_settings WHERE id=$1 AND company_id = NULLIF(current_setting('app.current_company_id', true), '')::int",
+    "DELETE FROM user_settings WHERE id=$1 AND company_id = COALESCE(NULLIF(current_setting('app.current_company_id', true), '')::int, 1)",
     [id]
   );
   if (result.rowCount === 0) return res.status(404).end();

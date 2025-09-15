@@ -7,31 +7,23 @@ const router = express.Router();
   await db.query(`CREATE TABLE IF NOT EXISTS suppliers (
     id SERIAL PRIMARY KEY,
     name TEXT NOT NULL,
-    company_id INTEGER NOT NULL DEFAULT NULLIF(current_setting('app.current_company_id', true), '')::int
+    company_id INTEGER REFERENCES companies(id) DEFAULT 1,
+    created_at TIMESTAMPTZ DEFAULT now(),
+    updated_at TIMESTAMPTZ DEFAULT now()
   )`);
-  
-  // Enable RLS and create policies
-  await db.query('ALTER TABLE suppliers ENABLE ROW LEVEL SECURITY');
-  await db.query(`CREATE POLICY suppliers_select ON suppliers
-    FOR SELECT USING (company_id = current_setting('app.current_company_id', true)::int)`);
-  await db.query(`CREATE POLICY suppliers_insert ON suppliers
-    FOR INSERT WITH CHECK (company_id = current_setting('app.current_company_id', true)::int)`);
-  await db.query(`CREATE POLICY suppliers_update ON suppliers
-    FOR UPDATE USING (company_id = current_setting('app.current_company_id', true)::int)
-    WITH CHECK (company_id = current_setting('app.current_company_id', true)::int)`);
-  await db.query(`CREATE POLICY suppliers_delete ON suppliers
-    FOR DELETE USING (company_id = current_setting('app.current_company_id', true)::int)`);
 })();
 
 router.get('/', async (req, res) => {
   const limit = Math.min(parseInt(req.query.limit) || 10, 100);
   const page = Math.max(parseInt(req.query.page) || 1, 1);
   const offset = (page - 1) * limit;
+  const companyId = req.headers['x-company-id'] || 1;
+  
   const result = await db.query(
-    'SELECT id, name FROM suppliers WHERE company_id = NULLIF(current_setting(\'app.current_company_id\', true), \'\')::int ORDER BY id LIMIT $1 OFFSET $2',
-    [limit, offset]
+    'SELECT id, name FROM suppliers WHERE company_id = $1 ORDER BY id LIMIT $2 OFFSET $3',
+    [companyId, limit, offset]
   );
-  const totalRes = await db.query('SELECT COUNT(*) FROM suppliers WHERE company_id = NULLIF(current_setting(\'app.current_company_id\', true), \'\')::int');
+  const totalRes = await db.query('SELECT COUNT(*) FROM suppliers WHERE company_id = $1', [companyId]);
   res.json({ items: result.rows, total: parseInt(totalRes.rows[0].count, 10) });
 });
 

@@ -126,12 +126,14 @@
           </div>
         </div>
         <nav class="grid gap-2 overflow-y-auto pr-1 flex-1 min-h-0">
-          <div v-for="g in visibleMenuGroups" :key="g.label" class="mobile-menu-group">
-            <div class="text-[11px] uppercase tracking-wide text-slate-400 px-2 mobile-menu-group-label">{{ g.label }}</div>
+          <div v-for="g in visibleMenuGroups" :key="g.key" class="mobile-menu-group">
+            <div class="text-[11px] uppercase tracking-wide text-slate-400 px-2 mobile-menu-group-label"
+             :class="{ 'text-white': g.key === currentSection }">{{ g.label }}</div>
             <RouterLink
               v-for="t in g.items"
               :key="t.path"
               :to="t.path"
+              :aria-current="isActive(t.path) ? 'page' : undefined"
               @click="isMenuOpen=false"
               class="block px-3 py-2 rounded-lg text-slate-300 hover:text-white hover:bg-white/10 mobile-menu-item"
               :class="{ 'bg-white/10 text-white': isActive(t.path) }"
@@ -164,6 +166,7 @@ const router = useRouter();
 // Sections and tabs
 type Tab = { label: string; path: string };
 type Section = { key: 'home' | 'anagrafiche' | 'logistica' | 'edilizia' | 'risorse-umane' | 'commerciale' | 'amministrativa' | 'impostazioni'; label: string; base: string };
+type MobileMenuGroup = { key: Section['key']; label: string; items: Tab[] };
 
 const role = ref<string>('');
 const features = ref<Record<string, Record<string, boolean>> | null>(null);
@@ -359,7 +362,9 @@ watch(isMenuOpen, (open) => {
 watch(() => route.path, () => { isMenuOpen.value = false; });
 
 function toggleMobileMenu() {
-  isMenuOpen.value = !isMenuOpen.value;
+  const nextState = !isMenuOpen.value;
+  isMenuOpen.value = nextState;
+  if (nextState) notifOpen.value = false;
 }
 
 function logout() {
@@ -370,11 +375,11 @@ function logout() {
 }
 
 // Build the mobile menu from the same section/tab rules used on desktop
-const visibleMenuGroups = computed(() => {
+const visibleMenuGroups = computed<MobileMenuGroup[]>(() => {
   return sections.value
     .map(section => {
       const items = tabsForSection(section.key).filter(t => isPathEnabled(features.value as any, t.path));
-      return { label: section.label, items };
+      return { key: section.key, label: section.label, items };
     })
     .filter(group => group.items.length > 0);
 });

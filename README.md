@@ -1,5 +1,6 @@
 # MagSuite
 
+> **Prima di iniziare:** leggi e segui la [Mandatory Deployment Workflow](WORKFLOW_RULE.md). Ogni attivita termina solo con deploy su Render riuscito e servizio live.
 [![Backend CI](https://github.com/example/MagSuite/actions/workflows/ci.yml/badge.svg?job=backend)](https://github.com/example/MagSuite/actions/workflows/ci.yml)
 [![Frontend CI](https://github.com/example/MagSuite/actions/workflows/ci.yml/badge.svg?job=frontend)](https://github.com/example/MagSuite/actions/workflows/ci.yml)
 
@@ -308,4 +309,6 @@ For details on the branching policy, environments and CI/CD workflow, see the [t
 ## License
 
 MagSuite is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
+
+
 

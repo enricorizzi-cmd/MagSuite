@@ -8,7 +8,7 @@
       @new="$emit('new')"
       v-slot="{ filtered }"
     >
-      <div v-if="filtered.length === 0" class="text-slate-400">Nessun risultato.</div>
+      <div v-if="filtered.length === 0" class="text-slate-400">{{ emptyLabelComputed }}</div>
       <div v-else class="overflow-x-auto border border-white/10 rounded-lg">
         <table class="min-w-full text-sm">
           <thead class="bg-white/5 text-slate-300">
@@ -44,12 +44,15 @@ const props = defineProps<{
   fields: Array<Field>;
   newLabel?: string;
   showNew?: boolean;
+  emptyLabel?: string;
   rowKeyField?: string; // defaults to 'id' if present, else JSON stringify
   page?: number;
   limit?: number;
 }>();
 
 defineEmits<{ (e: 'new'): void; (e: 'edit', row: Record<string, any>): void }>();
+
+const emptyLabelComputed = computed<string>(() => props.emptyLabel || 'Nessun risultato.');
 
 function rowKey(row: Record<string, any>): string | number {
   const k = props.rowKeyField || 'id';

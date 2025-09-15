@@ -16,6 +16,7 @@
         ]"
         :new-label="role==='super_admin' ? 'Nuovo utente' : ''"
         :show-new="role==='super_admin'"
+        empty-label="Nessun utente."
         @new="openCreate"
         @edit="openEdit"
       />

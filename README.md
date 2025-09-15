@@ -240,6 +240,16 @@ Required configuration:
 - **Environment variables:** `DATABASE_URL`, `ACCESS_SECRET`, `REFRESH_SECRET`, `SSO_SECRET`, `API_KEY`, `FILE_ENCRYPTION_KEY`, `ALERT_EMAIL` (optional), `BATCH_STRATEGY` (optional), `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE`, `VAPID_PUBLIC`, `VAPID_PRIVATE`, `SENTRY_DSN`, `CORS_ORIGIN`, `VITE_API_URL`. If using Supabase pooling (6543) set `SUPABASE_CA_CERT` to the base64 of your DB CA. If using direct (5432), include `?sslmode=require` in `DATABASE_URL`.
 - **Blueprint (optional):** a starter `render.yaml` is included. It defines a single `web` service using the Dockerfile above. Import it in Render → New + → Blueprint from Repo and fill secrets after import.
 
+### Render MCP monitoring
+
+Render provides an official [MCP server](https://render.com/docs/mcp-server) that we access through Cursor and automation. After every push, start the Render deploy (either via Git auto-deploy or `@render deploy magsuite-backend`) and run the helper below to watch the rollout until it is live:
+
+```bash
+# requires RENDER_API_KEY and RENDER_SERVICE_ID in your environment
+node scripts/render-monitor.js
+```
+
+The script polls `GET /services/{SERVICE_ID}/deploys` and `GET /logs` (see the [Render API docs](https://render.com/docs/api)) every 15 seconds, streaming new log lines to stdout. It exits successfully only when the latest deploy reaches the `live` state; it exits with a non-zero code if the deploy transitions to a failure status, so you can re-run fixes immediately.
 ### Post-activity mandatory sequence
 
 After every change, always perform:

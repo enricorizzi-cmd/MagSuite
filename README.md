@@ -226,12 +226,19 @@ cd ../frontend && npm run dev
 
 ### Render
 
-Deploying on [Render](https://render.com) (single Node service serving API and frontend) requires the following configuration:
+Deploying on [Render](https://render.com) follows the project's golden rule: **a single Render web service** is responsible for serving the backend API, the built frontend, and connecting to the database.
+
+Golden rule details:
+- One web service only (no separate FE/BE services).
+- The Dockerfile at `backend/Dockerfile` builds the Vue app and copies the output to `./public` within the same container.
+- The same service holds all environment variables for DB/Supabase and runtime configuration.
+
+Required configuration:
 
 - **Dockerfile path:** `backend/Dockerfile` (build context = repo root)
 - **Health check path:** `/health`
 - **Environment variables:** `DATABASE_URL`, `ACCESS_SECRET`, `REFRESH_SECRET`, `SSO_SECRET`, `API_KEY`, `FILE_ENCRYPTION_KEY`, `ALERT_EMAIL` (optional), `BATCH_STRATEGY` (optional), `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE`, `VAPID_PUBLIC`, `VAPID_PRIVATE`, `SENTRY_DSN`, `CORS_ORIGIN`, `VITE_API_URL`. If using Supabase pooling (6543) set `SUPABASE_CA_CERT` to the base64 of your DB CA. If using direct (5432), include `?sslmode=require` in `DATABASE_URL`.
-- **Blueprint (optional):** a starter `render.yaml` is included. You can import it in Render → New + → Blueprint from Repo. Fill secrets after import.
+- **Blueprint (optional):** a starter `render.yaml` is included. It defines a single `web` service using the Dockerfile above. Import it in Render → New + → Blueprint from Repo and fill secrets after import.
 
 To audit a deployed service with Render API, create a Personal Access Token in Render (Account → API Keys) and run:
 

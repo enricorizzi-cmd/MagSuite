@@ -125,6 +125,14 @@ git commit -m "🔒 SEC: Add input validation to API endpoints"
 - **Qualità continua** con TestSprite
 - **Documentazione automatica** dei cambiamenti
 
+### 🧱 Regola d'oro di deploy (Render)
+
+- L'applicazione deve essere servita da **un unico servizio Render** che include:
+  - **Backend Node** (API)
+  - **Frontend statico** buildato nello stesso container (Vite → copiato in `./public`)
+  - **Accesso al database Supabase** tramite le env del medesimo servizio
+- Non creare servizi separati per frontend o backend. Il blueprint `render.yaml` e il `backend/Dockerfile` sono la fonte di verità per questa architettura.
+
 ---
 
 **🤖 Questa linea guida è attiva e permanente. L'AI Assistant seguirà automaticamente questo workflow per tutte le operazioni di sviluppo.**

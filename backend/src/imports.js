@@ -4,7 +4,6 @@ const ExcelJS = require('exceljs');
 const fs = require('fs/promises');
 const os = require('os');
 const db = require('./db');
-const { fixDatabaseIssues } = require('./db-fix');
 
 const router = express.Router();
 
@@ -44,9 +43,6 @@ async function uploadMiddleware(req, res, next) {
 }
 
 (async () => {
-  // Run database fixes first
-  await fixDatabaseIssues();
-  
   await db.query(`CREATE TABLE IF NOT EXISTS import_logs (
     id SERIAL PRIMARY KEY,
     type TEXT NOT NULL,

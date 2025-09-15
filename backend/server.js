@@ -34,8 +34,13 @@ const { sendPdf } = require('./src/mail');
 const logger = require('./src/logger');
 const { sendHealthAlert } = require('./src/alerts');
 const path = require('path');
+const { fixDatabaseIssues } = require('./src/db-fix');
 
 (async () => {
+  // Run database fixes first
+  console.log('Starting database initialization...');
+  await fixDatabaseIssues();
+  
   await db.query(`CREATE TABLE IF NOT EXISTS purchase_conditions (
     id SERIAL PRIMARY KEY,
     name TEXT NOT NULL,

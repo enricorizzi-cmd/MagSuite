@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <header class="sticky top-0 z-60 backdrop-blur bg-black/20 border-b border-white/10">
     <!-- Top row: brand + sections + actions -->
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-14 flex items-center justify-between gap-4 overflow-x-hidden">
@@ -179,9 +179,8 @@ const sections = computed<Section[]>(() => {
     { key: 'amministrativa', label: 'Direzione amministrativa', base: '/direzione-amministrativa/piano-finanziario' },
     { key: 'impostazioni', label: 'Impostazioni', base: role.value === 'super_admin' ? '/all-settings' : '/users' },
   ];
-  // Hide sections with no visible tabs (except home and impostazioni, which always show)
+  // Hide sections with no visible tabs so desktop tabs reflect feature visibility
   return base.filter(s => {
-    if (s.key === 'home' || s.key === 'impostazioni') return true;
     const tabs = tabsForSection(s.key).filter(t => isPathEnabled(features.value as any, t.path));
     return tabs.length > 0;
   });
@@ -237,7 +236,7 @@ function tabsForSection(key: Section['key']): Tab[] {
     case 'amministrativa':
       return [
         { label: 'Piano Finanziario', path: '/direzione-amministrativa/piano-finanziario' },
-        { label: 'Marginalità', path: '/direzione-amministrativa/marginalita' },
+        { label: 'Marginalit�', path: '/direzione-amministrativa/marginalita' },
         { label: 'Flusso di Cassa', path: '/direzione-amministrativa/flusso-di-cassa' },
         { label: 'Scadenzari', path: '/direzione-amministrativa/scadenzari' },
       ];
@@ -257,13 +256,16 @@ const notifOpen = ref(false);
 const unread = unreadCount;
 const notifications = notifItems;
 const showNotifCTA = ref(false);
+const bodyOverflowCache = ref<string | null>(null);
 
 const companies = ref<Array<{ id: number; name: string }>>([]);
 const currentCompany = ref<{ id: number; name: string } | null>(null);
 const selectedCompanyId = ref<string>('');
 
 function isActive(path: string) {
-  return route.path === path;
+  if (route.path === path) return true;
+  if (path !== '/' && route.path.startsWith(path + '/')) return true;
+  return false;
 }
 
 function formatTime(iso?: string) {
@@ -342,7 +344,14 @@ onMounted(async () => {
 // Prevent background scrolling when the mobile menu is open
 watch(isMenuOpen, (open) => {
   try {
-    document.body.style.overflow = open ? 'hidden' : '';
+    const bodyStyle = document.body.style;
+    if (open) {
+      if (bodyOverflowCache.value === null) bodyOverflowCache.value = bodyStyle.overflow || '';
+      bodyStyle.overflow = 'hidden';
+    } else if (bodyOverflowCache.value !== null) {
+      bodyStyle.overflow = bodyOverflowCache.value;
+      bodyOverflowCache.value = null;
+    }
   } catch {}
 });
 
@@ -360,74 +369,14 @@ function logout() {
   router.push('/');
 }
 
-// Explicit grouped menu for mobile to avoid any rendering edge-cases
-const menuGroups = computed(() => {
-  const groups: Array<{ label: string; items: Tab[] }> = [
-    { label: 'Home', items: [{ label: 'Dashboard', path: '/dashboard' }] },
-    {
-      label: 'Anagrafiche',
-      items: [
-        { label: 'Clienti', path: '/anagrafiche/clienti' },
-        { label: 'Fornitori', path: '/anagrafiche/fornitori' },
-        { label: 'Articoli', path: '/anagrafiche/articoli' },
-        { label: 'Operatori', path: '/anagrafiche/operatori' },
-      ],
-    },
-    {
-      label: 'Risorse umane',
-      items: [
-        { label: 'Ferie & Permessi', path: '/risorse-umane/ferie-permessi' },
-        { label: 'Entrata/Uscita', path: '/risorse-umane/entrata-uscita' },
-        { label: 'Turni', path: '/risorse-umane/turni' },
-      ],
-    },
-    {
-      label: 'Logistica',
-      items: [
-        { label: 'Giacenze', path: '/logistica/giacenze' },
-        { label: 'Inventario', path: '/logistica/inventario' },
-        { label: 'Magazzini', path: '/logistica/magazzini' },
-        { label: 'Movimenti', path: '/logistica/movimenti' },
-      ],
-    },
-    {
-      label: 'Edilizia',
-      items: [
-        { label: 'SAL', path: '/edilizia/sal' },
-        { label: 'Materiali di cantiere', path: '/edilizia/materiali-cantiere' },
-        { label: 'Manodopera di cantiere', path: '/edilizia/manodopera-cantiere' },
-      ],
-    },
-    {
-      label: 'Direzione commerciale',
-      items: [
-        { label: 'BPApp', path: '/direzione-commerciale/bpapp' },
-      ],
-    },
-    {
-      label: 'Direzione amministrativa',
-      items: [
-        { label: 'Piano Finanziario', path: '/direzione-amministrativa/piano-finanziario' },
-        { label: 'Marginalità', path: '/direzione-amministrativa/marginalita' },
-        { label: 'Flusso di Cassa', path: '/direzione-amministrativa/flusso-di-cassa' },
-        { label: 'Scadenzari', path: '/direzione-amministrativa/scadenzari' },
-      ],
-    },
-    {
-      label: 'Impostazioni',
-      items: [
-        ...(role.value === 'super_admin' ? [{ label: 'All Settings', path: '/all-settings' } as Tab] : []),
-        { label: 'Utenti', path: '/users' },
-      ],
-    },
-  ];
-  return groups;
-});
-
+// Build the mobile menu from the same section/tab rules used on desktop
 const visibleMenuGroups = computed(() => {
-  // Mobile menu should always show all sections and subsections
-  // Avoid hiding due to feature misconfigurations or delayed loading
-  return menuGroups.value;
+  return sections.value
+    .map(section => {
+      const items = tabsForSection(section.key).filter(t => isPathEnabled(features.value as any, t.path));
+      return { label: section.label, items };
+    })
+    .filter(group => group.items.length > 0);
 });
 </script>
 
@@ -462,5 +411,7 @@ const visibleMenuGroups = computed(() => {
 .company-select { color-scheme: dark; }
 .company-select option { color: #0f172a; background-color: #ffffff; }
 </style>
+
+
 
 

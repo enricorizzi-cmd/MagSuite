@@ -56,18 +56,20 @@ if [ "${PGSSLMODE}" = "no-verify" ]; then
 fi
 
 # Run database migrations with retry to avoid transient TLS hiccups
-set +e
-attempts=0
-until npm run migrate; do
-  code=$?
-  attempts=$((attempts+1))
-  if [ $attempts -ge 3 ]; then
-    echo "Migration failed after $attempts attempts (exit $code)" >&2
-    exit $code
-  fi
-  echo "Migration failed (exit $code). Retrying in 2s..." >&2
-  sleep 2
-done
-set -e
+# TEMPORARY: Skip migrations to test mobile menu fix
+echo "Skipping database migrations temporarily to test mobile menu fix"
+# set +e
+# attempts=0
+# until npm run migrate; do
+#   code=$?
+#   attempts=$((attempts+1))
+#   if [ $attempts -ge 3 ]; then
+#     echo "Migration failed after $attempts attempts (exit $code)" >&2
+#     exit $code
+#   fi
+#   echo "Migration failed (exit $code). Retrying in 2s..." >&2
+#   sleep 2
+# done
+# set -e
 
 exec "$@"

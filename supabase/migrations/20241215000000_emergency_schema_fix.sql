@@ -157,72 +157,142 @@ CREATE TABLE IF NOT EXISTS causals (
 -- 7. Set up Row Level Security for multi-tenancy
 DO $$
 BEGIN
-  -- Enable RLS on items
-  IF NOT EXISTS (SELECT 1 FROM pg_class WHERE relname = 'items_select_policy') THEN
-    ALTER TABLE items ENABLE ROW LEVEL SECURITY;
+  -- Items
+  ALTER TABLE items ENABLE ROW LEVEL SECURITY;
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = 'items' AND policyname = 'items_select_policy'
+  ) THEN
     CREATE POLICY items_select_policy ON items
       FOR SELECT USING (company_id = current_setting('app.current_company_id', true)::int);
+  END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = 'items' AND policyname = 'items_insert_policy'
+  ) THEN
     CREATE POLICY items_insert_policy ON items
       FOR INSERT WITH CHECK (company_id = current_setting('app.current_company_id', true)::int);
+  END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = 'items' AND policyname = 'items_update_policy'
+  ) THEN
     CREATE POLICY items_update_policy ON items
       FOR UPDATE USING (company_id = current_setting('app.current_company_id', true)::int)
       WITH CHECK (company_id = current_setting('app.current_company_id', true)::int);
+  END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = 'items' AND policyname = 'items_delete_policy'
+  ) THEN
     CREATE POLICY items_delete_policy ON items
       FOR DELETE USING (company_id = current_setting('app.current_company_id', true)::int);
   END IF;
-  
-  -- Enable RLS on inventories
-  IF NOT EXISTS (SELECT 1 FROM pg_class WHERE relname = 'inventories_select') THEN
-    ALTER TABLE inventories ENABLE ROW LEVEL SECURITY;
+
+  -- Inventories
+  ALTER TABLE inventories ENABLE ROW LEVEL SECURITY;
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = 'inventories' AND policyname = 'inventories_select'
+  ) THEN
     CREATE POLICY inventories_select ON inventories
       FOR SELECT USING (company_id = current_setting('app.current_company_id', true)::int);
+  END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = 'inventories' AND policyname = 'inventories_insert'
+  ) THEN
     CREATE POLICY inventories_insert ON inventories
       FOR INSERT WITH CHECK (company_id = current_setting('app.current_company_id', true)::int);
+  END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = 'inventories' AND policyname = 'inventories_update'
+  ) THEN
     CREATE POLICY inventories_update ON inventories
       FOR UPDATE USING (company_id = current_setting('app.current_company_id', true)::int)
       WITH CHECK (company_id = current_setting('app.current_company_id', true)::int);
+  END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = 'inventories' AND policyname = 'inventories_delete'
+  ) THEN
     CREATE POLICY inventories_delete ON inventories
       FOR DELETE USING (company_id = current_setting('app.current_company_id', true)::int);
   END IF;
-  
-  -- Enable RLS on import_logs
-  IF NOT EXISTS (SELECT 1 FROM pg_class WHERE relname = 'import_logs_select') THEN
-    ALTER TABLE import_logs ENABLE ROW LEVEL SECURITY;
+
+  -- import_logs
+  ALTER TABLE import_logs ENABLE ROW LEVEL SECURITY;
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = 'import_logs' AND policyname = 'import_logs_select'
+  ) THEN
     CREATE POLICY import_logs_select ON import_logs
       FOR SELECT USING (company_id = current_setting('app.current_company_id', true)::int);
+  END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = 'import_logs' AND policyname = 'import_logs_insert'
+  ) THEN
     CREATE POLICY import_logs_insert ON import_logs
       FOR INSERT WITH CHECK (company_id = current_setting('app.current_company_id', true)::int);
+  END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = 'import_logs' AND policyname = 'import_logs_update'
+  ) THEN
     CREATE POLICY import_logs_update ON import_logs
       FOR UPDATE USING (company_id = current_setting('app.current_company_id', true)::int)
       WITH CHECK (company_id = current_setting('app.current_company_id', true)::int);
+  END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = 'import_logs' AND policyname = 'import_logs_delete'
+  ) THEN
     CREATE POLICY import_logs_delete ON import_logs
       FOR DELETE USING (company_id = current_setting('app.current_company_id', true)::int);
   END IF;
-  
-  -- Enable RLS on sequences
-  IF NOT EXISTS (SELECT 1 FROM pg_class WHERE relname = 'sequences_select') THEN
-    ALTER TABLE sequences ENABLE ROW LEVEL SECURITY;
+
+  -- sequences
+  ALTER TABLE sequences ENABLE ROW LEVEL SECURITY;
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = 'sequences' AND policyname = 'sequences_select'
+  ) THEN
     CREATE POLICY sequences_select ON sequences
       FOR SELECT USING (company_id = current_setting('app.current_company_id', true)::int);
+  END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = 'sequences' AND policyname = 'sequences_insert'
+  ) THEN
     CREATE POLICY sequences_insert ON sequences
       FOR INSERT WITH CHECK (company_id = current_setting('app.current_company_id', true)::int);
+  END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = 'sequences' AND policyname = 'sequences_update'
+  ) THEN
     CREATE POLICY sequences_update ON sequences
       FOR UPDATE USING (company_id = current_setting('app.current_company_id', true)::int)
       WITH CHECK (company_id = current_setting('app.current_company_id', true)::int);
+  END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = 'sequences' AND policyname = 'sequences_delete'
+  ) THEN
     CREATE POLICY sequences_delete ON sequences
       FOR DELETE USING (company_id = current_setting('app.current_company_id', true)::int);
   END IF;
-  
-  -- Enable RLS on causals
-  IF NOT EXISTS (SELECT 1 FROM pg_class WHERE relname = 'causals_select') THEN
-    ALTER TABLE causals ENABLE ROW LEVEL SECURITY;
+
+  -- causals
+  ALTER TABLE causals ENABLE ROW LEVEL SECURITY;
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = 'causals' AND policyname = 'causals_select'
+  ) THEN
     CREATE POLICY causals_select ON causals
       FOR SELECT USING (company_id = current_setting('app.current_company_id', true)::int);
+  END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = 'causals' AND policyname = 'causals_insert'
+  ) THEN
     CREATE POLICY causals_insert ON causals
       FOR INSERT WITH CHECK (company_id = current_setting('app.current_company_id', true)::int);
+  END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = 'causals' AND policyname = 'causals_update'
+  ) THEN
     CREATE POLICY causals_update ON causals
       FOR UPDATE USING (company_id = current_setting('app.current_company_id', true)::int)
       WITH CHECK (company_id = current_setting('app.current_company_id', true)::int);
+  END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = 'causals' AND policyname = 'causals_delete'
+  ) THEN
     CREATE POLICY causals_delete ON causals
       FOR DELETE USING (company_id = current_setting('app.current_company_id', true)::int);
   END IF;

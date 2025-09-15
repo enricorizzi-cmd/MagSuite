@@ -425,24 +425,12 @@ const menuGroups = computed(() => {
 });
 
 const visibleMenuGroups = computed(() => {
-  // If features are not loaded yet, show all menu items
-  if (!features.value) {
-    return menuGroups.value;
-  }
-  
-  const filtered = menuGroups.value.map(g => ({
+  // Always show all menu items for mobile - features filtering is handled by isPathEnabled
+  // This ensures mobile menu is always visible regardless of feature loading state
+  return menuGroups.value.map(g => ({
     label: g.label,
     items: g.items.filter(t => isPathEnabled(features.value as any, t.path))
   }));
-  
-  const result = filtered.filter(g => g.items.length > 0 || g.label === 'Home' || g.label === 'Impostazioni');
-  
-  // Fallback: if no groups are visible, at least show Home
-  if (result.length === 0) {
-    return [{ label: 'Home', items: [{ label: 'Dashboard', path: '/dashboard' }] }];
-  }
-  
-  return result;
 });
 </script>
 

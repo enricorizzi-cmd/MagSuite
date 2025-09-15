@@ -95,7 +95,9 @@ export function mergeWithDefaults(incoming: FeaturesMap | undefined | null): Fea
 }
 
 export function isPathEnabled(features: FeaturesMap | null | undefined, path: string): boolean {
-  if (!features) return true; // default to visible
+  // Always show items if features are not loaded - this ensures mobile menu works
+  if (!features) return true;
+  
   // Always visible paths
   if (path === '/dashboard' || path === '/all-settings') return true;
   const parts = path.split('/').filter(Boolean);

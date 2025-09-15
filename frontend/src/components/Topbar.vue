@@ -350,9 +350,7 @@ watch(isMenuOpen, (open) => {
 watch(() => route.path, () => { isMenuOpen.value = false; });
 
 function toggleMobileMenu() {
-  console.log('Mobile menu toggle clicked, current state:', isMenuOpen.value);
   isMenuOpen.value = !isMenuOpen.value;
-  console.log('Mobile menu new state:', isMenuOpen.value);
 }
 
 function logout() {
@@ -423,14 +421,12 @@ const menuGroups = computed(() => {
       ],
     },
   ];
-  console.log('Mobile menu: Menu groups computed:', groups);
   return groups;
 });
 
 const visibleMenuGroups = computed(() => {
   // If features are not loaded yet, show all menu items
   if (!features.value) {
-    console.log('Mobile menu: Features not loaded, showing all menu items');
     return menuGroups.value;
   }
   
@@ -443,11 +439,9 @@ const visibleMenuGroups = computed(() => {
   
   // Fallback: if no groups are visible, at least show Home
   if (result.length === 0) {
-    console.log('Mobile menu: No groups visible, showing fallback Home group');
     return [{ label: 'Home', items: [{ label: 'Dashboard', path: '/dashboard' }] }];
   }
   
-  console.log('Mobile menu: Visible groups:', result);
   return result;
 });
 </script>

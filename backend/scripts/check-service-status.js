@@ -1,6 +1,10 @@
 const https = require('https');
 
-const RENDER_API_KEY = process.env.RENDER_API_KEY || 'rnd_ublyTLPyPqnIHTRNnsi9w65975mn';
+const RENDER_API_KEY = process.env.RENDER_API_KEY;
+if (!RENDER_API_KEY) {
+  console.error('Missing RENDER_API_KEY in environment');
+  process.exit(2);
+}
 const SERVICE_ID = 'srv-d2viim8gjchc73b9icgg';
 
 console.log('🔍 Checking Render service status...');

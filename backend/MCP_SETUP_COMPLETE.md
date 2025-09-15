@@ -4,7 +4,7 @@
 
 **TUTTO CONFIGURATO E PRONTO!** 🚀
 
-- ✅ **API Key**: `rnd_ublyTLPyPqnIHTRNnsi9w65975mn`
+- ✅ **API Key**: `${RENDER_API_KEY}`
 - ✅ **MCP Server**: `https://mcp.render.com/mcp`
 - ✅ **Configurazione Cursor**: `~/.cursor/mcp.json`
 - ✅ **Test di Configurazione**: PASSATI

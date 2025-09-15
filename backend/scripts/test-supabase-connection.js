@@ -10,7 +10,7 @@ const { Pool } = require('pg');
 // Credenziali Supabase dal MCP.txt
 const SUPABASE_CONFIG = {
   projectRef: 'mojuhmhubjnocogxxwbh',
-  accessToken: 'sbp_068103a7a5e1fece2c7d4c9858508583854fe87f',
+  accessToken: process.env.SUPABASE_ACCESS_TOKEN || '',
   // URL di connessione Supabase (pooler)
   databaseUrl: 'postgresql://postgres.mojuhmhubjnocogxxwbh:[password]@aws-0-eu-central-1.pooler.supabase.com:6543/postgres',
   // URL Supabase API
@@ -24,7 +24,7 @@ async function testSupabaseConnection() {
   console.log('📋 Configuration:');
   console.log(`   Project Ref: ${SUPABASE_CONFIG.projectRef}`);
   console.log(`   Supabase URL: ${SUPABASE_CONFIG.supabaseUrl}`);
-  console.log(`   Access Token: ${SUPABASE_CONFIG.accessToken.substring(0, 20)}...`);
+  console.log(`   Access Token: ${(SUPABASE_CONFIG.accessToken || '').substring(0, 8)}...`);
   console.log('');
   
   // Test 2: Verifica API Supabase (se possibile)

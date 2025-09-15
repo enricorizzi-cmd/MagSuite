@@ -1,217 +1,79 @@
-# 🚀 Render MCP Server - Guida Completa
+# Render MCP Server Usage Guide
 
-## ✅ **Configurazione Completata!**
+This guide summarizes how to work with Render's hosted Model Context Protocol (MCP) server so you can manage deployments for MagSuite directly from AI tooling or scripts.
 
-Il Render MCP Server è stato configurato per Cursor con la tua API key `rnd_ublyTLPyPqnIHTRNnsi9w65975mn`.
+## 1. What the Render MCP Server Provides
 
-## 🔄 **Prossimi Passi**
+Render exposes an official MCP endpoint that lets assistants like Cursor, Claude Code, and other MCP-aware agents manage infrastructure through natural language. The hosted server documented by Render [Render MCP Server � Render Docs](https://render.com/docs/mcp-server) currently supports tasks such as:
 
-### 1. **Riavvia Cursor**
-**IMPORTANTE**: Devi riavviare Cursor completamente per caricare la configurazione MCP.
+- Listing and inspecting services, deploys, and environments
+- Triggering deploys or rollbacks for a service
+- Streaming recent service logs and health information
+- Managing environment variables and custom domains
 
-### 2. **Verifica la Configurazione**
-Il file di configurazione è stato creato in: `C:\Users\erizzi\.cursor\mcp.json`
+Render also maintains a REST API (`https://api.render.com/v1`) that backs the MCP server. Third-party implementations like [niyogi/render-mcp](https://github.com/niyogi/render-mcp) mirror the same feature set when you prefer a self-hosted bridge.
 
-## 🎯 **Come Utilizzare MCP in Cursor**
+## 2. Prerequisites
 
-### **Comandi Principali**
+1. **Render API key** - Generate one from the Render dashboard (`Account -> API Keys`). Copy the value that starts with `rnd_`.
+2. **Workspace ID and service ID** � From the service page in Render copy the `srv-...` identifier. Store it in your `.env` or Secret Manager as `RENDER_SERVICE_ID`.
+3. **Local configuration file** � Ensure `.cursor/mcp.json` contains the hosted server entry:
 
-Una volta riavviato Cursor, potrai usare questi comandi:
-
-#### **📊 Monitoraggio**
-```
-@render status
-@render deployments
-@render logs
-@render health
-```
-
-#### **🚀 Deployment**
-```
-@render deploy
-@render rollback
-@render scale
-```
-
-#### **⚙️ Configurazione**
-```
-@render env
-@render config
-@render services
+```json
+{
+  "mcpServers": {
+    "render": {
+      "url": "https://mcp.render.com/mcp",
+      "headers": {
+        "Authorization": "Bearer ${RENDER_API_KEY}"
+      }
+    }
+  }
+}
 ```
 
-#### **🔍 Diagnostica**
-```
-@render debug
-@render metrics
-@render alerts
-```
+Restart Cursor (or any MCP-aware IDE) after editing this file so it can negotiate the session.
 
-## 🛠️ **Esempi Pratici**
+## 3. Using MCP Commands in Cursor
 
-### **Controllo Stato del Servizio**
+After the restart, open the MCP command palette and use the built-in Render tools. Common commands are:
+
 ```
 @render status magsuite-backend
-```
-
-### **Visualizzare Deployment Recenti**
-```
 @render deployments magsuite-backend --limit 5
-```
-
-### **Controllare i Log**
-```
-@render logs magsuite-backend --tail 50
-```
-
-### **Triggerare un Deployment**
-```
+@render logs magsuite-backend --tail 100
 @render deploy magsuite-backend --branch main
+@render rollback magsuite-backend --latest
 ```
 
-### **Analizzare Rollback**
-```
-@render rollback magsuite-backend --analyze
-```
+Cursor will invoke the hosted MCP server, which in turn talks to the Render API with your API key. Errors returned in chat usually map 1:1 to Render API validation messages.
 
-### **Gestire Variabili d'Ambiente**
-```
-@render env magsuite-backend --list
-@render env magsuite-backend --set DATABASE_URL=new-url
-```
+## 4. Automation From Scripts
 
-## 🔧 **Integrazione con i Tuoi Script**
+While MCP covers interactive workflows, automations can call the REST API directly. All requests require the `Authorization: Bearer <RENDER_API_KEY>` header.
 
-I tuoi script di deployment possono essere integrati con MCP:
+Useful endpoints (documented under [Render API Overview](https://render.com/docs/api)) include:
 
-### **Workflow Completo**
-```bash
-# 1. Monitoraggio locale
-npm run deploy:monitor
+- `GET /services/{SERVICE_ID}` � inspect live status and plan
+- `GET /services/{SERVICE_ID}/deploys?limit=1` � retrieve the most recent deploy
+- `GET /logs?serviceId={SERVICE_ID}&limit=200` � pull recent log lines
+- `POST /services/{SERVICE_ID}/deploys` � trigger a new deploy
 
-# 2. Deploy su Render (via MCP)
-@render deploy magsuite-backend
+These endpoints are what MCP uses under the hood and are referenced by the `@niyogi/render-mcp` project as well.
 
-# 3. Validazione post-deployment
-npm run deploy:validate
+## 5. Working Agreement for MagSuite Deployments
 
-# 4. Analisi rollback se necessario
-npm run deploy:rollback
-```
+1. Apply code changes and push to Git.
+2. Start a deployment on Render via MCP (`@render deploy magsuite-backend`) or by triggering a Git push if auto deploy is enabled.
+3. Monitor logs and deploy status until the service reaches the `live` state. The `scripts/render-monitor.js` helper (documented alongside the script) polls `/services/{SERVICE_ID}/deploys` and `/logs` every 15 seconds until the latest deploy either completes or fails.
+4. If the deploy fails, inspect the streamed logs, fix the issue locally, and repeat from step 1.
 
-### **Monitoraggio Automatico**
-```bash
-# Script per monitoraggio continuo
-npm run deploy:auto
-```
+Following these steps keeps our workflow aligned with Render's official guidance and ensures the assistant can reason about deployment health in real time.
 
-## 📋 **Comandi MCP Dettagliati**
+## 6. References
 
-### **Status e Monitoraggio**
-- `@render status [service-name]` - Stato del servizio
-- `@render health [service-name]` - Salute del servizio
-- `@render metrics [service-name]` - Metriche di performance
-- `@render uptime [service-name]` - Tempo di attività
+- Render Docs � Render MCP Server: https://render.com/docs/mcp-server
+- Render Docs � The Render API: https://render.com/docs/api
+- GitHub � @niyogi/render-mcp: https://github.com/niyogi/render-mcp
 
-### **Deployment Management**
-- `@render deploy [service-name]` - Nuovo deployment
-- `@render rollback [service-name]` - Rollback a versione precedente
-- `@render deployments [service-name]` - Lista deployment
-- `@render logs [service-name]` - Log del servizio
 
-### **Configurazione**
-- `@render env [service-name]` - Variabili d'ambiente
-- `@render config [service-name]` - Configurazione servizio
-- `@render scale [service-name]` - Ridimensionamento risorse
-
-### **Diagnostica**
-- `@render debug [service-name]` - Diagnostica problemi
-- `@render alerts [service-name]` - Gestione alert
-- `@render test [service-name]` - Test connessione
-
-## 🚨 **Troubleshooting**
-
-### **Se MCP non funziona:**
-
-1. **Verifica che Cursor sia riavviato completamente**
-2. **Controlla il file di configurazione:**
-   ```bash
-   cat ~/.cursor/mcp.json
-   ```
-3. **Verifica che l'API key sia corretta**
-4. **Controlla i log di Cursor per errori**
-
-### **Se i comandi non sono disponibili:**
-
-1. **Assicurati che MCP sia abilitato in Cursor**
-2. **Controlla la versione di Cursor (deve supportare MCP)**
-3. **Riavvia Cursor completamente**
-
-### **Se la connessione fallisce:**
-
-1. **Verifica la connessione internet**
-2. **Controlla che l'API key sia valida**
-3. **Testa la connessione:**
-   ```
-   @render test
-   ```
-
-## 📊 **Monitoraggio Avanzato**
-
-### **Alerting Automatico**
-```
-@render alert magsuite-backend --on-failure --email alerts@yourdomain.com
-```
-
-### **Monitoraggio Continuo**
-```
-@render monitor magsuite-backend --interval 30s
-```
-
-### **Backup Automatico**
-```
-@render backup magsuite-backend --schedule daily
-```
-
-## 🔐 **Sicurezza**
-
-- ✅ L'API key è configurata localmente
-- ✅ I comandi MCP sono sicuri
-- ✅ Non vengono esposte informazioni sensibili
-- ✅ La connessione è crittografata HTTPS
-
-## 🎯 **Workflow Raccomandato**
-
-### **Per Deployment Normali:**
-1. `@render status magsuite-backend` - Controlla stato
-2. `npm run deploy:monitor` - Monitora locale
-3. `@render deploy magsuite-backend` - Deploy
-4. `npm run deploy:validate` - Valida deployment
-
-### **Per Troubleshooting:**
-1. `@render logs magsuite-backend` - Controlla log
-2. `@render debug magsuite-backend` - Diagnostica
-3. `npm run deploy:render` - Analizza Render
-4. `@render rollback magsuite-backend` - Se necessario
-
-### **Per Monitoraggio Continuo:**
-1. `npm run deploy:auto` - Automazione completa
-2. `@render monitor magsuite-backend` - Monitoraggio MCP
-3. `@render alerts magsuite-backend` - Gestione alert
-
-## 📞 **Supporto**
-
-Per problemi:
-1. **Controlla i log di Cursor**
-2. **Verifica la configurazione MCP**
-3. **Testa la connessione: `@render test`**
-4. **Usa i tuoi script di diagnostica: `npm run deploy:render`**
-5. **Consulta la documentazione Render MCP**
-
-## 🎉 **Benvenuto nel Futuro del Deployment!**
-
-Ora hai accesso diretto ai tuoi deployment su Render tramite Cursor. Puoi monitorare, gestire e risolvere problemi in tempo reale senza uscire dall'editor!
-
----
-
-**Ricorda**: Riavvia Cursor per iniziare a usare i comandi MCP!

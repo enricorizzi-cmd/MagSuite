@@ -17,7 +17,7 @@
 ```json
 {
   "projectRef": "mojuhmhubjnocogxxwbh",
-  "accessToken": "sbp_068103a7a5e1fece2c7d4c9858508583854fe87f",
+  "accessToken": "${SUPABASE_ACCESS_TOKEN}",
   "supabaseUrl": "https://mojuhmhubjnocogxxwbh.supabase.co",
   "databaseUrl": "postgresql://postgres.mojuhmhubjnocogxxwbh:[password]@aws-0-eu-central-1.pooler.supabase.com:6543/postgres"
 }

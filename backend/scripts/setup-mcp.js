@@ -11,7 +11,7 @@ const os = require('os');
 
 class RenderMCPHelper {
   constructor() {
-    this.apiKey = 'rnd_ublyTLPyPqnIHTRNnsi9w65975mn';
+    this.apiKey = process.env.RENDER_API_KEY || '';
     this.mcpUrl = 'https://mcp.render.com/mcp';
     this.cursorConfigPath = path.join(os.homedir(), '.cursor', 'mcp.json');
   }

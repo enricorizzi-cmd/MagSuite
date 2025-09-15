@@ -159,6 +159,11 @@ DO $$
 BEGIN
   -- Items
   ALTER TABLE items ENABLE ROW LEVEL SECURITY;
+  -- Ensure no duplicate policy names (idempotent reset)
+  DROP POLICY IF EXISTS items_select_policy ON items;
+  DROP POLICY IF EXISTS items_insert_policy ON items;
+  DROP POLICY IF EXISTS items_update_policy ON items;
+  DROP POLICY IF EXISTS items_delete_policy ON items;
   IF NOT EXISTS (
     SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = 'items' AND policyname = 'items_select_policy'
   ) THEN

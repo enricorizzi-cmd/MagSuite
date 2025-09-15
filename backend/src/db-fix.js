@@ -90,12 +90,27 @@ async function fixDatabaseIssues() {
       `);
     }
     
-    // 6. Create indexes for performance
+    // 6. Ensure stock_movements has company_id for multi-tenancy
+    await db.query(`
+      DO $$
+      BEGIN
+        IF NOT EXISTS (
+          SELECT 1 FROM information_schema.columns 
+          WHERE table_name = 'stock_movements' AND column_name = 'company_id'
+        ) THEN
+          ALTER TABLE stock_movements ADD COLUMN company_id INTEGER REFERENCES companies(id) DEFAULT 1;
+          UPDATE stock_movements SET company_id = 1 WHERE company_id IS NULL;
+        END IF;
+      END $$
+    `);
+    
+    // 7. Create indexes for performance
     const indexes = [
       'CREATE INDEX IF NOT EXISTS idx_items_company_id ON items(company_id);',
       'CREATE INDEX IF NOT EXISTS idx_customers_company_id ON customers(company_id);',
       'CREATE INDEX IF NOT EXISTS idx_suppliers_company_id ON suppliers(company_id);',
-      'CREATE INDEX IF NOT EXISTS idx_warehouses_company_id ON warehouses(company_id);'
+      'CREATE INDEX IF NOT EXISTS idx_warehouses_company_id ON warehouses(company_id);',
+      'CREATE INDEX IF NOT EXISTS idx_stock_movements_company_id ON stock_movements(company_id);'
     ];
     
     for (const indexSql of indexes) {

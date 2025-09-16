@@ -16,3 +16,4 @@ uploads/
 backend/db/*.log
 MCP.txt
 *.env.deploy
+docker.env

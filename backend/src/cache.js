@@ -3,7 +3,7 @@ const logger = require('./logger');
 
 let redis = null;
 
-// Initialize Redis connection
+// Lazily initialize the Redis connection only once
 function initRedis() {
   if (redis) return redis;
   

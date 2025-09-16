@@ -9,10 +9,10 @@
         </div>
         <button
           v-if="hasEndpoint"
-          class="px-3 py-1.5 rounded-lg text-sm border border-white/10 text-slate-200 hover:bg-white/10"
+          class="px-3 py-1.5 rounded-lg text-sm border border-white/10 text-slate-200 hover:bg-white/10 disabled:opacity-50"
           :disabled="loading"
           @click="load"
-        >Aggiorna</button>
+        >{{ loading ? 'Aggiornamento…' : 'Aggiorna' }}</button>
       </header>
 
       <div v-if="error" class="mb-4 flex items-start gap-3 rounded-lg border border-rose-500/40 bg-rose-500/10 px-3 py-2 text-sm text-rose-200">
@@ -29,16 +29,19 @@
           :empty-label="emptyLabel || 'Nessun risultato.'"
           :page="page"
           :limit="limit"
+          :server-pagination="useServerPagination"
+          :show-new="showNew"
+          :show-actions="showActions"
           @new="openCreate"
           @edit="openEdit"
         />
 
         <div class="mt-3 flex flex-wrap items-center gap-3 text-sm text-slate-400">
-          <div>Totale: {{ rows.length }} • Pagina {{ page }} di {{ totalPages }}</div>
+          <div>Totale: {{ totalItems }} • Pagina {{ page }} di {{ totalPages }}</div>
           <div class="ml-auto flex items-center gap-2 text-slate-300">
-            <button class="px-2 py-1 rounded border border-white/10 hover:bg-white/10" :disabled="page<=1" @click="prevPage">Indietro</button>
-            <button class="px-2 py-1 rounded border border-white/10 hover:bg-white/10" :disabled="page>=totalPages" @click="nextPage">Avanti</button>
-            <select v-model.number="limit" class="px-2 py-1 rounded bg-white/10 border border-white/10 text-sm text-slate-200">
+            <button class="px-2 py-1 rounded border border-white/10 hover:bg-white/10 disabled:opacity-40" :disabled="page<=1 || loading" @click="prevPage">Indietro</button>
+            <button class="px-2 py-1 rounded border border-white/10 hover:bg-white/10 disabled:opacity-40" :disabled="page>=totalPages || loading" @click="nextPage">Avanti</button>
+            <select v-model.number="limit" class="px-2 py-1 rounded bg-white/10 border border-white/10 text-sm text-slate-200" :disabled="loading">
               <option :value="20">20</option>
               <option :value="50">50</option>
               <option :value="100">100</option>
@@ -104,7 +107,7 @@
             <div v-if="modal.error" class="mt-3 text-sm text-rose-400">{{ modal.error }}</div>
             <div class="mt-4 flex items-center gap-2">
               <button class="px-3 py-1.5 rounded-lg text-sm bg-white/10 hover:bg-white/20 text-slate-200" @click="closeModal">Annulla</button>
-              <button class="px-3 py-1.5 rounded-lg text-sm bg-fuchsia-600 hover:bg-fuchsia-500 text-white ml-auto" :disabled="modal.saving" @click="saveRecord">
+              <button class="px-3 py-1.5 rounded-lg text-sm bg-fuchsia-600 hover:bg-fuchsia-500 text-white ml-auto disabled:opacity-60" :disabled="modal.saving" @click="saveRecord">
                 <span v-if="modal.saving">Salvataggio…</span>
                 <span v-else>Salva</span>
               </button>
@@ -128,7 +131,15 @@ type ResourceField = { key: string; label: string; type: FieldType; align?: 'lef
 type FormInputType = 'text' | 'textarea' | 'number' | 'currency' | 'select' | 'checkbox' | 'date' | 'datetime';
 type SelectOption = { value: string | number | boolean; label: string };
 type FormField = { key: string; label: string; input: FormInputType; required?: boolean; options?: SelectOption[]; placeholder?: string; default?: any; colSpan?: 1 | 2; hint?: string };
-type ModalState = { open: boolean; mode: 'create' | 'edit'; index: number; error: string; saving: boolean };
+type ModalState = { open: boolean; mode: 'create' | 'edit'; index: number; error: string; saving: boolean; original?: Record<string, any> | null };
+
+type QueryParams = Record<string, any>;
+
+type SubmitPayloadBuilder = (data: Record<string, any>, original?: Record<string, any> | null) => Record<string, any>;
+type UpdateUrlBuilder = (id: string | number, payload: Record<string, any>, original?: Record<string, any> | null) => string;
+type CreateUrlBuilder = (payload: Record<string, any>) => string;
+
+type HttpMethod = 'post' | 'put' | 'patch';
 
 const props = defineProps<{
   title: string;
@@ -136,36 +147,55 @@ const props = defineProps<{
   newLabel: string;
   fields: ResourceField[];
   formSchema: FormField[];
-  sampleData: Array<Record<string, any>>;
   endpoint?: string;
-  idKey?: string;
-  emptyLabel?: string;
+  queryParams?: QueryParams | (() => QueryParams);
+  serverPagination?: boolean;
+  createMethod?: HttpMethod;
+  updateMethod?: HttpMethod;
+  buildCreatePayload?: SubmitPayloadBuilder;
+  buildUpdatePayload?: SubmitPayloadBuilder;
+  buildCreateUrl?: CreateUrlBuilder;
+  buildUpdateUrl?: UpdateUrlBuilder;
   transformResponse?: (payload: any) => Array<Record<string, any>>;
-}>();
+  sampleData?: Array<Record<string, any>>;
+  idKey?: string;
+  emptyLabel?: string;\n  showNew?: boolean;\n  showActions?: boolean;\n}>();
 
 const hasEndpoint = computed(() => typeof props.endpoint === 'string' && props.endpoint.length > 0);
+const useServerPagination = computed(() => props.serverPagination === true && hasEndpoint.value);
+const showNew = computed(() => props.showNew !== undefined ? props.showNew : true);
+const showActions = computed(() => props.showActions !== false);
 const idKey = computed(() => props.idKey || 'id');
 
-const rows = ref(normalizeRows(props.sampleData || []));
+const rows = ref<Array<Record<string, any>>>([]);
 const loading = ref(false);
 const error = ref('');
 const page = ref(1);
 const limit = ref(20);
-const totalPages = computed(() => Math.max(1, Math.ceil(rows.value.length / limit.value)));
+const totalItems = ref(0);
+const totalPages = computed(() => Math.max(1, Math.ceil(Math.max(totalItems.value, rows.value.length) / limit.value)));
 
-const modal = ref<ModalState>({ open: false, mode: 'create', index: -1, error: '', saving: false });
-const form = ref<Record<string, any>>(buildEmptyForm());
-
-watch([() => rows.value.length, limit], () => {
-  const max = Math.max(1, Math.ceil(rows.value.length / limit.value));
-  if (page.value > max) page.value = max;
-});
+const modal = ref<ModalState>({ open: false, mode: 'create', index: -1, error: '', saving: false, original: null });
+const form = ref<Record<string, any>>({});
 
 watch(() => props.sampleData, (next) => {
-  if (!loading.value) {
-    rows.value = normalizeRows(next || []);
+  if (!hasEndpoint.value && Array.isArray(next)) {
+    rows.value = normalizeRows(next);
+    totalItems.value = rows.value.length;
   }
 }, { deep: true });
+
+watch(rows, () => {
+  if (!useServerPagination.value) {
+    totalItems.value = rows.value.length;
+  }
+}, { deep: true });
+
+watch([page, limit], ([newPage, newLimit], [oldPage, oldLimit]) => {
+  if (!useServerPagination.value) return;
+  if (newPage === oldPage && newLimit === oldLimit) return;
+  load();
+});
 
 function normalizeRows(list: Array<Record<string, any>>) {
   const key = idKey.value;
@@ -204,6 +234,31 @@ function inputType(input: FormInputType) {
   return 'text';
 }
 
+function openCreate() {
+  modal.value = { open: true, mode: 'create', index: -1, error: '', saving: false, original: null };
+  form.value = buildEmptyForm();
+}
+
+function findIndex(row: Record<string, any>) {
+  const key = idKey.value;
+  const rowId = row?.[key];
+  if (rowId !== undefined && rowId !== null) {
+    const idx = rows.value.findIndex(item => item[key] === rowId);
+    if (idx !== -1) return idx;
+  }
+  return rows.value.findIndex(item => JSON.stringify(item) === JSON.stringify(row));
+}
+
+function openEdit(row: Record<string, any>) {
+  const idx = findIndex(row);
+  modal.value = { open: true, mode: 'edit', index: idx, error: '', saving: false, original: idx >= 0 ? { ...rows.value[idx] } : { ...row } };
+  if (idx >= 0) {
+    setForm(rows.value[idx]);
+  } else {
+    setForm(row);
+  }
+}
+
 function setForm(row?: Record<string, any>) {
   const base = buildEmptyForm();
   if (!row) {
@@ -220,28 +275,6 @@ function setForm(row?: Record<string, any>) {
   form.value = filled;
 }
 
-function openCreate() {
-  modal.value = { open: true, mode: 'create', index: -1, error: '', saving: false };
-  setForm();
-}
-
-function findIndex(row: Record<string, any>) {
-  const key = idKey.value;
-  const rowId = row?.[key];
-  if (rowId !== undefined && rowId !== null) {
-    const idx = rows.value.findIndex(item => item[key] === rowId);
-    if (idx !== -1) return idx;
-  }
-  return rows.value.findIndex(item => JSON.stringify(item) === JSON.stringify(row));
-}
-
-function openEdit(row: Record<string, any>) {
-  const idx = findIndex(row);
-  modal.value = { open: true, mode: 'edit', index: idx, error: '', saving: false };
-  if (idx >= 0) setForm(rows.value[idx]);
-  else setForm(row);
-}
-
 function closeModal() {
   modal.value.open = false;
 }
@@ -256,16 +289,47 @@ function nextPage() {
   page.value += 1;
 }
 
+function resolvedQueryParams(): QueryParams {
+  const base = typeof props.queryParams === 'function' ? props.queryParams() : (props.queryParams || {});
+  const params: QueryParams = { ...base };
+  if (useServerPagination.value) {
+    params.page = page.value;
+    params.limit = limit.value;
+  }
+  return params;
+}
+
 async function load() {
-  if (!hasEndpoint.value) return;
+  if (!hasEndpoint.value) {
+    rows.value = normalizeRows(props.sampleData || []);
+    totalItems.value = rows.value.length;
+    return;
+  }
   loading.value = true;
   error.value = '';
   try {
-    const { data } = await api.get(props.endpoint!);
+    const params = resolvedQueryParams();
+    const { data } = await api.get(props.endpoint!, { params });
     const list = extractRows(data);
-    rows.value = list.length ? normalizeRows(list) : normalizeRows(props.sampleData || []);
+    rows.value = normalizeRows(list);
+    const totalFromResponse = extractTotal(data);
+    if (Number.isFinite(totalFromResponse)) {
+      totalItems.value = Number(totalFromResponse);
+    } else {
+      totalItems.value = rows.value.length;
+    }
+    if (!rows.value.length && props.sampleData?.length) {
+      rows.value = normalizeRows(props.sampleData);
+      if (!Number.isFinite(totalFromResponse)) {
+        totalItems.value = rows.value.length;
+      }
+    }
   } catch (e: any) {
     error.value = e?.response?.data?.error || e?.message || 'Errore durante il caricamento';
+    if (props.sampleData?.length) {
+      rows.value = normalizeRows(props.sampleData);
+      totalItems.value = rows.value.length;
+    }
   } finally {
     loading.value = false;
   }
@@ -283,6 +347,16 @@ function extractRows(payload: any): Array<Record<string, any>> {
   if (Array.isArray(payload.results)) return payload.results;
   if (Array.isArray(payload.rows)) return payload.rows;
   return [];
+}
+
+function extractTotal(payload: any): number | null {
+  if (!payload || typeof payload !== 'object') return null;
+  const candidates = [payload.total, payload.count, payload.totalItems, payload.meta?.total, payload.pagination?.total];
+  for (const candidate of candidates) {
+    const num = typeof candidate === 'number' ? candidate : Number(candidate);
+    if (Number.isFinite(num)) return num;
+  }
+  return null;
 }
 
 function validateForm() {
@@ -319,6 +393,73 @@ function buildPayload() {
   return payload;
 }
 
+async function saveRecord() {
+  if (modal.value.saving) return;
+  if (!validateForm()) return;
+  modal.value.saving = true;
+  modal.value.error = '';
+  const mode = modal.value.mode;
+  const basePayload = buildPayload();
+  const original = modal.value.original || (modal.value.index >= 0 ? rows.value[modal.value.index] : null);
+  try {
+    if (!hasEndpoint.value) {
+      applyLocalSave(mode, basePayload, original);
+      closeModal();
+      return;
+    }
+    if (mode === 'create') {
+      const payload = props.buildCreatePayload ? props.buildCreatePayload(basePayload, null) : basePayload;
+      const method = (props.createMethod || 'post');
+      const url = props.buildCreateUrl ? props.buildCreateUrl(payload) : props.endpoint!;
+      await callApi(method, url, payload);
+      if (!useServerPagination.value) page.value = 1;
+      await load();
+      closeModal();
+    } else {
+      if (!original) throw new Error('Record originale non disponibile');
+      const payload = props.buildUpdatePayload ? props.buildUpdatePayload(basePayload, original) : basePayload;
+      const method = (props.updateMethod || 'put');
+      const id = original[idKey.value];
+      if (id === undefined || id === null) throw new Error('ID non valido per aggiornamento');
+      const url = props.buildUpdateUrl ? props.buildUpdateUrl(id, payload, original) : `${props.endpoint}/${encodeURIComponent(String(id))}`;
+      await callApi(method, url, payload);
+      await load();
+      closeModal();
+    }
+  } catch (e: any) {
+    modal.value.error = e?.response?.data?.error || e?.message || 'Impossibile salvare i dati';
+  } finally {
+    modal.value.saving = false;
+  }
+}
+
+function applyLocalSave(mode: 'create' | 'edit', payload: Record<string, any>, original: Record<string, any> | null) {
+  if (mode === 'edit' && modal.value.index >= 0) {
+    const updated = { ...(original || {}), ...payload, [idKey.value]: original?.[idKey.value] };
+    rows.value = rows.value.map((row, idx) => idx === modal.value.index ? updated : row);
+  } else {
+    const newRow: Record<string, any> = { ...payload };
+    const key = idKey.value;
+    if (newRow[key] === undefined || newRow[key] === null || newRow[key] === '') {
+      newRow[key] = createLocalId();
+    }
+    rows.value = [...rows.value, newRow];
+  }
+}
+
+async function callApi(method: HttpMethod, url: string, payload: Record<string, any>) {
+  const lower = method.toLowerCase();
+  if (lower === 'post') {
+    await api.post(url, payload);
+  } else if (lower === 'put') {
+    await api.put(url, payload);
+  } else if (lower === 'patch') {
+    await api.patch(url, payload);
+  } else {
+    throw new Error(`Metodo HTTP non supportato: ${method}`);
+  }
+}
+
 function createLocalId() {
   const key = idKey.value;
   const numericValues = rows.value
@@ -334,34 +475,13 @@ function createLocalId() {
   return candidate;
 }
 
-function saveRecord() {
-  if (modal.value.saving) return;
-  if (!validateForm()) return;
-  modal.value.saving = true;
-  try {
-    const payload = buildPayload();
-    if (modal.value.mode === 'edit' && modal.value.index >= 0) {
-      const existing = rows.value[modal.value.index];
-      const updated = { ...existing, ...payload, [idKey.value]: existing[idKey.value] };
-      rows.value = rows.value.map((row, idx) => idx === modal.value.index ? updated : row);
-    } else {
-      const newRow: Record<string, any> = { ...payload };
-      const key = idKey.value;
-      if (newRow[key] === undefined || newRow[key] === null || newRow[key] === '') {
-        newRow[key] = createLocalId();
-      }
-      rows.value = [...rows.value, newRow];
-    }
-    closeModal();
-  } catch (e: any) {
-    modal.value.error = e?.message || 'Impossibile salvare i dati';
-  } finally {
-    modal.value.saving = false;
-  }
-}
-
 onMounted(() => {
-  if (hasEndpoint.value) load();
+  if (hasEndpoint.value) {
+    load();
+  } else if (props.sampleData?.length) {
+    rows.value = normalizeRows(props.sampleData);
+    totalItems.value = rows.value.length;
+  }
 });
 </script>
 
@@ -375,3 +495,6 @@ onMounted(() => {
   opacity: 0;
 }
 </style>
+
+
+

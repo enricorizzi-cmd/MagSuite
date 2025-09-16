@@ -1,11 +1,13 @@
 ﻿<template>
   <ResourceTablePage
     title="Trasferimenti"
-    description="Movimenti inter-magazzino con stato, righe e vettore incaricato."
+    description="Movimenti interni con origine, destinazione e quantità."
     new-label="Nuovo trasferimento"
+    endpoint="/transfers"
     :fields="fields"
     :form-schema="formSchema"
-    :sample-data="sampleData"
+    :build-create-payload="buildPayload"
+    :build-update-payload="buildPayload"
     empty-label="Nessun trasferimento pianificato."
   />
 </template>
@@ -13,73 +15,31 @@
 <script setup lang="ts">
 import ResourceTablePage from '../../components/ResourceTablePage.vue';
 
+type TransferForm = Record<string, any>;
+
 const fields = [
-  { key: 'reference', label: 'Riferimento', type: 'string' },
-  { key: 'from_location', label: 'Da', type: 'string' },
-  { key: 'to_location', label: 'A', type: 'string' },
-  { key: 'status', label: 'Stato', type: 'enum', options: ['Bozza', 'In transito', 'Completato', 'Annullato'] },
-  { key: 'lines', label: 'Righe', type: 'number', align: 'right' },
-  { key: 'scheduled_at', label: 'Pianificato', type: 'string' },
-  { key: 'completed_at', label: 'Completato', type: 'string' },
-  { key: 'carrier', label: 'Vettore', type: 'string' }
+  { key: 'id', label: 'ID', type: 'number', align: 'right' },
+  { key: 'item_id', label: 'Articolo', type: 'number', align: 'right' },
+  { key: 'source_location_id', label: 'Da ubicazione', type: 'number', align: 'right' },
+  { key: 'dest_location_id', label: 'A ubicazione', type: 'number', align: 'right' },
+  { key: 'quantity', label: 'Quantità', type: 'number', align: 'right' },
+  { key: 'status', label: 'Stato', type: 'string' },
+  { key: 'document_id', label: 'Documento', type: 'number', align: 'right' }
 ];
 
 const formSchema = [
-  { key: 'reference', label: 'Riferimento', input: 'text', required: true, placeholder: 'TRF-2025-0012' },
-  { key: 'from_location', label: 'Magazzino partenza', input: 'text', required: true },
-  { key: 'to_location', label: 'Magazzino arrivo', input: 'text', required: true },
-  {
-    key: 'status',
-    label: 'Stato',
-    input: 'select',
-    options: [
-      { value: 'Bozza', label: 'Bozza' },
-      { value: 'In transito', label: 'In transito' },
-      { value: 'Completato', label: 'Completato' },
-      { value: 'Annullato', label: 'Annullato' }
-    ]
-  },
-  { key: 'lines', label: 'Numero righe', input: 'number' },
-  { key: 'scheduled_at', label: 'Data pianificata', input: 'datetime' },
-  { key: 'completed_at', label: 'Data completamento', input: 'datetime' },
-  { key: 'carrier', label: 'Vettore', input: 'text' }
+  { key: 'item_id', label: 'ID articolo', input: 'number', required: true },
+  { key: 'source_location_id', label: 'Ubicazione origine', input: 'number', required: true },
+  { key: 'dest_location_id', label: 'Ubicazione destinazione', input: 'number', required: true },
+  { key: 'quantity', label: 'Quantità', input: 'number', required: true }
 ];
 
-const sampleData = [
-  {
-    id: 'TRF-2025-0012',
-    reference: 'TRF-2025-0012',
-    from_location: 'Magazzino Nord',
-    to_location: 'Magazzino Sud',
-    status: 'In transito',
-    lines: 42,
-    scheduled_at: '2025-09-16 06:30',
-    completed_at: '',
-    carrier: 'GreenTransport Logistics'
-  },
-  {
-    id: 'TRF-2025-0010',
-    reference: 'TRF-2025-0010',
-    from_location: 'HQ',
-    to_location: 'Magazzino Nord',
-    status: 'Completato',
-    lines: 18,
-    scheduled_at: '2025-09-10 08:00',
-    completed_at: '2025-09-11 15:45',
-    carrier: 'Fleet interno'
-  },
-  {
-    id: 'TRF-2025-0013',
-    reference: 'TRF-2025-0013',
-    from_location: 'Magazzino Sud',
-    to_location: 'Hub E-commerce',
-    status: 'Bozza',
-    lines: 9,
-    scheduled_at: '2025-09-20 07:30',
-    completed_at: '',
-    carrier: 'Express Cargo'
-  }
-];
+const buildPayload = (data: TransferForm) => ({
+  item_id: Number(data.item_id),
+  source_location_id: Number(data.source_location_id),
+  dest_location_id: Number(data.dest_location_id),
+  quantity: Number(data.quantity),
+});
 </script>
 
 <style scoped></style>

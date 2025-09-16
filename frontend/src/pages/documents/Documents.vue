@@ -1,99 +1,69 @@
 ﻿<template>
   <ResourceTablePage
     title="Documenti"
-    description="Repository documentale con stato e canale di emissione."
+    description="Documenti di magazzino con stato e causale."
     new-label="Nuovo documento"
+    endpoint="/documents"
     :fields="fields"
     :form-schema="formSchema"
-    :sample-data="sampleData"
+    :transform-response="transformResponse"
+    :build-create-payload="buildPayload"
+    :query-params="queryParams"
     empty-label="Nessun documento disponibile."
+    :show-actions="false"
   />
 </template>
 
 <script setup lang="ts">
 import ResourceTablePage from '../../components/ResourceTablePage.vue';
 
+type DocumentRow = Record<string, any>;
+
 const fields = [
-  { key: 'number', label: 'Numero', type: 'string' },
-  { key: 'type', label: 'Tipo', type: 'enum', options: ['Ordine', 'DDT', 'Fattura', 'Preventivo'] },
-  { key: 'counterparty', label: 'Contropartita', type: 'string' },
-  { key: 'channel', label: 'Canale', type: 'enum', options: ['Portale', 'Email', 'Cartaceo'] },
-  { key: 'date', label: 'Data', type: 'string' },
-  { key: 'amount', label: 'Importo', type: 'number', align: 'right' },
-  { key: 'status', label: 'Stato', type: 'enum', options: ['Bozza', 'Emesso', 'In approvazione', 'Annullato'] }
+  { key: 'id', label: 'ID', type: 'number', align: 'right' },
+  { key: 'type', label: 'Tipo', type: 'string' },
+  { key: 'status', label: 'Stato', type: 'string' },
+  { key: 'causal', label: 'Causale', type: 'string' },
+  { key: 'lines_count', label: 'Righe', type: 'number', align: 'right' },
+  { key: 'created_at', label: 'Creato il', type: 'string' }
 ];
 
 const formSchema = [
-  { key: 'number', label: 'Numero documento', input: 'text', required: true, placeholder: 'FT/2025/001' },
+  { key: 'type', label: 'Tipo', input: 'text', required: true, placeholder: 'transfer, picking…' },
+  { key: 'causal', label: 'Causale', input: 'text' },
   {
-    key: 'type',
-    label: 'Tipo',
-    input: 'select',
-    options: [
-      { value: 'Ordine', label: 'Ordine' },
-      { value: 'DDT', label: 'DDT' },
-      { value: 'Fattura', label: 'Fattura' },
-      { value: 'Preventivo', label: 'Preventivo' }
-    ]
-  },
-  { key: 'counterparty', label: 'Contropartita', input: 'text', required: true },
-  {
-    key: 'channel',
-    label: 'Canale',
-    input: 'select',
-    options: [
-      { value: 'Portale', label: 'Portale' },
-      { value: 'Email', label: 'Email' },
-      { value: 'Cartaceo', label: 'Cartaceo' }
-    ]
-  },
-  { key: 'date', label: 'Data', input: 'date', required: true },
-  { key: 'amount', label: 'Importo', input: 'currency' },
-  {
-    key: 'status',
-    label: 'Stato',
-    input: 'select',
-    options: [
-      { value: 'Bozza', label: 'Bozza' },
-      { value: 'Emesso', label: 'Emesso' },
-      { value: 'In approvazione', label: 'In approvazione' },
-      { value: 'Annullato', label: 'Annullato' }
-    ]
+    key: 'lines',
+    label: 'Righe (JSON opzionale)',
+    input: 'textarea',
+    placeholder: '[{"item_id":1,"quantity":10}]'
   }
 ];
 
-const sampleData = [
-  {
-    id: 'DOC-FT-2025-001',
-    number: 'FT/2025/0001',
-    type: 'Fattura',
-    counterparty: 'Tecno Srl',
-    channel: 'Email',
-    date: '2025-09-02',
-    amount: 18250,
-    status: 'Emesso'
-  },
-  {
-    id: 'DOC-ORD-2025-045',
-    number: 'ORD/2025/0045',
-    type: 'Ordine',
-    counterparty: 'SteelWorks Spa',
-    channel: 'Portale',
-    date: '2025-09-10',
-    amount: 28400,
-    status: 'In approvazione'
-  },
-  {
-    id: 'DOC-DDT-2025-112',
-    number: 'DDT/2025/0112',
-    type: 'DDT',
-    counterparty: 'Mercurio Group',
-    channel: 'Cartaceo',
-    date: '2025-09-08',
-    amount: 0,
-    status: 'Bozza'
+const queryParams = () => ({ limit: 100 });
+
+const buildPayload = (data: DocumentRow) => {
+  const payload: DocumentRow = {
+    type: data.type?.trim(),
+    causal: data.causal?.trim() || null,
+  };
+  if (data.lines) {
+    try {
+      payload.lines = JSON.parse(data.lines as string);
+    } catch (err) {
+      throw new Error('Righe non sono JSON valido');
+    }
   }
-];
+  return payload;
+};
+
+const transformResponse = (payload: any) => {
+  const items = Array.isArray(payload?.items) ? payload.items : [];
+  return items.map((row: DocumentRow) => ({
+    ...row,
+    lines_count: Array.isArray(row.lines) ? row.lines.length : 0,
+    created_at: row.created_at ? new Date(row.created_at).toLocaleString() : '',
+  }));
+};
 </script>
 
 <style scoped></style>

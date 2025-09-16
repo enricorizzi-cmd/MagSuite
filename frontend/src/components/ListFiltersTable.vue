@@ -16,13 +16,13 @@
               <th v-for="f in fields" :key="f.key" class="px-3 py-2" :class="f.align === 'right' ? 'text-right' : 'text-left'">
                 {{ f.label || f.key }}
               </th>
-              <th class="px-3 py-2 text-right">Azioni</th>
+              <th v-if="showActionsComputed" class="px-3 py-2 text-right">Azioni</th>
             </tr>
           </thead>
           <tbody>
             <tr v-for="row in paged(filtered)" :key="rowKey(row)" class="border-t border-white/10">
               <td v-for="f in fields" :key="f.key" class="px-3 py-2" :class="cellAlign(f)">{{ renderCell(row[f.key], f) }}</td>
-              <td class="px-3 py-2 text-right">
+              <td v-if="showActionsComputed" class="px-3 py-2 text-right">
                 <button class="px-2 py-1 rounded-lg text-xs bg-white/10 hover:bg-white/20 text-slate-200" @click="$emit('edit', row)">Modifica</button>
               </td>
             </tr>
@@ -34,6 +34,7 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue';
 import ListFilters from './ListFilters.vue';
 
 type FieldType = 'string' | 'number' | 'boolean' | 'enum';
@@ -45,14 +46,17 @@ const props = defineProps<{
   newLabel?: string;
   showNew?: boolean;
   emptyLabel?: string;
-  rowKeyField?: string; // defaults to 'id' if present, else JSON stringify
+  rowKeyField?: string;
   page?: number;
   limit?: number;
+  serverPagination?: boolean;
+  showActions?: boolean;
 }>();
 
 defineEmits<{ (e: 'new'): void; (e: 'edit', row: Record<string, any>): void }>();
 
 const emptyLabelComputed = computed<string>(() => props.emptyLabel || 'Nessun risultato.');
+const showActionsComputed = computed<boolean>(() => props.showActions !== false);
 
 function rowKey(row: Record<string, any>): string | number {
   const k = props.rowKeyField || 'id';
@@ -69,7 +73,7 @@ function cellAlign(f: Field) {
 
 function renderCell(val: any, f: Field) {
   if (val == null || val === '') return '-';
-  if (f.type === 'boolean') return val ? 'Sì' : 'No';
+  if (f.type === 'boolean') return val ? 'Si' : 'No';
   if (f.type === 'number') {
     try { return Number(val).toLocaleString(); } catch { return String(val); }
   }
@@ -77,6 +81,9 @@ function renderCell(val: any, f: Field) {
 }
 
 function paged(list: any[]) {
+  if (props.serverPagination) {
+    return list;
+  }
   const p = props.page || 0;
   const l = props.limit || 0;
   if (p > 0 && l > 0) {

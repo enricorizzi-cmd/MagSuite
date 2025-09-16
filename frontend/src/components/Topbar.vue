@@ -96,6 +96,10 @@
     </div>
 
     <!-- Mobile drawer -->
+
+    <!-- Render drawer at root level to avoid backdrop-filter clipping on mobile -->
+    <Teleport to="body">
+
     <transition name="fade">
       <!-- Backdrop above header for full contrast; drawer stays on top -->
       <div v-if="isMenuOpen" class="fixed inset-0 z-[75] bg-black/70 backdrop-blur-[1px]" @click="isMenuOpen=false"></div>
@@ -150,6 +154,8 @@
         </div>
       </aside>
     </transition>
+
+    </Teleport>
   </header>
 </template>
 

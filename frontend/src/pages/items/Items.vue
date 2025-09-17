@@ -1,7 +1,7 @@
 <template>
   <ResourceTablePage
     title="Articoli"
-    description="Catalogo articoli con disponibilità e parametri di riordino."
+    description="Catalogo articoli con disponibilita e parametri di riordino."
     new-label="Nuovo articolo"
     endpoint="/items"
     :fields="fields"
@@ -35,7 +35,7 @@ const fields = [
 const formSchema = [
   { key: 'name', label: 'Nome', input: 'text', required: true },
   { key: 'sku', label: 'SKU', input: 'text', required: true },
-  { key: 'type', label: 'Tipo', input: 'text', placeholder: 'Merce, Servizio…' },
+  { key: 'type', label: 'Tipo', input: 'text', placeholder: 'Merce, Servizioâ€¦' },
   { key: 'category', label: 'Categoria', input: 'text' },
   { key: 'group', label: 'Gruppo', input: 'text' },
   { key: 'class', label: 'Classe', input: 'text' },
@@ -97,3 +97,4 @@ const transformResponse = (payload: any) => {
 </script>
 
 <style scoped></style>
+

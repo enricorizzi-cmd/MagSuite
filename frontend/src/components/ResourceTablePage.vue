@@ -159,7 +159,10 @@ const props = defineProps<{
   transformResponse?: (payload: any) => Array<Record<string, any>>;
   sampleData?: Array<Record<string, any>>;
   idKey?: string;
-  emptyLabel?: string;\n  showNew?: boolean;\n  showActions?: boolean;\n}>();
+  emptyLabel?: string;
+  showNew?: boolean;
+  showActions?: boolean;
+}>();
 
 const hasEndpoint = computed(() => typeof props.endpoint === 'string' && props.endpoint.length > 0);
 const useServerPagination = computed(() => props.serverPagination === true && hasEndpoint.value);
@@ -495,6 +498,7 @@ onMounted(() => {
   opacity: 0;
 }
 </style>
+
 
 
 

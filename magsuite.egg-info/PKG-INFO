@@ -1,0 +1,8 @@
+Metadata-Version: 2.4
+Name: magsuite
+Version: 0.0.0
+Summary: Minimal MagSuite example package
+Requires-Python: >=3.8
+License-File: LICENSE
+Requires-Dist: openpyxl
+Dynamic: license-file

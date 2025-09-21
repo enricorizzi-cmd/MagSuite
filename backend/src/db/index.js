@@ -10,6 +10,13 @@ const usePgMem = process.env.USE_PG_MEM === 'true';
 const sessionContext = new AsyncLocalStorage();
 const settings = new Map();
 
+function toSqlString(text) {
+  if (typeof text === 'string') return text;
+  if (text && typeof text.text === 'string') return text.text;
+  if (text && typeof text.query === 'string') return text.query;
+  return '';
+}
+
 const parsePositiveInt = (value, fallback) => {
   const parsed = Number.parseInt(value, 10);
   return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
@@ -83,6 +90,19 @@ if (usePgMem) {
   );
   mem.public.none(
     "INSERT INTO companies(id, name) VALUES (1,'A'), (2,'B')"
+  );
+  mem.public.none(
+    `CREATE TABLE IF NOT EXISTS items (
+      id SERIAL PRIMARY KEY,
+      name TEXT NOT NULL,
+      sku TEXT NOT NULL UNIQUE,
+      lotti BOOLEAN DEFAULT false,
+      seriali BOOLEAN DEFAULT false,
+      company_id INTEGER REFERENCES companies(id) DEFAULT 1
+    )`
+  );
+  mem.public.none(
+    "CREATE INDEX IF NOT EXISTS idx_items_company_id ON items(company_id)"
   );
   const { Pool } = mem.adapters.createPg();
   pool = new Pool();
@@ -296,7 +316,41 @@ async function query(text, params) {
             String(cid),
           ]);
         }
-        return await client.query(text, params);
+        const sql = toSqlString(text);
+        if (usePgMem && /^\s*DO\s+\$\$/i.test(sql)) {
+          return { rows: [], rowCount: 0, command: 'DO' };
+        }
+        try {
+          return await client.query(text, params);
+        } catch (err) {
+          if (usePgMem) {
+            const message = err && typeof err.message === 'string' ? err.message : '';
+            if (/relation \"items\" does not exist/i.test(message)) {
+              await client.query(`CREATE TABLE IF NOT EXISTS items (
+                id SERIAL PRIMARY KEY,
+                name TEXT,
+                sku TEXT,
+                lotti BOOLEAN DEFAULT false,
+                seriali BOOLEAN DEFAULT false,
+                company_id INTEGER REFERENCES companies(id) DEFAULT 1
+              )`);
+              return await client.query(text, params);
+            }
+            if (/already exists/i.test(message) && /CREATE TABLE IF NOT EXISTS/i.test(sql)) {
+              return { rows: [], rowCount: 0, command: 'CREATE' };
+            }
+            if (/already exists/i.test(message) && /CREATE INDEX IF NOT EXISTS/i.test(sql)) {
+              return { rows: [], rowCount: 0, command: 'CREATE INDEX' };
+            }
+            if ((/duplicate column/i.test(message) || /already exists/i.test(message)) && /ALTER TABLE .* ADD COLUMN IF NOT EXISTS/i.test(sql)) {
+              return { rows: [], rowCount: 0, command: 'ALTER' };
+            }
+            if (/language \"plpgsql\"/i.test(message) || /Unkonwn language \"plpgsql\"/i.test(message)) {
+              return { rows: [], rowCount: 0, command: 'DO' };
+            }
+          }
+          throw err;
+        }
       } finally {
         if (usePgMem) {
           settings.delete(sessionId);

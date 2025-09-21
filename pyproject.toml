@@ -1,3 +1,7 @@
+[build-system]
+requires = ["setuptools>=64", "wheel"]
+build-backend = "setuptools.build_meta"
+
 [project]
 name = "magsuite"
 version = "0.0.0"
@@ -7,3 +11,6 @@ dependencies = ["openpyxl"]
 
 [project.scripts]
 magsuite = "magsuite.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["magsuite*"]

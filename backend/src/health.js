@@ -107,7 +107,7 @@ async function checkCache() {
 
 async function checkStorage() {
   try {
-    const uploadRoot = path.join(__dirname, '..', '..', 'uploads');
+    const uploadRoot = path.join(__dirname, '..', 'uploads');
     
     // Create upload directory if it doesn't exist
     try {
@@ -234,3 +234,4 @@ module.exports = {
   getSystemInfo,
   checkEnvironmentVariables
 };
+

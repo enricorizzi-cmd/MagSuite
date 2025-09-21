@@ -1,5 +1,6 @@
 const express = require('express');
 const db = require('./db');
+const logger = require('./logger');
 
 const router = express.Router();
 
@@ -12,6 +13,13 @@ const ready = (async () => {
     status TEXT NOT NULL DEFAULT 'active'
   )`);
 })();
+ready.catch((err) => {
+  if (logger && logger.database && typeof logger.database.error === 'function') {
+    logger.database.error('Lots schema initialization failed', { error: err.message });
+  } else {
+    console.error('Lots schema initialization failed', err);
+  }
+});
 
 router.get('/expiring', async (req, res) => {
   const days = Math.max(parseInt(req.query.days) || 30, 0);

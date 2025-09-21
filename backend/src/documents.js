@@ -1,6 +1,7 @@
 const express = require('express');
 const PDFDocument = require('pdfkit');
 const db = require('./db');
+const logger = require('./logger');
 
 const router = express.Router();
 
@@ -49,6 +50,13 @@ const ready = (async () => {
     'ALTER TABLE serials ADD COLUMN IF NOT EXISTS blocked BOOLEAN DEFAULT false'
   );
 })();
+ready.catch((err) => {
+  if (logger && logger.database && typeof logger.database.error === 'function') {
+    logger.database.error('Documents schema initialization failed', { error: err.message });
+  } else {
+    console.error('Documents schema initialization failed', err);
+  }
+});
 
 router.get('/', async (req, res) => {
   const { type, causal, from, to, item } = req.query;

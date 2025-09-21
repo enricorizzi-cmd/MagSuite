@@ -1,5 +1,6 @@
 const db = require('../db');
 const users = require('./users');
+const logger = require('../logger');
 
 const ready = (async () => {
   // Ensure users table exists before creating FK references
@@ -18,6 +19,13 @@ const ready = (async () => {
     `CREATE UNIQUE INDEX IF NOT EXISTS user_approvals_open_unique ON user_approvals(user_id) WHERE status='open'`
   );
 })();
+ready.catch((err) => {
+  if (logger && logger.database && typeof logger.database.error === 'function') {
+    logger.database.error('Approvals schema initialization failed', { error: err.message });
+  } else {
+    console.error('Approvals schema initialization failed', err);
+  }
+});
 
 async function openForUser(userId, companyId) {
   await ready;

@@ -23,6 +23,7 @@ const logsRouter = require('./src/logs');
 const operations = require('./src/operations');
 const customersRouter = require('./src/customers');
 const suppliersRouter = require('./src/suppliers');
+const gestionaleRouter = require('./src/gestionale');
 
 const notificationsRouter = require('./src/notifications');
 const usersRouter = require('./src/users');
@@ -397,6 +398,7 @@ async function start(port = process.env.PORT || 3000) {
   app.use('/logs', logsRouter.router);
   app.use('/customers', customersRouter.router);
   app.use('/suppliers', suppliersRouter.router);
+  app.use('/gestionale', gestionaleRouter.router);
   app.use('/users', usersRouter.router);
   
   app.use('/notifications', notificationsRouter.router);

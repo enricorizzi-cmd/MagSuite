@@ -101,8 +101,31 @@
               </div>
               <div class="text-sm text-slate-300">Stato: <span :class="statusClass(docModal.status)" class="px-2 py-0.5 rounded text-xs">{{ docModal.status }}</span></div>
               <div v-if="docModal.error" class="mt-2 text-sm text-rose-400">{{ docModal.error }}</div>
-              <div class="mt-4 flex flex-wrap gap-2">
-                <button v-if="docModal.status!=='cancelled'" class="px-3 py-1.5 rounded-lg text-sm bg-white/10 hover:bg-white/20 text-slate-200 ml-auto" :disabled="docModal.busy" @click="cancelDoc">Annulla documento</button>
+              <div class="mt-4 flex flex-wrap items-center gap-2">
+                <button
+                  class="px-3 py-1.5 rounded-lg text-sm bg-white/10 hover:bg-white/20 text-slate-200 disabled:opacity-60"
+                  :disabled="docModal.busy || docModal.deleting"
+                  @click="docModal.open=false"
+                >Chiudi</button>
+                <button
+                  v-if="docModal.id"
+                  type="button"
+                  class="ml-auto px-3 py-1.5 rounded-lg text-sm border border-rose-500/40 text-rose-300 hover:bg-rose-500/10 disabled:opacity-60"
+                  :disabled="docModal.busy || docModal.deleting"
+                  @click="deleteDoc"
+                >
+                  <span v-if="docModal.deleting">Eliminazione…</span>
+                  <span v-else>Elimina documento</span>
+                </button>
+                <button
+                  v-if="docModal.status!=='cancelled'"
+                  class="px-3 py-1.5 rounded-lg text-sm bg-white/10 hover:bg-white/20 text-slate-200 disabled:opacity-60"
+                  :disabled="docModal.busy || docModal.deleting"
+                  @click="cancelDoc"
+                >
+                  <span v-if="docModal.busy">Annullamento…</span>
+                  <span v-else>Annulla documento</span>
+                </button>
               </div>
             </div>
           </div>
@@ -194,16 +217,16 @@ async function saveDocCreate() {
 }
 
 // Modale modifica documento (azioni minime)
-const docModal = ref<{ open: boolean; id: number|null; status: string; busy: boolean; error: string }>({ open: false, id: null, status: 'draft', busy: false, error: '' });
+const docModal = ref<{ open: boolean; id: number|null; status: string; busy: boolean; deleting: boolean; error: string }>({ open: false, id: null, status: 'draft', busy: false, deleting: false, error: '' });
 async function openDocEdit(row: Doc) {
   try {
-    docModal.value = { open: true, id: row.id, status: row.status, busy: false, error: '' };
+    docModal.value = { open: true, id: row.id, status: row.status, busy: false, deleting: false, error: '' };
     const { data } = await api.get(`/documents/${row.id}`);
     docModal.value.status = data?.status || row.status;
   } catch {}
 }
 async function cancelDoc() {
-  if (!docModal.value.id) return;
+  if (!docModal.value.id || docModal.value.deleting) return;
   docModal.value.busy = true; docModal.value.error = '';
   try {
     await api.post(`/documents/${docModal.value.id}/cancel`);
@@ -213,6 +236,23 @@ async function cancelDoc() {
     docModal.value.error = e?.response?.data?.error || e?.message || 'Errore annullamento';
   } finally { docModal.value.busy = false; }
 }
+
+async function deleteDoc() {
+  if (!docModal.value.id || docModal.value.deleting) return;
+  if (!confirm('Eliminare definitivamente questo documento?')) return;
+  docModal.value.deleting = true;
+  docModal.value.error = '';
+  try {
+    await api.delete(`/documents/${docModal.value.id}`);
+    docModal.value.open = false;
+    await load();
+  } catch (e: any) {
+    docModal.value.error = e?.response?.data?.error || e?.message || 'Errore eliminazione documento';
+  } finally {
+    docModal.value.deleting = false;
+  }
+}
+
 </script>
 
 <style scoped></style>

@@ -1,5 +1,6 @@
 const db = require('./db');
 const audit = require('./audit');
+const logger = require('./logger');
 
 // Ensure companies table and required columns/indexes exist
 const ready = (async () => {
@@ -16,6 +17,13 @@ const ready = (async () => {
     `ALTER TABLE companies ADD COLUMN IF NOT EXISTS suspended BOOLEAN NOT NULL DEFAULT false`
   );
 })();
+ready.catch((err) => {
+  if (logger && logger.database && typeof logger.database.error === 'function') {
+    logger.database.error('Companies schema initialization failed', { error: err.message });
+  } else {
+    console.error('Companies schema initialization failed', err);
+  }
+});
 
 function safeIdent(name) {
   if (!/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(name)) {

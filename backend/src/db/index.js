@@ -1,6 +1,7 @@
 const fs = require('fs');
 const { AsyncLocalStorage } = require('async_hooks');
 const companyContext = require('../companyContext');
+const logger = require('../logger');
 
 let pool;
 const usePgMem = process.env.USE_PG_MEM === 'true';
@@ -8,6 +9,21 @@ const usePgMem = process.env.USE_PG_MEM === 'true';
 // Track session-specific settings when using pg-mem
 const sessionContext = new AsyncLocalStorage();
 const settings = new Map();
+
+const parsePositiveInt = (value, fallback) => {
+  const parsed = Number.parseInt(value, 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+};
+const defaultConnectRetries = parsePositiveInt(process.env.PG_CONNECT_RETRIES, 5);
+const baseConnectDelayMs = parsePositiveInt(process.env.PG_CONNECT_BASE_DELAY_MS, 250);
+const maxConnectDelayMs = Math.max(baseConnectDelayMs, parsePositiveInt(process.env.PG_CONNECT_MAX_DELAY_MS, 5000));
+const transientErrorCodes = ['ETIMEDOUT','ECONNRESET','ECONNREFUSED','EAI_AGAIN','ENETUNREACH','EHOSTUNREACH','ECONNABORTED'];
+const transientErrorMessages = [
+  'Connection terminated due to connection timeout',
+  'Connection terminated unexpectedly',
+  'timeout expired'
+];
+
 
 if (usePgMem) {
   const { newDb } = require('pg-mem');
@@ -216,19 +232,46 @@ if (usePgMem) {
   });
 }
 
-async function connectWithRetry(attempts = 3) {
+async function connectWithRetry(attempts = defaultConnectRetries) {
   let lastErr;
+  let retried = false;
   for (let i = 0; i < attempts; i++) {
     try {
       return await pool.connect();
     } catch (err) {
       lastErr = err;
       const code = err && (err.code || err.errno);
-      // Retry only on transient/connection-level errors
-      const transient = ['ETIMEDOUT','ECONNRESET','ECONNREFUSED','EAI_AGAIN','ENETUNREACH','EHOSTUNREACH'];
-      if (!transient.includes(code)) break;
-      const backoff = 200 * Math.pow(2, i); // 200, 400, 800ms
-      await new Promise((r) => setTimeout(r, backoff));
+      const message = err && typeof err.message === 'string' ? err.message : '';
+      const shouldRetry =
+        (code && transientErrorCodes.includes(code)) ||
+        transientErrorMessages.some((fragment) => fragment && message.includes(fragment));
+      if (!shouldRetry || i === attempts - 1) {
+        break;
+      }
+      retried = true;
+      const delay = Math.min(maxConnectDelayMs, baseConnectDelayMs * Math.pow(2, i));
+      if (logger && logger.database && typeof logger.database.warn === 'function') {
+        logger.database.warn('Database connection attempt failed; retrying', {
+          attempt: i + 1,
+          maxAttempts: attempts,
+          code,
+          message,
+          delay,
+        });
+      }
+      await new Promise((resolve) => setTimeout(resolve, delay));
+    }
+  }
+  if (lastErr) {
+    if (logger && logger.database && typeof logger.database.error === 'function') {
+      logger.database.error('Database connection failed after retries', {
+        attempts,
+        retried,
+        code: lastErr && (lastErr.code || lastErr.errno),
+        message: lastErr && lastErr.message,
+      });
+    } else {
+      console.error('Database connection failed after retries', lastErr);
     }
   }
   throw lastErr;
@@ -238,7 +281,7 @@ async function query(text, params) {
   const store = companyContext.getStore();
   const companyId = store && store.companyId;
   const sessionId = Symbol('session');
-  const client = await connectWithRetry(Number(process.env.PG_CONNECT_RETRIES) || 3);
+  const client = await connectWithRetry();
   try {
     return await sessionContext.run(sessionId, async () => {
       try {
@@ -265,5 +308,5 @@ async function query(text, params) {
   }
 }
 
-module.exports = { query, connect: () => pool.connect() };
+module.exports = { query, connect: () => connectWithRetry() };
 

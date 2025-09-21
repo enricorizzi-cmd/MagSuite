@@ -5,6 +5,18 @@ const Auth = () => import('./pages/auth/Auth.vue');
 const Dashboard = () => import('./pages/dashboard/Dashboard.vue');
 const AllSettings = () => import('./pages/settings/AllSettings.vue');
 const Users = () => import('./pages/users/Users.vue');
+// Gestionale
+const GestionaleDashboard = () => import('./pages/gestionale/Dashboard.vue');
+const GestionaleOrdini = () => import('./pages/gestionale/Ordini.vue');
+const GestionaleOrdiniPortafoglio = () => import('./pages/gestionale/OrdiniPortafoglio.vue');
+const GestionaleOrdiniErogazioni = () => import('./pages/gestionale/OrdiniErogazioni.vue');
+const GestionaleContatti = () => import('./pages/gestionale/Contatti.vue');
+const GestionaleSottoprodotti = () => import('./pages/gestionale/Sottoprodotti.vue');
+const GestionaleProvvigioni = () => import('./pages/gestionale/Provvigioni.vue');
+const GestionaleGames = () => import('./pages/gestionale/Games.vue');
+const GestionaleMarketingClienti = () => import('./pages/gestionale/MarketingClienti.vue');
+const GestionaleTarget = () => import('./pages/gestionale/Target.vue');
+const GestionaleProfile = () => import('./pages/gestionale/Profile.vue');
 // Logistica
 const Giacenze = () => import('./pages/logistica/Giacenze.vue');
 const Inventario = () => import('./pages/logistica/Inventario.vue');
@@ -36,6 +48,18 @@ const routes: Array<RouteRecordRaw> = [
   { path: '/dashboard', name: 'dashboard', component: Dashboard },
   { path: '/all-settings', name: 'all-settings', component: AllSettings },
   { path: '/users', name: 'users', component: Users },
+  // Gestionale
+  { path: '/gestionale', name: 'gestionale-dashboard', component: GestionaleDashboard },
+  { path: '/gestionale/ordini', name: 'gestionale-ordini', component: GestionaleOrdini },
+  { path: '/gestionale/ordini-portafoglio', name: 'gestionale-ordini-portafoglio', component: GestionaleOrdiniPortafoglio },
+  { path: '/gestionale/ordini-erogazioni', name: 'gestionale-ordini-erogazioni', component: GestionaleOrdiniErogazioni },
+  { path: '/gestionale/contatti', name: 'gestionale-contatti', component: GestionaleContatti },
+  { path: '/gestionale/sottoprodotti', name: 'gestionale-sottoprodotti', component: GestionaleSottoprodotti },
+  { path: '/gestionale/provvigioni', name: 'gestionale-provvigioni', component: GestionaleProvvigioni },
+  { path: '/gestionale/games', name: 'gestionale-games', component: GestionaleGames },
+  { path: '/gestionale/marketing-clienti', name: 'gestionale-marketing-clienti', component: GestionaleMarketingClienti },
+  { path: '/gestionale/target', name: 'gestionale-target', component: GestionaleTarget },
+  { path: '/gestionale/profile', name: 'gestionale-profile', component: GestionaleProfile },
   // Anagrafiche
   { path: '/anagrafiche/clienti', name: 'clienti', component: Clienti },
   { path: '/anagrafiche/fornitori', name: 'fornitori', component: Fornitori },

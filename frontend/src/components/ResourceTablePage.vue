@@ -55,7 +55,7 @@
           <div class="w-full max-w-3xl rounded-xl border border-white/10 bg-[#0b1020] p-5">
             <div class="mb-4 flex items-center gap-3">
               <h2 class="text-lg font-semibold text-slate-100">
-                {{ modal.mode==='create' ? newLabel : 'Modifica record' }}
+                {{ modalTitle }}
               </h2>
               <button class="ml-auto rounded-lg px-2 py-1 text-xl leading-none text-slate-300 hover:bg-white/10" @click="closeModal" aria-label="Chiudi">×</button>
             </div>
@@ -106,8 +106,27 @@
             </div>
             <div v-if="modal.error" class="mt-3 text-sm text-rose-400">{{ modal.error }}</div>
             <div class="mt-4 flex items-center gap-2">
-              <button class="px-3 py-1.5 rounded-lg text-sm bg-white/10 hover:bg-white/20 text-slate-200" @click="closeModal">Annulla</button>
-              <button class="px-3 py-1.5 rounded-lg text-sm bg-fuchsia-600 hover:bg-fuchsia-500 text-white ml-auto disabled:opacity-60" :disabled="modal.saving" @click="saveRecord">
+              <button
+                class="px-3 py-1.5 rounded-lg text-sm bg-white/10 hover:bg-white/20 text-slate-200 disabled:opacity-60"
+                :disabled="modal.saving || modal.deleting"
+                @click="closeModal"
+              >Annulla</button>
+              <button
+                v-if="showDeleteButton"
+                type="button"
+                class="ml-auto px-3 py-1.5 rounded-lg text-sm border border-rose-500/40 text-rose-300 hover:bg-rose-500/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rose-500 disabled:opacity-60"
+                :disabled="modal.saving || modal.deleting"
+                @click="deleteRecord"
+              >
+                <span v-if="modal.deleting">Eliminazione…</span>
+                <span v-else>{{ deleteButtonLabel }}</span>
+              </button>
+              <button
+                class="px-3 py-1.5 rounded-lg text-sm bg-fuchsia-600 hover:bg-fuchsia-500 text-white disabled:opacity-60"
+                :class="showDeleteButton ? '' : 'ml-auto'"
+                :disabled="modal.saving || modal.deleting"
+                @click="saveRecord"
+              >
                 <span v-if="modal.saving">Salvataggio…</span>
                 <span v-else>Salva</span>
               </button>
@@ -131,7 +150,7 @@ type ResourceField = { key: string; label: string; type: FieldType; align?: 'lef
 type FormInputType = 'text' | 'textarea' | 'number' | 'currency' | 'select' | 'checkbox' | 'date' | 'datetime';
 type SelectOption = { value: string | number | boolean; label: string };
 type FormField = { key: string; label: string; input: FormInputType; required?: boolean; options?: SelectOption[]; placeholder?: string; default?: any; colSpan?: 1 | 2; hint?: string };
-type ModalState = { open: boolean; mode: 'create' | 'edit'; index: number; error: string; saving: boolean; original?: Record<string, any> | null };
+type ModalState = { open: boolean; mode: 'create' | 'edit'; index: number; error: string; saving: boolean; deleting: boolean; original?: Record<string, any> | null };
 
 type QueryParams = Record<string, any>;
 
@@ -140,6 +159,10 @@ type UpdateUrlBuilder = (id: string | number, payload: Record<string, any>, orig
 type CreateUrlBuilder = (payload: Record<string, any>) => string;
 
 type HttpMethod = 'post' | 'put' | 'patch';
+
+type DeleteMethod = 'delete' | 'post' | 'put';
+type DeletePayloadBuilder = (original: Record<string, any> | null) => Record<string, any>;
+type DeleteUrlBuilder = (id: string | number, original?: Record<string, any> | null) => string;
 
 const props = defineProps<{
   title: string;
@@ -156,6 +179,10 @@ const props = defineProps<{
   buildUpdatePayload?: SubmitPayloadBuilder;
   buildCreateUrl?: CreateUrlBuilder;
   buildUpdateUrl?: UpdateUrlBuilder;
+  deleteMethod?: DeleteMethod;
+  buildDeletePayload?: DeletePayloadBuilder;
+  buildDeleteUrl?: DeleteUrlBuilder;
+  allowDelete?: boolean;
   transformResponse?: (payload: any) => Array<Record<string, any>>;
   sampleData?: Array<Record<string, any>>;
   idKey?: string;
@@ -169,6 +196,10 @@ const useServerPagination = computed(() => props.serverPagination === true && ha
 const showNew = computed(() => props.showNew !== undefined ? props.showNew : true);
 const showActions = computed(() => props.showActions !== false);
 const idKey = computed(() => props.idKey || 'id');
+const allowDelete = computed(() => props.allowDelete !== false);
+const entityLabel = computed(() => inferEntityLabel(props.newLabel));
+const editTitle = computed(() => entityLabel.value ? `Modifica ${entityLabel.value}` : 'Modifica record');
+const deleteButtonLabel = computed(() => entityLabel.value ? `Elimina ${entityLabel.value}` : 'Elimina elemento');
 
 const rows = ref<Array<Record<string, any>>>([]);
 const loading = ref(false);
@@ -178,8 +209,13 @@ const limit = ref(20);
 const totalItems = ref(0);
 const totalPages = computed(() => Math.max(1, Math.ceil(Math.max(totalItems.value, rows.value.length) / limit.value)));
 
-const modal = ref<ModalState>({ open: false, mode: 'create', index: -1, error: '', saving: false, original: null });
+const modal = ref<ModalState>({ open: false, mode: 'create', index: -1, error: '', saving: false, deleting: false, original: null });
 const form = ref<Record<string, any>>({});
+const modalTitle = computed(() => {
+  if (modal.value.mode === 'create') return props.newLabel || 'Nuovo elemento';
+  return editTitle.value;
+});
+const showDeleteButton = computed(() => modal.value.mode === 'edit' && allowDelete.value);
 
 watch(() => props.sampleData, (next) => {
   if (!hasEndpoint.value && Array.isArray(next)) {
@@ -237,8 +273,23 @@ function inputType(input: FormInputType) {
   return 'text';
 }
 
+function inferEntityLabel(label?: string): string {
+  if (!label) return '';
+  const trimmed = label.trim();
+  if (!trimmed) return '';
+  const lowered = trimmed.toLowerCase();
+  const prefixes = ['nuovo', 'nuova', 'nuovi', 'nuove'];
+  for (const prefix of prefixes) {
+    if (lowered === prefix) return '';
+    if (lowered.startsWith(prefix + ' ')) {
+      return trimmed.slice(prefix.length).trim();
+    }
+  }
+  return trimmed;
+}
+
 function openCreate() {
-  modal.value = { open: true, mode: 'create', index: -1, error: '', saving: false, original: null };
+  modal.value = { open: true, mode: 'create', index: -1, error: '', saving: false, deleting: false, original: null };
   form.value = buildEmptyForm();
 }
 
@@ -254,7 +305,7 @@ function findIndex(row: Record<string, any>) {
 
 function openEdit(row: Record<string, any>) {
   const idx = findIndex(row);
-  modal.value = { open: true, mode: 'edit', index: idx, error: '', saving: false, original: idx >= 0 ? { ...rows.value[idx] } : { ...row } };
+  modal.value = { open: true, mode: 'edit', index: idx, error: '', saving: false, deleting: false, original: idx >= 0 ? { ...rows.value[idx] } : { ...row } };
   if (idx >= 0) {
     setForm(rows.value[idx]);
   } else {
@@ -435,6 +486,77 @@ async function saveRecord() {
     modal.value.saving = false;
   }
 }
+
+async function deleteRecord() {
+  if (!showDeleteButton.value) return;
+  if (modal.value.deleting || modal.value.saving) return;
+  const original = modal.value.original || (modal.value.index >= 0 ? rows.value[modal.value.index] : null);
+  if (!original) {
+    modal.value.error = 'Record da eliminare non trovato';
+    return;
+  }
+  const label = entityLabel.value || 'elemento';
+  const confirmMessage = `Eliminare definitivamente questo ${label}?`;
+  if (typeof window !== 'undefined' && !window.confirm(confirmMessage)) return;
+  modal.value.deleting = true;
+  modal.value.error = '';
+  try {
+    if (hasEndpoint.value) {
+      const id = original[idKey.value];
+      if (id === undefined || id === null) throw new Error('ID non valido per eliminazione');
+      const url = props.buildDeleteUrl ? props.buildDeleteUrl(id, original) : `${props.endpoint}/${encodeURIComponent(String(id))}`;
+      const payload = props.buildDeletePayload ? props.buildDeletePayload(original) : undefined;
+      const method = props.deleteMethod || 'delete';
+      const shouldGoBack = useServerPagination.value && page.value > 1 && rows.value.length <= 1;
+      await callDeleteApi(method, url, payload);
+      if (shouldGoBack) {
+        page.value = Math.max(1, page.value - 1);
+      } else {
+        await load();
+      }
+    } else {
+      applyLocalDelete(modal.value.index, original);
+    }
+    closeModal();
+  } catch (e: any) {
+    modal.value.error = e?.response?.data?.error || e?.message || 'Impossibile eliminare i dati';
+  } finally {
+    modal.value.deleting = false;
+  }
+}
+
+function applyLocalDelete(index: number, original: Record<string, any> | null) {
+  if (index >= 0) {
+    rows.value = rows.value.filter((_, idx) => idx !== index);
+    return;
+  }
+  if (original) {
+    const key = idKey.value;
+    rows.value = rows.value.filter(row => row[key] !== original[key]);
+  }
+}
+
+async function callDeleteApi(method: DeleteMethod, url: string, payload?: Record<string, any>) {
+  const lower = method.toLowerCase();
+  if (lower === 'delete') {
+    if (payload) {
+      await api.delete(url, { data: payload });
+    } else {
+      await api.delete(url);
+    }
+    return;
+  }
+  if (lower === 'post') {
+    await api.post(url, payload || {});
+    return;
+  }
+  if (lower === 'put') {
+    await api.put(url, payload || {});
+    return;
+  }
+  throw new Error(`Metodo HTTP non supportato: ${method}`);
+}
+
 
 function applyLocalSave(mode: 'create' | 'edit', payload: Record<string, any>, original: Record<string, any> | null) {
   if (mode === 'edit' && modal.value.index >= 0) {

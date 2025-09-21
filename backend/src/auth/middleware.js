@@ -12,11 +12,13 @@ const rolePermissions = {
     inventory: ['read'],
     documents: ['read'],
     items: ['read'],
+    gestionale: ['read'],
   },
   view: {
     inventory: ['read'],
     documents: ['read'],
     items: ['read'],
+    gestionale: ['read'],
   },
   // Backward compatible legacy roles
   manager: {
@@ -24,6 +26,7 @@ const rolePermissions = {
     orders: ['read'],
     documents: ['read', 'write'],
     items: ['read', 'write'],
+    gestionale: ['read'],
   },
   worker: { inventory: ['read'], items: ['read'] },
   api: { '*': ['*'] },

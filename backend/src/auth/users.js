@@ -1,6 +1,7 @@
 const bcrypt = require('bcryptjs');
 const { generateMfaSecret, verifyMfaToken } = require('./mfa');
 const db = require('../db');
+const logger = require('../logger');
 
 // Ensure required tables/columns exist. We keep using the "users" table
 // defined by migrations, but we add a few optional columns if missing
@@ -51,6 +52,13 @@ const ready = (async () => {
     await db.query("ALTER TABLE users ADD COLUMN status text DEFAULT 'active'");
   }
 })();
+ready.catch((err) => {
+  if (logger && logger.database && typeof logger.database.error === 'function') {
+    logger.database.error('User schema initialization failed', { error: err.message });
+  } else {
+    console.error('User schema initialization failed', err);
+  }
+});
 
 function validatePassword(password) {
   const complexity = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*]).{8,}$/;

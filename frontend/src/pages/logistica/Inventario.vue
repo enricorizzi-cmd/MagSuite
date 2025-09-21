@@ -44,10 +44,40 @@
               </div>
               <div class="text-sm text-slate-300">Stato: <span :class="statusClass(modal.status)" class="px-2 py-0.5 rounded text-xs">{{ modal.status }}</span></div>
               <div v-if="modal.error" class="mt-2 text-sm text-rose-400">{{ modal.error }}</div>
-              <div class="mt-4 flex flex-wrap gap-2">
-                <button v-if="modal.status==='open'" class="px-3 py-1.5 rounded-lg text-sm bg-white/10 hover:bg-white/20 text-slate-200" :disabled="modal.busy" @click="freezeInv">Congela</button>
-                <button v-if="modal.status==='frozen'" class="px-3 py-1.5 rounded-lg text-sm bg-white/10 hover:bg-white/20 text-slate-200" :disabled="modal.busy" @click="approveInv">Approva</button>
-                <button v-if="modal.status!=='closed'" class="px-3 py-1.5 rounded-lg text-sm bg-white/10 hover:bg-white/20 text-slate-200 ml-auto" :disabled="modal.busy" @click="closeInv">Chiudi</button>
+              <div class="mt-4 flex flex-wrap items-center gap-2">
+                <button
+                  class="px-3 py-1.5 rounded-lg text-sm bg-white/10 hover:bg-white/20 text-slate-200 disabled:opacity-60"
+                  :disabled="modal.busy || modal.deleting"
+                  @click="closeModal"
+                >Chiudi</button>
+                <button
+                  v-if="modal.id"
+                  type="button"
+                  class="ml-auto px-3 py-1.5 rounded-lg text-sm border border-rose-500/40 text-rose-300 hover:bg-rose-500/10 disabled:opacity-60"
+                  :disabled="modal.busy || modal.deleting"
+                  @click="deleteInv"
+                >
+                  <span v-if="modal.deleting">Eliminazione…</span>
+                  <span v-else>Elimina inventario</span>
+                </button>
+                <button
+                  v-if="modal.status==='open'"
+                  class="px-3 py-1.5 rounded-lg text-sm bg-white/10 hover:bg-white/20 text-slate-200 disabled:opacity-60"
+                  :disabled="modal.busy || modal.deleting"
+                  @click="freezeInv"
+                >Congela</button>
+                <button
+                  v-if="modal.status==='frozen'"
+                  class="px-3 py-1.5 rounded-lg text-sm bg-white/10 hover:bg-white/20 text-slate-200 disabled:opacity-60"
+                  :disabled="modal.busy || modal.deleting"
+                  @click="approveInv"
+                >Approva</button>
+                <button
+                  v-if="modal.status!=='closed'"
+                  class="px-3 py-1.5 rounded-lg text-sm bg-white/10 hover:bg-white/20 text-slate-200 disabled:opacity-60"
+                  :disabled="modal.busy || modal.deleting"
+                  @click="closeInv"
+                >Chiudi inventario</button>
               </div>
             </div>
           </div>
@@ -109,14 +139,14 @@ function statusClass(s: string) {
 }
 
 // Modal/actions
-const modal = ref<{ open: boolean; id: number|null; status: string; busy: boolean; error: string }>({ open: false, id: null, status: 'open', busy: false, error: '' });
+const modal = ref<{ open: boolean; id: number|null; status: string; busy: boolean; deleting: boolean; error: string }>({ open: false, id: null, status: 'open', busy: false, deleting: false, error: '' });
 
 function openEdit(row: Inventory) {
-  modal.value = { open: true, id: row.id, status: row.status, busy: false, error: '' };
+  modal.value = { open: true, id: row.id, status: row.status, busy: false, deleting: false, error: '' };
 }
-function closeModal() { modal.value.open = false; }
+function closeModal() { modal.value.open = false; modal.value.busy = false; modal.value.deleting = false; }
 async function freezeInv() {
-  if (!modal.value.id) return;
+  if (!modal.value.id || modal.value.deleting) return;
   modal.value.busy = true; modal.value.error = '';
   try {
     await api.post(`/inventories/${modal.value.id}/freeze`);
@@ -127,7 +157,7 @@ async function freezeInv() {
   } finally { modal.value.busy = false; }
 }
 async function approveInv() {
-  if (!modal.value.id) return;
+  if (!modal.value.id || modal.value.deleting) return;
   modal.value.busy = true; modal.value.error = '';
   try {
     await api.post(`/inventories/${modal.value.id}/approve`);
@@ -137,7 +167,7 @@ async function approveInv() {
   } finally { modal.value.busy = false; }
 }
 async function closeInv() {
-  if (!modal.value.id) return;
+  if (!modal.value.id || modal.value.deleting) return;
   modal.value.busy = true; modal.value.error = '';
   try {
     await api.post(`/inventories/${modal.value.id}/close`);
@@ -147,6 +177,23 @@ async function closeInv() {
     modal.value.error = e?.response?.data?.error || e?.message || 'Errore chiusura';
   } finally { modal.value.busy = false; }
 }
+
+async function deleteInv() {
+  if (!modal.value.id || modal.value.deleting) return;
+  if (!confirm('Eliminare definitivamente questo inventario?')) return;
+  modal.value.deleting = true;
+  modal.value.error = '';
+  try {
+    await api.delete(`/inventories/${modal.value.id}`);
+    modal.value.open = false;
+    await load();
+  } catch (e: any) {
+    modal.value.error = e?.response?.data?.error || e?.message || 'Errore eliminazione inventario';
+  } finally {
+    modal.value.deleting = false;
+  }
+}
+
 
 onMounted(load);
 </script>

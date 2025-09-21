@@ -23,7 +23,18 @@
             <tr v-for="row in paged(filtered)" :key="rowKey(row)" class="border-t border-white/10">
               <td v-for="f in fields" :key="f.key" class="px-3 py-2" :class="cellAlign(f)">{{ renderCell(row[f.key], f) }}</td>
               <td v-if="showActionsComputed" class="px-3 py-2 text-right">
-                <button class="px-2 py-1 rounded-lg text-xs bg-white/10 hover:bg-white/20 text-slate-200" @click="$emit('edit', row)">Modifica</button>
+                <button
+                  type="button"
+                  class="inline-flex h-8 w-8 items-center justify-center rounded-full border border-white/15 bg-white/5 text-slate-200 hover:bg-white/15 focus:outline-none focus:ring-2 focus:ring-fuchsia-500/40"
+                  :aria-label="editButtonLabel"
+                  :title="editButtonLabel"
+                  @click="$emit('edit', row)"
+                >
+                  <svg class="h-4 w-4" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M4 13.5V16h2.5l7.374-7.374-2.5-2.5L4 13.5z" fill="currentColor"/>
+                    <path d="M13.793 3.793a1 1 0 011.414 0l1 1a1 1 0 010 1.414l-1.086 1.086-2.414-2.414 1.086-1.086z" fill="currentColor"/>
+                  </svg>
+                </button>
               </td>
             </tr>
           </tbody>
@@ -57,6 +68,23 @@ defineEmits<{ (e: 'new'): void; (e: 'edit', row: Record<string, any>): void }>()
 
 const emptyLabelComputed = computed<string>(() => props.emptyLabel || 'Nessun risultato.');
 const showActionsComputed = computed<boolean>(() => props.showActions !== false);
+const entityLabel = computed<string>(() => inferEntityLabel(props.newLabel));
+const editButtonLabel = computed<string>(() => entityLabel.value ? `Modifica ${entityLabel.value}` : 'Modifica elemento');
+
+function inferEntityLabel(label?: string): string {
+  if (!label) return '';
+  const trimmed = label.trim();
+  if (!trimmed) return '';
+  const lowered = trimmed.toLowerCase();
+  const prefixes = ['nuovo', 'nuova', 'nuovi', 'nuove'];
+  for (const prefix of prefixes) {
+    if (lowered === prefix) return '';
+    if (lowered.startsWith(prefix + ' ')) {
+      return trimmed.slice(prefix.length).trim();
+    }
+  }
+  return trimmed;
+}
 
 function rowKey(row: Record<string, any>): string | number {
   const k = props.rowKeyField || 'id';

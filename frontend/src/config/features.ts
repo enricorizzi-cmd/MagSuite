@@ -6,6 +6,23 @@ export type FeaturesMap = Record<string, Record<string, boolean>>;
 // NOTE: When adding new pages/routes, update this tree.
 export const FEATURES_TREE: FeatureSection[] = [
   {
+    key: 'gestionale',
+    label: 'Gestionale',
+    children: [
+      { key: 'dashboard', label: 'Overview', path: '/gestionale' },
+      { key: 'ordini', label: 'Ordini', path: '/gestionale/ordini' },
+      { key: 'ordini-portafoglio', label: 'Portafoglio', path: '/gestionale/ordini-portafoglio' },
+      { key: 'ordini-erogazioni', label: 'Erogazioni', path: '/gestionale/ordini-erogazioni' },
+      { key: 'contatti', label: 'Contatti', path: '/gestionale/contatti' },
+      { key: 'sottoprodotti', label: 'Sottoprodotti', path: '/gestionale/sottoprodotti' },
+      { key: 'provvigioni', label: 'Provvigioni', path: '/gestionale/provvigioni' },
+      { key: 'games', label: 'Games', path: '/gestionale/games' },
+      { key: 'marketing-clienti', label: 'Marketing / Clienti', path: '/gestionale/marketing-clienti' },
+      { key: 'target', label: 'Target', path: '/gestionale/target' },
+      { key: 'profile', label: 'Profilo', path: '/gestionale/profile' },
+    ],
+  },
+  {
     key: 'anagrafiche',
     label: 'Anagrafiche',
     children: [
@@ -103,6 +120,10 @@ export function isPathEnabled(features: FeaturesMap | null | undefined, path: st
   const parts = path.split('/').filter(Boolean);
   if (parts.length === 0) return true;
   const first = parts[0];
+  if (first === 'gestionale') {
+    const leaf = parts[1] || 'dashboard';
+    return !!features['gestionale']?.[leaf];
+  }
   if (first === 'anagrafiche') return !!features['anagrafiche']?.[parts[1]];
   if (first === 'logistica') return !!features['logistica']?.[parts[1]];
   if (first === 'edilizia') return !!features['edilizia']?.[parts[1]];

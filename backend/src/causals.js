@@ -1,5 +1,6 @@
 const express = require('express');
 const db = require('./db');
+const logger = require('./logger');
 
 const router = express.Router();
 
@@ -12,6 +13,13 @@ const ready = (async () => {
     sign INTEGER NOT NULL DEFAULT 1
   )`);
 })();
+ready.catch((err) => {
+  if (logger && logger.database && typeof logger.database.error === 'function') {
+    logger.database.error('Causals schema initialization failed', { error: err.message });
+  } else {
+    console.error('Causals schema initialization failed', err);
+  }
+});
 
 router.get('/', async (req, res) => {
   const result = await db.query(

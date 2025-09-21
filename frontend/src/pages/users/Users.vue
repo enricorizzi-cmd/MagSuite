@@ -126,9 +126,28 @@
            </div>
           <div class="flex justify-between items-center gap-2 pt-2">
             <button class="px-3 py-2 rounded-lg text-sm bg-rose-700/30 hover:bg-rose-700/50 text-rose-200" :disabled="saving" @click="confirmDelete">Elimina utente</button>
-            <div class="flex gap-2">
-              <button class="px-3 py-2 rounded-lg text-sm bg-white/5 hover:bg-white/10" @click="closeEdit">Annulla</button>
-              <button class="px-3 py-2 rounded-lg text-sm bg-fuchsia-600 hover:bg-fuchsia-500 text-white" :disabled="saving" @click="saveEdit">Salva</button>
+            <div class="flex items-center gap-2">
+              <button
+                class="px-3 py-2 rounded-lg text-sm bg-white/5 hover:bg-white/10 disabled:opacity-60"
+                :disabled="saving || deleting"
+                @click="closeEdit"
+              >Annulla</button>
+              <button
+                v-if="editingUser"
+                type="button"
+                class="ml-auto px-3 py-2 rounded-lg text-sm border border-rose-500/40 text-rose-300 hover:bg-rose-500/10 disabled:opacity-60"
+                :disabled="saving || deleting"
+                @click="confirmDelete"
+              >
+                <span v-if="deleting">Eliminazione…</span>
+                <span v-else>Elimina utente</span>
+              </button>
+              <button
+                class="px-3 py-2 rounded-lg text-sm bg-fuchsia-600 hover:bg-fuchsia-500 text-white disabled:opacity-60"
+                :class="editingUser ? '' : 'ml-auto'"
+                :disabled="saving || deleting"
+                @click="saveEdit"
+              >Salva</button>
             </div>
           </div>
         </div>
@@ -153,6 +172,7 @@ const companies = ref<Array<{ id: number; name: string }>>([]);
 
 const isEditing = ref(false);
 const saving = ref(false);
+const deleting = ref(false);
 const editError = ref('');
 const editingUser = ref<U | null>(null);
 const form = ref<{ name: string; email: string; role: string; company_id: number | null; password: string; status: string }>({
@@ -199,6 +219,8 @@ async function loadCompaniesIfAllowed() {
 function openEdit(u: U) {
   editingUser.value = u;
   editError.value = '';
+  deleting.value = false;
+  saving.value = false;
   form.value = {
     name: u.name || '',
     email: u.email,
@@ -213,6 +235,7 @@ function openEdit(u: U) {
 function closeEdit() {
   isEditing.value = false;
   saving.value = false;
+  deleting.value = false;
 }
 
 function openCreate() {
@@ -254,7 +277,7 @@ async function saveCreate() {
 }
 
 async function saveEdit() {
-  if (!editingUser.value) return;
+  if (!editingUser.value || deleting.value) return;
   saving.value = true;
   editError.value = '';
   try {
@@ -282,9 +305,9 @@ async function approveUser(u: U) {
 }
 
 async function confirmDelete() {
-  if (!editingUser.value) return;
+  if (!editingUser.value || deleting.value) return;
   if (!confirm('Eliminare definitivamente questo utente?')) return;
-  saving.value = true;
+  deleting.value = true;
   editError.value = '';
   try {
     await api.delete(`/auth/users/${editingUser.value.id}`);
@@ -293,7 +316,7 @@ async function confirmDelete() {
   } catch (e: any) {
     editError.value = e?.response?.data?.error || e?.message || 'Errore eliminazione';
   } finally {
-    saving.value = false;
+    deleting.value = false;
   }
 }
 

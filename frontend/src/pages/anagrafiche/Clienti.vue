@@ -104,9 +104,28 @@
               </div>
               <div v-if="modal.error" class="mt-2 text-sm text-rose-400">{{ modal.error }}</div>
               <div class="mt-4 flex items-center gap-2">
-                <button class="px-3 py-1.5 rounded-lg text-sm bg-white/10 hover:bg-white/20 text-slate-200" @click="closeModal">Annulla</button>
-                <button class="ml-auto px-3 py-1.5 rounded-lg text-sm bg-fuchsia-600 hover:bg-fuchsia-500 text-white" :disabled="modal.saving" @click="saveModal">
-                  <span v-if="modal.saving">Salvataggio...</span>
+                <button
+                  class="px-3 py-1.5 rounded-lg text-sm bg-white/10 hover:bg-white/20 text-slate-200 disabled:opacity-60"
+                  :disabled="modal.saving || modal.deleting"
+                  @click="closeModal"
+                >Annulla</button>
+                <button
+                  v-if="modal.mode==='edit' && modal.id"
+                  type="button"
+                  class="ml-auto px-3 py-1.5 rounded-lg text-sm border border-rose-500/40 text-rose-300 hover:bg-rose-500/10 disabled:opacity-60"
+                  :disabled="modal.saving || modal.deleting"
+                  @click="deleteCustomer"
+                >
+                  <span v-if="modal.deleting">Eliminazione…</span>
+                  <span v-else>Elimina cliente</span>
+                </button>
+                <button
+                  class="px-3 py-1.5 rounded-lg text-sm bg-fuchsia-600 hover:bg-fuchsia-500 text-white disabled:opacity-60"
+                  :class="modal.mode==='edit' && modal.id ? '' : 'ml-auto'"
+                  :disabled="modal.saving || modal.deleting"
+                  @click="saveModal"
+                >
+                  <span v-if="modal.saving">Salvataggio…</span>
                   <span v-else>Salva</span>
                 </button>
               </div>
@@ -270,15 +289,15 @@ async function exportCustomers(format: 'csv'|'xlsx') {
   }
 }
 
-const modal = ref<{ open: boolean; mode: 'create'|'edit'; id?: number|null; saving: boolean; error: string }>({ open: false, mode: 'create', id: null, saving: false, error: '' });
+const modal = ref<{ open: boolean; mode: 'create'|'edit'; id?: number|null; saving: boolean; deleting: boolean; error: string }>({ open: false, mode: 'create', id: null, saving: false, deleting: false, error: '' });
 const form = ref<CustomerForm>(emptyForm());
 
 function openCreate() {
-  modal.value = { open: true, mode: 'create', id: null, saving: false, error: '' };
+  modal.value = { open: true, mode: 'create', id: null, saving: false, deleting: false, error: '' };
   form.value = emptyForm();
 }
 function openEdit(row: Customer) {
-  modal.value = { open: true, mode: 'edit', id: row.id, saving: false, error: '' };
+  modal.value = { open: true, mode: 'edit', id: row.id, saving: false, deleting: false, error: '' };
   form.value = {
     code: row.code || '',
     name: row.name || '',
@@ -314,6 +333,7 @@ function trimmedPayload() {
 }
 
 async function saveModal() {
+  if (modal.value.deleting) return;
   try {
     modal.value.saving = true;
     modal.value.error = '';
@@ -341,6 +361,24 @@ async function saveModal() {
     modal.value.saving = false;
   }
 }
+
+async function deleteCustomer() {
+  if (modal.value.deleting) return;
+  if (!modal.value.id) return;
+  if (!confirm('Eliminare definitivamente questo cliente?')) return;
+  modal.value.deleting = true;
+  modal.value.error = '';
+  try {
+    await api.delete(`/customers/${modal.value.id}`);
+    modal.value.open = false;
+    await load();
+  } catch (e: any) {
+    modal.value.error = e?.response?.data?.error || e?.message || 'Errore eliminazione cliente';
+  } finally {
+    modal.value.deleting = false;
+  }
+}
+
 </script>
 
 <style scoped></style>

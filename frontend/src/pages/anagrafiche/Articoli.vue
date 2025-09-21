@@ -56,8 +56,27 @@
               </div>
               <div v-if="itemModal.error" class="mt-2 text-sm text-rose-400">{{ itemModal.error }}</div>
               <div class="mt-4 flex items-center gap-2">
-                <button class="px-3 py-1.5 rounded-lg text-sm bg-white/10 hover:bg-white/20 text-slate-200" @click="closeItemModal">Annulla</button>
-                <button class="ml-auto px-3 py-1.5 rounded-lg text-sm bg-fuchsia-600 hover:bg-fuchsia-500 text-white" :disabled="itemModal.saving" @click="saveItemModal">
+                <button
+                  class="px-3 py-1.5 rounded-lg text-sm bg-white/10 hover:bg-white/20 text-slate-200 disabled:opacity-60"
+                  :disabled="itemModal.saving || itemModal.deleting"
+                  @click="closeItemModal"
+                >Annulla</button>
+                <button
+                  v-if="itemModal.mode==='edit' && itemModal.id"
+                  type="button"
+                  class="ml-auto px-3 py-1.5 rounded-lg text-sm border border-rose-500/40 text-rose-300 hover:bg-rose-500/10 disabled:opacity-60"
+                  :disabled="itemModal.saving || itemModal.deleting"
+                  @click="deleteItem"
+                >
+                  <span v-if="itemModal.deleting">Eliminazione…</span>
+                  <span v-else>Elimina articolo</span>
+                </button>
+                <button
+                  class="px-3 py-1.5 rounded-lg text-sm bg-fuchsia-600 hover:bg-fuchsia-500 text-white disabled:opacity-60"
+                  :class="itemModal.mode==='edit' && itemModal.id ? '' : 'ml-auto'"
+                  :disabled="itemModal.saving || itemModal.deleting"
+                  @click="saveItemModal"
+                >
                   <span v-if="itemModal.saving">Salvataggio…</span>
                   <span v-else>Salva</span>
                 </button>
@@ -291,13 +310,13 @@ async function exportItems(format: 'csv'|'xlsx') {
 }
 
 // Modal Articolo (crea/modifica)
-const itemModal = ref<{ open: boolean; mode: 'create'|'edit'; id?: number|null; saving: boolean; error: string }>({ open: false, mode: 'create', id: null, saving: false, error: '' });
+const itemModal = ref<{ open: boolean; mode: 'create'|'edit'; id?: number|null; saving: boolean; deleting: boolean; error: string }>({ open: false, mode: 'create', id: null, saving: false, deleting: false, error: '' });
 const itemForm = ref<{ name: string; sku: string; type: string; category: string; supplier: string; lotti: boolean; seriali: boolean }>({
   name: '', sku: '', type: '', category: '', supplier: '', lotti: false, seriali: false
 });
 
 function openEdit(row: any) {
-  itemModal.value = { open: true, mode: 'edit', id: row.id, saving: false, error: '' };
+  itemModal.value = { open: true, mode: 'edit', id: row.id, saving: false, deleting: false, error: '' };
   itemForm.value = {
     name: row.name || '',
     sku: row.sku || '',
@@ -310,6 +329,7 @@ function openEdit(row: any) {
 }
 function closeItemModal() { itemModal.value.open = false; }
 async function saveItemModal() {
+  if (itemModal.value.deleting) return;
   try {
     itemModal.value.saving = true;
     itemModal.value.error = '';
@@ -329,9 +349,27 @@ async function saveItemModal() {
   }
 }
 
+async function deleteItem() {
+  if (itemModal.value.deleting) return;
+  if (!itemModal.value.id) return;
+  if (!confirm('Eliminare definitivamente questo articolo?')) return;
+  itemModal.value.deleting = true;
+  itemModal.value.error = '';
+  try {
+    await api.delete(`/items/${itemModal.value.id}`);
+    itemModal.value.open = false;
+    await load();
+  } catch (e: any) {
+    itemModal.value.error = e?.response?.data?.error || e?.message || 'Errore eliminazione articolo';
+  } finally {
+    itemModal.value.deleting = false;
+  }
+}
+
+
 // Reindirizza la creazione all'uso dello stesso modal
 function openCreate() {
-  itemModal.value = { open: true, mode: 'create', id: null, saving: false, error: '' };
+  itemModal.value = { open: true, mode: 'create', id: null, saving: false, deleting: false, error: '' };
   itemForm.value = { name: '', sku: '', type: '', category: '', supplier: '', lotti: false, seriali: false };
 }
 

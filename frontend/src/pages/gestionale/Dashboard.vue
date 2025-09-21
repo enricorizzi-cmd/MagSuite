@@ -11,7 +11,7 @@
           class="px-3 py-1.5 rounded-lg text-sm border border-white/10 text-slate-200 hover:bg-white/10 disabled:opacity-50"
           :disabled="loading"
           @click="load"
-        >{{ loading ? 'Aggiornamento…' : 'Aggiorna' }}</button>
+        >{{ loading ? 'Aggiornamentoâ€¦' : 'Aggiorna' }}</button>
       </header>
 
       <div v-if="error" class="rounded-lg border border-rose-500/40 bg-rose-500/10 px-4 py-3 text-sm text-rose-200 flex items-start gap-3">
@@ -97,4 +97,4 @@ function formatDate(value: string) {
   if (Number.isNaN(date.getTime())) return value;
   return date.toLocaleDateString('it-IT', { day: '2-digit', month: 'short', year: 'numeric' });
 }
-</script>
+</script>

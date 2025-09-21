@@ -1,7 +1,7 @@
 <template>
   <ResourceTablePage
     title="Marketing / Clienti"
-    description="Lead e opportunità generate dalle campagne marketing."
+    description="Lead e opportunitÃ  generate dalle campagne marketing."
     new-label="Nuovo lead"
     :show-new="false"
     :show-actions="false"
@@ -30,4 +30,4 @@ const transformResponse = (payload: any) => {
     created_at: row.created_at ? new Date(row.created_at).toLocaleString('it-IT') : ''
   }));
 };
-</script>
+</script>

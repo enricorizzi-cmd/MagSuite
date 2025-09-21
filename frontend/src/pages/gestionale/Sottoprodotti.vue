@@ -18,7 +18,7 @@ import ResourceTablePage from '../../components/ResourceTablePage.vue';
 const fields = [
   { key: 'code', label: 'Codice', type: 'string' },
   { key: 'name', label: 'Nome', type: 'string' },
-  { key: 'unit', label: 'Unità', type: 'string' },
+  { key: 'unit', label: 'UnitÃ ', type: 'string' },
   { key: 'price', label: 'Prezzo', type: 'string' }
 ];
 
@@ -31,4 +31,4 @@ const transformResponse = (payload: any) => {
     price: typeof row.price === 'number' ? currency.format(row.price) : row.price
   }));
 };
-</script>
+</script>

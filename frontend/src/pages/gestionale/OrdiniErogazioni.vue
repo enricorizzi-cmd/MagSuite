@@ -1,7 +1,7 @@
 <template>
   <ResourceTablePage
     title="Ordini / Erogazioni"
-    description="Cronologia erogazioni e quantità consegnate."
+    description="Cronologia erogazioni e quantitÃ  consegnate."
     new-label="Nuova erogazione"
     :show-new="false"
     :show-actions="false"
@@ -20,7 +20,7 @@ const fields = [
   { key: 'id', label: 'ID', type: 'number' },
   { key: 'customer_name', label: 'Cliente', type: 'string' },
   { key: 'date', label: 'Data', type: 'string' },
-  { key: 'quantity', label: 'Quantità', type: 'number' },
+  { key: 'quantity', label: 'QuantitÃ ', type: 'number' },
   { key: 'notes', label: 'Note', type: 'string' }
 ];
 
@@ -31,4 +31,4 @@ const transformResponse = (payload: any) => {
     date: row.date ? new Date(row.date).toLocaleDateString('it-IT') : ''
   }));
 };
-</script>
+</script>

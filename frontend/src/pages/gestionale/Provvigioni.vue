@@ -32,7 +32,7 @@ const transformResponse = (payload: any) => {
   return list.map((row: Record<string, any>) => ({
     ...row,
     amount: typeof row.amount === 'number' ? currency.format(row.amount) : row.amount,
-    rate: typeof row.rate === 'number' ? ${row.rate.toFixed(2)}% : row.rate
+    rate: typeof row.rate === 'number' ? `${row.rate.toFixed(2)}%` : row.rate
   }));
 };
 </script>

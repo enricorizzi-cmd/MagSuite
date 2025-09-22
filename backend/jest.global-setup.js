@@ -1,5 +1,10 @@
 const path = require('path');
 require('dotenv').config({ path: path.join(__dirname, '..', '.env.test') });
+
+// Set USE_PG_MEM for all tests
+process.env.USE_PG_MEM = 'true';
+process.env.DEFAULT_COMPANY_ID = '1';
+
 const db = require('./src/db');
 
 module.exports = async () => {

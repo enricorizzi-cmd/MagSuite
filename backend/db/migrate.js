@@ -2,6 +2,12 @@ const fs = require('fs');
 const path = require('path');
 const { Pool } = require('pg');
 
+// Skip migration if using pg-mem for testing
+if (process.env.USE_PG_MEM === 'true') {
+  console.log('[migrate] Skipping migration - using pg-mem for testing');
+  process.exit(0);
+}
+
 const connectionString = (process.env.DATABASE_URL && process.env.DATABASE_URL.replace(/^\s*["']|["']\s*$/g, '')) ||
   'postgres://postgres:postgres@localhost:5432/postgres';
 const caPath = process.env.DB_CA_PATH || '/etc/secrets/supabase-ca.crt';

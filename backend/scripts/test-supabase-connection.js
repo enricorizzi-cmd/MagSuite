@@ -5,8 +5,6 @@
  * Utilizza le credenziali fornite per verificare la connessione
  */
 
-const { Pool } = require('pg');
-
 // Credenziali Supabase dal MCP.txt
 const SUPABASE_CONFIG = {
   projectRef: 'mojuhmhubjnocogxxwbh',

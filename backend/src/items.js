@@ -1,6 +1,5 @@
 const express = require('express');
 const db = require('./db');
-const cache = require('./cache');
 const logger = require('./logger');
 const audit = require('./audit');
 

@@ -1,4 +1,4 @@
-import { createRouter, createWebHistory, RouteRecordRaw } from 'vue-router';
+﻿import { createRouter, createWebHistory, RouteRecordRaw } from 'vue-router';
 
 // Lazy load components for better performance
 const Auth = () => import('./pages/auth/Auth.vue');
@@ -134,3 +134,5 @@ router.beforeEach((to, from, next) => {
 });
 
 export default router;
+
+

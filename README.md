@@ -1,10 +1,10 @@
-# MagSuite
+﻿# MagSuite
 
 > **Prima di iniziare:** leggi e segui la [Mandatory Deployment Workflow](WORKFLOW_RULE.md). Ogni attivita termina solo con deploy su Render riuscito e servizio live.
 [![Backend CI](https://github.com/example/MagSuite/actions/workflows/ci.yml/badge.svg?job=backend)](https://github.com/example/MagSuite/actions/workflows/ci.yml)
 [![Frontend CI](https://github.com/example/MagSuite/actions/workflows/ci.yml/badge.svg?job=frontend)](https://github.com/example/MagSuite/actions/workflows/ci.yml)
 
-MagSuite — Giacenze chiare, scorte giuste, meno sprechi.
+MagSuite â€” Giacenze chiare, scorte giuste, meno sprechi.
 
 ## Project Overview
 
@@ -18,9 +18,9 @@ MagSuite is a lightweight toolkit aimed at helping small businesses keep their s
 
 ## Repository Structure
 
-- [backend](backend/) – Node.js server placeholder
-- [frontend](frontend/) – Vite app scaffold
-- [supabase](supabase/) – Supabase configuration and migrations
+- [backend](backend/) â€“ Node.js server placeholder
+- [frontend](frontend/) â€“ Vite app scaffold
+- [supabase](supabase/) â€“ Supabase configuration and migrations
 
 ## Prerequisites
 
@@ -108,24 +108,24 @@ supabase start
 
 The backend relies on a few variables at runtime:
 
-- `DATABASE_URL` – PostgreSQL connection string
-- `ACCESS_SECRET` – secret used to sign access tokens (required)
-- `REFRESH_SECRET` – secret used to sign refresh tokens (required)
-- `API_KEY` – API key used for external integrations (required)
-- `SSO_SECRET` – secret used to validate SSO tokens (required)
-- `FILE_ENCRYPTION_KEY` – key used to encrypt stored files (required)
-- `ALERT_EMAIL` – destination for alert notifications (optional)
-- `BATCH_STRATEGY` – `FIFO` (default) or `FEFO` for batch handling (optional)
-- `DB_CA_PATH` – path to the CA certificate used to verify the database TLS connection
-- `NODE_EXTRA_CA_CERTS` – optional, adds the same CA to Node's global trust store
-- `SUPABASE_URL` – Supabase project URL
-- `SUPABASE_ANON_KEY` – public Supabase key (server-side only if needed)
-- `SUPABASE_SERVICE_ROLE` – service-role key for privileged Supabase operations
-- `VAPID_PUBLIC` / `VAPID_PRIVATE` – VAPID keys for Web Push
-- `SENTRY_DSN` – Sentry project DSN for error tracking
-- `CORS_ORIGIN` – comma-separated list of allowed origins
+- `DATABASE_URL` â€“ PostgreSQL connection string
+- `ACCESS_SECRET` â€“ secret used to sign access tokens (required)
+- `REFRESH_SECRET` â€“ secret used to sign refresh tokens (required)
+- `API_KEY` â€“ API key used for external integrations (required)
+- `SSO_SECRET` â€“ secret used to validate SSO tokens (required)
+- `FILE_ENCRYPTION_KEY` â€“ key used to encrypt stored files (required)
+- `ALERT_EMAIL` â€“ destination for alert notifications (optional)
+- `BATCH_STRATEGY` â€“ `FIFO` (default) or `FEFO` for batch handling (optional)
+- `DB_CA_PATH` â€“ path to the CA certificate used to verify the database TLS connection
+- `NODE_EXTRA_CA_CERTS` â€“ optional, adds the same CA to Node's global trust store
+- `SUPABASE_URL` â€“ Supabase project URL
+- `SUPABASE_ANON_KEY` â€“ public Supabase key (server-side only if needed)
+- `SUPABASE_SERVICE_ROLE` â€“ service-role key for privileged Supabase operations
+- `VAPID_PUBLIC` / `VAPID_PRIVATE` â€“ VAPID keys for Web Push
+- `SENTRY_DSN` â€“ Sentry project DSN for error tracking
+- `CORS_ORIGIN` â€“ comma-separated list of allowed origins
 
-On Render, add them via **Environment → Add Environment Variable**:
+On Render, add them via **Environment â†’ Add Environment Variable**:
 
 ```
 DATABASE_URL=postgres://user:pass@db:5432/magsuite
@@ -239,7 +239,7 @@ Required configuration:
 - **Dockerfile path:** `backend/Dockerfile` (build context = repo root)
 - **Health check path:** `/health`
 - **Environment variables:** `DATABASE_URL`, `ACCESS_SECRET`, `REFRESH_SECRET`, `SSO_SECRET`, `API_KEY`, `FILE_ENCRYPTION_KEY`, `ALERT_EMAIL` (optional), `BATCH_STRATEGY` (optional), `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE`, `VAPID_PUBLIC`, `VAPID_PRIVATE`, `SENTRY_DSN`, `CORS_ORIGIN`, `VITE_API_URL`. If using Supabase pooling (6543) set `SUPABASE_CA_CERT` to the base64 of your DB CA. If using direct (5432), include `?sslmode=require` in `DATABASE_URL`.
-- **Blueprint (optional):** a starter `render.yaml` is included. It defines a single `web` service using the Dockerfile above. Import it in Render → New + → Blueprint from Repo and fill secrets after import.
+- **Blueprint (optional):** a starter `render.yaml` is included. It defines a single `web` service using the Dockerfile above. Import it in Render â†’ New + â†’ Blueprint from Repo and fill secrets after import.
 
 ### Render MCP monitoring
 
@@ -255,11 +255,11 @@ The script polls `GET /services/{SERVICE_ID}/deploys` and `GET /logs` (see the [
 
 After every change, always perform:
 
-1) commit → 2) push → 3) deploy verification (Render status/health/logs) → 4) fixes if needed → 5) commit + push → 6) merge to main → live.
+1) commit â†’ 2) push â†’ 3) deploy verification (Render status/health/logs) â†’ 4) fixes if needed â†’ 5) commit + push â†’ 6) merge to main â†’ live.
 
 This sequence is mandatory for every task.
 
-To audit a deployed service with Render API, create a Personal Access Token in Render (Account → API Keys) and run:
+To audit a deployed service with Render API, create a Personal Access Token in Render (Account â†’ API Keys) and run:
 
 ```bash
 cd backend
@@ -268,7 +268,7 @@ setx RENDER_SERVICE_ID <service_id>
 npm run audit:render
 ```
 
-At runtime, a non‑sensitive config check is available at `/health/config` (only flags, no secret values).
+At runtime, a nonâ€‘sensitive config check is available at `/health/config` (only flags, no secret values).
 
 ## Usage
 
@@ -310,5 +310,7 @@ For details on the branching policy, environments and CI/CD workflow, see the [t
 
 MagSuite is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
 
+## Business Planning (BP) Module
 
+See docs/BP_MODULE_SETUP.md for configuration, import and testing guidance.
 

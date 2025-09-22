@@ -1,4 +1,4 @@
-#!/usr/bin/env node
+﻿#!/usr/bin/env node
 
 /**
  * Render Rollback Helper
@@ -74,7 +74,7 @@ class RenderRollbackHelper {
 
   async rollbackToDeployment(deployId) {
     try {
-      console.log(`🔄 Rolling back to deployment ${deployId}...`);
+      console.log(`ðŸ”„ Rolling back to deployment ${deployId}...`);
       
       const response = await this.makeRequest(`/services/${this.serviceId}/deploys`, 'POST', {
         clearCache: true,
@@ -138,8 +138,8 @@ class RenderRollbackHelper {
     
     return {
       shouldRollback: conditions.some(Boolean),
-      reasons: conditions.map((condition, index) => ({
-        condition: ['service_not_live', 'more_failures_than_success', 'multiple_failures'][index],
+      reasons: conditions.map((condition, _index) => ({
+        condition: ['service_not_live', 'more_failures_than_success', 'multiple_failures'][_index],
         met: condition
       })),
       analysis,
@@ -149,12 +149,12 @@ class RenderRollbackHelper {
 
   async performRollback() {
     try {
-      console.log('🔍 Analyzing deployment health...');
+      console.log('ðŸ” Analyzing deployment health...');
       
       const rollbackDecision = await this.shouldRollback();
       
       if (!rollbackDecision.shouldRollback) {
-        console.log('✅ No rollback needed - service appears healthy');
+        console.log('âœ… No rollback needed - service appears healthy');
         return {
           action: 'no_rollback',
           reason: 'Service appears healthy',
@@ -162,24 +162,24 @@ class RenderRollbackHelper {
         };
       }
       
-      console.log('⚠️  Rollback conditions met:');
-      rollbackDecision.reasons.forEach((reason, index) => {
+      console.log('âš ï¸  Rollback conditions met:');
+      rollbackDecision.reasons.forEach((reason, _index) => {
         if (reason.met) {
           console.log(`   - ${reason.condition}`);
         }
       });
       
-      console.log('🔍 Finding last successful deployment...');
+      console.log('ðŸ” Finding last successful deployment...');
       const lastSuccessful = await this.findLastSuccessfulDeployment();
       
-      console.log(`📋 Last successful deployment:`);
+      console.log(`ðŸ“‹ Last successful deployment:`);
       console.log(`   ID: ${lastSuccessful.id}`);
       console.log(`   Commit: ${lastSuccessful.commit?.id || 'N/A'}`);
       console.log(`   Finished: ${lastSuccessful.finishedAt}`);
       console.log(`   Status: ${lastSuccessful.status}`);
       
       // Note: Actual rollback would require commit hash, not deploy ID
-      console.log('⚠️  Note: Actual rollback requires commit hash, not deploy ID');
+      console.log('âš ï¸  Note: Actual rollback requires commit hash, not deploy ID');
       console.log('   Manual rollback may be required through Render dashboard');
       
       return {
@@ -196,7 +196,7 @@ class RenderRollbackHelper {
       };
       
     } catch (error) {
-      console.error('❌ Rollback analysis failed:', error.message);
+      console.error('âŒ Rollback analysis failed:', error.message);
       return {
         action: 'error',
         error: error.message
@@ -240,13 +240,13 @@ class RenderRollbackHelper {
     }
     
     fs.writeFileSync(reportFile, JSON.stringify(report, null, 2));
-    console.log(`📄 Rollback report saved to: ${reportFile}`);
+    console.log(`ðŸ“„ Rollback report saved to: ${reportFile}`);
     
     return reportFile;
   }
 
   async printSummary(result) {
-    console.log('\n📊 Rollback Analysis Summary');
+    console.log('\nðŸ“Š Rollback Analysis Summary');
     console.log('============================');
     console.log(`Action: ${result.action.toUpperCase()}`);
     
@@ -264,8 +264,8 @@ class RenderRollbackHelper {
     }
     
     if (result.instructions) {
-      console.log('\n📋 Manual Rollback Instructions:');
-      result.instructions.forEach((instruction, index) => {
+      console.log('\nðŸ“‹ Manual Rollback Instructions:');
+      result.instructions.forEach((instruction, _index) => {
         console.log(`  ${instruction}`);
       });
     }
@@ -273,7 +273,7 @@ class RenderRollbackHelper {
 
   async runRollbackAnalysis() {
     try {
-      console.log('🚀 Starting rollback analysis...');
+      console.log('ðŸš€ Starting rollback analysis...');
       
       const result = await this.performRollback();
       const report = await this.generateRollbackReport(result);
@@ -281,11 +281,11 @@ class RenderRollbackHelper {
       await this.printSummary(result);
       await this.saveReport(report);
       
-      console.log(`\n✅ Rollback analysis completed. Action: ${result.action}`);
+      console.log(`\nâœ… Rollback analysis completed. Action: ${result.action}`);
       
       return result.action !== 'error';
     } catch (error) {
-      console.error('❌ Rollback analysis failed:', error);
+      console.error('âŒ Rollback analysis failed:', error);
       return false;
     }
   }
@@ -315,3 +315,4 @@ if (require.main === module) {
 }
 
 module.exports = RenderRollbackHelper;
+

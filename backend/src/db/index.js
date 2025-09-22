@@ -1,4 +1,4 @@
-const fs = require('fs');
+﻿const fs = require('fs');
 const { AsyncLocalStorage } = require('async_hooks');
 const companyContext = require('../companyContext');
 const logger = require('../logger');
@@ -188,7 +188,7 @@ if (usePgMem) {
       }
     : false;
 
-  function buildPool(overrideRejectUnauthorized) {
+  const buildPool = (overrideRejectUnauthorized) => {
     const effectiveSsl = useSSL
       ? {
           ...sslConfig,
@@ -210,7 +210,7 @@ if (usePgMem) {
       keepAlive: true,
       keepAliveInitialDelayMillis: Number(process.env.PG_KEEPALIVE_DELAY_MS) || 30000,
     });
-  }
+  };
 
   pool = buildPool();
 
@@ -325,7 +325,7 @@ async function query(text, params) {
         } catch (err) {
           if (usePgMem) {
             const message = err && typeof err.message === 'string' ? err.message : '';
-            if (/relation \"items\" does not exist/i.test(message)) {
+            if (/relation "items" does not exist/i.test(message)) {
               await client.query(`CREATE TABLE IF NOT EXISTS items (
                 id SERIAL PRIMARY KEY,
                 name TEXT,
@@ -345,7 +345,7 @@ async function query(text, params) {
             if ((/duplicate column/i.test(message) || /already exists/i.test(message)) && /ALTER TABLE .* ADD COLUMN IF NOT EXISTS/i.test(sql)) {
               return { rows: [], rowCount: 0, command: 'ALTER' };
             }
-            if (/language \"plpgsql\"/i.test(message) || /Unkonwn language \"plpgsql\"/i.test(message)) {
+            if (/language "plpgsql"/i.test(message) || /Unkonwn language "plpgsql"/i.test(message)) {
               return { rows: [], rowCount: 0, command: 'DO' };
             }
           }

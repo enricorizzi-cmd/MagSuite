@@ -108,7 +108,7 @@ class DeploymentMonitor {
 
   async checkDiskSpace() {
     try {
-      const stats = fs.statSync('/');
+      fs.statSync('/');
       // This is a simplified check - in production you'd use a proper disk space check
       this.log('Disk space: OK');
       return true;

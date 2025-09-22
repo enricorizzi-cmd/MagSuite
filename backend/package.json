@@ -1,60 +1,61 @@
 {
-    "name":  "magsuite-backend",
-    "version":  "0.1.0",
-    "engines":  {
-                    "node":  "20.x"
-                },
-    "scripts":  {
-                    "start":  "node server.js",
-                    "lint":  "eslint . --max-warnings=0",
-                    "test":  "jest",
-                    "migrate":  "node db/migrate.js",
-                    "audit:supabase": "node scripts/audit-supabase.js",
-                    "audit:render": "node scripts/audit-render.js",
-                    "deploy:monitor": "node scripts/deployment-monitor.js",
-                    "deploy:validate": "node scripts/deployment-validator.js",
-                    "deploy:rollback": "node scripts/rollback-helper.js",
-                    "deploy:render": "node scripts/render-helper.js",
-                    "deploy:auto": "node scripts/deployment-automation.js",
-                    "mcp:setup": "node scripts/setup-mcp.js",
-                    "mcp:test": "node scripts/test-mcp.js"
-                },
-    "dependencies":  {
-                         "bcryptjs":  "^3.0.2",
-                         "bwip-js":  "^4.7.0",
-                         "compression":  "^1.7.4",
-                         "exceljs":  "^4.4.0",
-                         "express":  "^5.1.0",
-                         "express-rate-limit":  "^7.1.5",
-                         "helmet":  "^7.1.0",
-                         "ioredis":  "^5.3.2",
-                         "jimp":  "^1.6.0",
-                         "jsonwebtoken":  "^9.0.2",
-                         "multer":  "^2.0.2",
-                         "node-cron":  "^3.0.3",
-                         "nodemailer":  "^6.9.11",
-                         "pdfkit":  "^0.17.2",
-                         "pg":  "^8.11.3",
-                         "pg-mem":  "^3.0.5",
-                         "qrcode":  "^1.5.3",
-                         "tslib":  "^2.8.1",
-                         "winston":  "^3.10.0"
-                     },
-    "devDependencies":  {
-                            "dotenv":  "^16.4.5",
-                            "eslint":  "^8.57.1",
-                            "eslint-config-prettier":  "^10.1.8",
-                            "jest":  "^30.1.3",
-                            "jest-environment-node":  "^30.1.2",
-                            "prettier":  "^3.6.2",
-                            "supertest":  "^7.1.4",
-                            "eslint-plugin-import":  "^2.29.1"
-                        },
-    "jest":  {
-                 "testEnvironment":  "node",
-                 "setupFiles":  [
-                                    "\u003crootDir\u003e/jest.setup.js"
-                                ],
-                 "globalSetup":  "\u003crootDir\u003e/jest.global-setup.js"
-             }
+    "name": "magsuite-backend",
+    "version": "0.1.0",
+    "engines": {
+        "node": "20.x"
+    },
+    "scripts": {
+        "start": "node server.js",
+        "lint": "eslint . --max-warnings=0",
+        "test": "jest",
+        "migrate": "node db/migrate.js",
+        "audit:supabase": "node scripts/audit-supabase.js",
+        "audit:render": "node scripts/audit-render.js",
+        "deploy:monitor": "node scripts/deployment-monitor.js",
+        "deploy:validate": "node scripts/deployment-validator.js",
+        "deploy:rollback": "node scripts/rollback-helper.js",
+        "deploy:render": "node scripts/render-helper.js",
+        "deploy:auto": "node scripts/deployment-automation.js",
+        "mcp:setup": "node scripts/setup-mcp.js",
+        "mcp:test": "node scripts/test-mcp.js"
+    },
+    "dependencies": {
+        "bcryptjs": "^3.0.2",
+        "bwip-js": "^4.7.0",
+        "compression": "^1.7.4",
+        "exceljs": "^4.4.0",
+        "express": "^5.1.0",
+        "express-rate-limit": "^7.1.5",
+        "helmet": "^7.1.0",
+        "ioredis": "^5.3.2",
+        "jimp": "^1.6.0",
+        "jsonwebtoken": "^9.0.2",
+        "multer": "^2.0.2",
+        "node-cron": "^3.0.3",
+        "nodemailer": "^6.9.11",
+        "pdfkit": "^0.17.2",
+        "pg": "^8.11.3",
+        "pg-mem": "^3.0.5",
+        "qrcode": "^1.5.3",
+        "tslib": "^2.8.1",
+        "web-push": "^3.6.7",
+        "winston": "^3.10.0"
+    },
+    "devDependencies": {
+        "dotenv": "^16.4.5",
+        "eslint": "^8.57.1",
+        "eslint-config-prettier": "^10.1.8",
+        "eslint-plugin-import": "^2.29.1",
+        "jest": "^30.1.3",
+        "jest-environment-node": "^30.1.2",
+        "prettier": "^3.6.2",
+        "supertest": "^7.1.4"
+    },
+    "jest": {
+        "testEnvironment": "node",
+        "setupFiles": [
+            "<rootDir>/jest.setup.js"
+        ],
+        "globalSetup": "<rootDir>/jest.global-setup.js"
+    }
 }

@@ -119,7 +119,7 @@ async function checkStorage() {
     }
     
     // Check disk space
-    const stats = await fs.stat(uploadRoot);
+    await fs.stat(uploadRoot);
     const tempFile = path.join(uploadRoot, '.health-check-temp');
     
     try {

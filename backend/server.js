@@ -27,6 +27,7 @@ const gestionaleRouter = require('./src/gestionale');
 
 const notificationsRouter = require('./src/notifications');
 const usersRouter = require('./src/users');
+const bpModule = require('./src/bp');
 const db = require('./src/db');
 const { runTenantBackups } = require('./src/backup');
 const cron = require('node-cron');
@@ -117,6 +118,7 @@ async function start(port = process.env.PORT || 3000) {
   
   // Initialize cache
   cache.initRedis();
+  bpModule.setup();
   
   await db
     .connect()
@@ -402,6 +404,7 @@ async function start(port = process.env.PORT || 3000) {
   app.use('/users', usersRouter.router);
   
   app.use('/notifications', notificationsRouter.router);
+  app.use('/bp', bpModule.router);
   
   // Initialize integrations (webhooks and schedulers)
   try {
@@ -834,7 +837,7 @@ async function start(port = process.env.PORT || 3000) {
   });
 
   // Global error handler
-  app.use((err, req, res, next) => {
+  app.use((err, req, res, _next) => {
     logger.error('Unhandled error in request', {
       error: err.message,
       stack: err.stack,
@@ -876,4 +879,11 @@ if (require.main === module) {
 }
 
 module.exports = { start };
+
+
+
+
+
+
+
 

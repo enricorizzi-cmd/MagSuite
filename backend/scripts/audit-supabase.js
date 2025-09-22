@@ -225,7 +225,6 @@ async function main() {
 
     // Expected RLS tables
     printSection('Expected RLS tables status');
-    const expectedTables = ['items','sequences','causals','partners','addresses'];
     const expectedStatus = await runQuery(
       client,
       `with expected(tablename) as (values ('items'),('sequences'),('causals'),('partners'),('addresses'))

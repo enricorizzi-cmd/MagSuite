@@ -13,12 +13,14 @@ const rolePermissions = {
     documents: ['read'],
     items: ['read'],
     gestionale: ['read'],
+    bp: ['read'],
   },
   view: {
     inventory: ['read'],
     documents: ['read'],
     items: ['read'],
     gestionale: ['read'],
+    bp: ['read'],
   },
   // Backward compatible legacy roles
   manager: {
@@ -27,8 +29,13 @@ const rolePermissions = {
     documents: ['read', 'write'],
     items: ['read', 'write'],
     gestionale: ['read'],
+    bp: ['read', 'write'],
   },
-  worker: { inventory: ['read'], items: ['read'] },
+  worker: {
+    inventory: ['read'],
+    items: ['read'],
+    bp: ['read'],
+  },
   api: { '*': ['*'] },
 };
 
@@ -138,3 +145,5 @@ function rbac(module, action) {
 }
 
 module.exports = { authenticateToken, rbac };
+
+

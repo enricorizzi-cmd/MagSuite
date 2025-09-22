@@ -382,7 +382,7 @@ function formatTimeRange(start: string, end: string) {
   const opts: Intl.DateTimeFormatOptions = { hour: '2-digit', minute: '2-digit' };
   const startFmt = new Intl.DateTimeFormat('it-IT', opts).format(new Date(start));
   const endFmt = end ? new Intl.DateTimeFormat('it-IT', opts).format(new Date(end)) : '';
-  return endFmt ? ${startFmt} -  : startFmt;
+  return endFmt ? `${startFmt} - ${endFmt}` : startFmt;
 }
 
 function formatNumber(value: number) {

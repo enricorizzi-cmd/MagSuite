@@ -272,7 +272,7 @@ onMounted(async () => {
 });
 
 function formatRange(start: string, end: string) {
-  return ${formatDate(start)} → ;
+  return `${formatDate(start)} → ${formatDate(end)}`;
 }
 
 function formatDate(value: string) {

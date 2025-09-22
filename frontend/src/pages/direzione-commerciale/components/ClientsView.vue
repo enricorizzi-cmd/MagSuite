@@ -196,7 +196,7 @@ async function updateStatus(item: BPClient) {
 }
 
 async function unlink(item: BPClient) {
-  if (!confirm(Scollegare  dal modulo BP?)) return;
+  if (!confirm('Scollegare dal modulo BP?')) return;
   await store.removeClient(item.id);
 }
 

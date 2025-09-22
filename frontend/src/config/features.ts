@@ -64,7 +64,13 @@ export const FEATURES_TREE: FeatureSection[] = [
     key: 'commerciale',
     label: 'Direzione commerciale',
     children: [
-      { key: 'bpapp', label: 'BPApp', path: '/direzione-commerciale/bpapp' },
+      { key: 'dashboard', label: 'Dashboard', path: '/direzione-commerciale' },
+      { key: 'agenda', label: 'Agenda', path: '/direzione-commerciale/agenda' },
+      { key: 'periodi', label: 'Periodi & KPI', path: '/direzione-commerciale/periodi' },
+      { key: 'clienti', label: 'Clienti', path: '/direzione-commerciale/clienti' },
+      { key: 'vendite', label: 'Vendite', path: '/direzione-commerciale/vendite' },
+      { key: 'squadra', label: 'Squadra & provvigioni', path: '/direzione-commerciale/squadra' },
+      { key: 'impostazioni', label: 'Impostazioni', path: '/direzione-commerciale/impostazioni' },
     ],
   },
   {

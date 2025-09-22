@@ -371,7 +371,7 @@ const sections = computed<Section[]>(() => {
 
     { key: 'risorse-umane', label: 'Risorse umane', base: '/risorse-umane/ferie-permessi' },
 
-    { key: 'commerciale', label: 'Direzione commerciale', base: '/direzione-commerciale/bpapp' },
+    { key: 'commerciale', label: 'Direzione commerciale', base: '/direzione-commerciale' },
 
     { key: 'amministrativa', label: 'Direzione amministrativa', base: '/direzione-amministrativa/piano-finanziario' },
 
@@ -501,7 +501,19 @@ function tabsForSection(key: Section['key']): Tab[] {
 
       return [
 
-        { label: 'BPApp', path: '/direzione-commerciale/bpapp' },
+        { label: 'Dashboard', path: '/direzione-commerciale' },
+
+        { label: 'Agenda', path: '/direzione-commerciale/agenda' },
+
+        { label: 'Periodi & KPI', path: '/direzione-commerciale/periodi' },
+
+        { label: 'Clienti', path: '/direzione-commerciale/clienti' },
+
+        { label: 'Vendite', path: '/direzione-commerciale/vendite' },
+
+        { label: 'Squadra & provvigioni', path: '/direzione-commerciale/squadra' },
+
+        { label: 'Impostazioni', path: '/direzione-commerciale/impostazioni' },
 
       ];
 

@@ -30,8 +30,7 @@ Queste regole definiscono come pianificare, implementare e consegnare il lavoro 
    - Esegui lint e test sulle parti toccate; correggi errori prima di procedere.
    - Evita di ignorare warning critici o di introdurre debito tecnico.
 6. **Versionamento e PR**
-   - Usa branch descrittivi (es. feature/..., fix/...); commit messaggi chiari (imperativo, breve, motivo se utile).
-   - Apri PR piccole con descrizione del problema, della soluzione e dell'impatto.
+   - lavora sempre solo direttamente nel branch principale non crearne mai di nuovi!
 7. **Consegna e chiusura**
    - Verifica criteri di accettazione; aggiorna documentazione se cambia il comportamento.
    - Chiudi i TODO e fornisci un riepilogo conciso degli effetti della modifica.

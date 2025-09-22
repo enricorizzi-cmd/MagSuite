@@ -24,6 +24,13 @@ const Magazzini = () => import('./pages/logistica/Magazzini.vue');
 const Movimenti = () => import('./pages/logistica/Movimenti.vue');
 // Direzione commerciale
 const BPApp = () => import('./pages/direzione-commerciale/BPApp.vue');
+const DashboardView = () => import('./pages/direzione-commerciale/components/DashboardView.vue');
+const AgendaView = () => import('./pages/direzione-commerciale/components/AgendaView.vue');
+const PeriodsView = () => import('./pages/direzione-commerciale/components/PeriodsView.vue');
+const ClientsView = () => import('./pages/direzione-commerciale/components/ClientsView.vue');
+const SalesView = () => import('./pages/direzione-commerciale/components/SalesView.vue');
+const TeamView = () => import('./pages/direzione-commerciale/components/TeamView.vue');
+const SettingsView = () => import('./pages/direzione-commerciale/components/SettingsView.vue');
 // Direzione amministrativa
 const PianoFinanziario = () => import('./pages/direzione-amministrativa/PianoFinanziario.vue');
 const Marginalita = () => import('./pages/direzione-amministrativa/Marginalita.vue');
@@ -78,8 +85,15 @@ const routes: Array<RouteRecordRaw> = [
   { path: '/risorse-umane/ferie-permessi', name: 'ferie-permessi', component: FeriePermessi },
   { path: '/risorse-umane/entrata-uscita', name: 'entrata-uscita', component: EntrataUscita },
   { path: '/risorse-umane/turni', name: 'turni', component: Turni },
-  // Direzione commerciale (placeholder section)
+  // Direzione commerciale
+  { path: '/direzione-commerciale', name: 'direzione-commerciale', component: BPApp },
   { path: '/direzione-commerciale/bpapp', name: 'bpapp', component: BPApp },
+  { path: '/direzione-commerciale/agenda', name: 'direzione-commerciale-agenda', component: BPApp },
+  { path: '/direzione-commerciale/periodi', name: 'direzione-commerciale-periodi', component: BPApp },
+  { path: '/direzione-commerciale/clienti', name: 'direzione-commerciale-clienti', component: BPApp },
+  { path: '/direzione-commerciale/vendite', name: 'direzione-commerciale-vendite', component: BPApp },
+  { path: '/direzione-commerciale/squadra', name: 'direzione-commerciale-squadra', component: BPApp },
+  { path: '/direzione-commerciale/impostazioni', name: 'direzione-commerciale-impostazioni', component: BPApp },
   // Direzione amministrativa
   { path: '/direzione-amministrativa/piano-finanziario', name: 'piano-finanziario', component: PianoFinanziario },
   { path: '/direzione-amministrativa/marginalita', name: 'marginalita', component: Marginalita },

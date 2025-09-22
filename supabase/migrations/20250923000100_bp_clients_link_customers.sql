@@ -1,4 +1,4 @@
-﻿ALTER TABLE bp_clients
+ALTER TABLE bp_clients
   ADD COLUMN IF NOT EXISTS customer_id INTEGER REFERENCES customers(id) ON DELETE CASCADE;
 
 UPDATE bp_clients AS bc

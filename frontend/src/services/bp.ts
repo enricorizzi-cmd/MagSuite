@@ -1,4 +1,4 @@
-﻿import api from './api';
+import api from './api';
 
 export interface BPConsultant {
   company_id: number;
@@ -134,7 +134,7 @@ export async function fetchCurrentConsultant() {
 }
 
 export async function updateConsultant(userId: number, payload: Partial<BPConsultant>) {
-  const { data } = await api.put(/bp/consultants/, payload);
+  const { data } = await api.put('/bp/consultants/' + userId, payload);
   return data as BPConsultant;
 }
 
@@ -162,10 +162,18 @@ export async function saveClient(payload: Partial<BPClient> & { customer_id: num
 }
 
 export async function deleteClient(id: string) {
-  await api.delete(/bp/clients/);
+  await api.delete('/bp/clients/' + id);
 }
 
-\n\nexport interface CustomerSummary {\n  id: number;\n  code?: string | null;\n  name: string;\n  email?: string | null;\n  phone?: string | null;\n}\n\nexport async function searchCustomers(term: string, limit = 10) {
+export interface CustomerSummary {
+  id: number;
+  code?: string | null;
+  name: string;
+  email?: string | null;
+  phone?: string | null;
+}
+
+export async function searchCustomers(term: string, limit = 10) {
   const query = term.trim();
   if (query.length < 2) return [] as CustomerSummary[];
   const { data } = await api.get<{ items: CustomerSummary[] }>('/bp/customers/search', { params: { q: query, limit } });
@@ -188,7 +196,7 @@ export async function saveAppointment(payload: Partial<BPAppointment>) {
 }
 
 export async function deleteAppointment(id: string) {
-  await api.delete(/bp/appointments/);
+  await api.delete('/bp/appointments/' + id);
 }
 
 export async function fetchPeriods(params: ListParams = {}) {
@@ -202,7 +210,7 @@ export async function savePeriod(payload: Partial<BPPeriod>) {
 }
 
 export async function deletePeriod(id: string) {
-  await api.delete(/bp/periods/);
+  await api.delete('/bp/periods/' + id);
 }
 
 export async function fetchSales(params: ListParams = {}) {
@@ -216,7 +224,7 @@ export async function saveSale(payload: Partial<BPSale>) {
 }
 
 export async function deleteSale(id: string) {
-  await api.delete(/bp/sales/);
+  await api.delete('/bp/sales/' + id);
 }
 
 export async function fetchSettings() {
@@ -258,6 +266,7 @@ export async function unsubscribePush(endpoint: string) {
   const { data } = await api.post('/bp/push/unsubscribe', { endpoint });
   return data;
 }
+
 
 
 

@@ -3,8 +3,8 @@ CREATE TABLE IF NOT EXISTS companies (
   name text not null unique
 );
 
-alter table users add column company_id integer references companies(id);
-alter table items add column company_id integer references companies(id);
+alter table users add column if not exists company_id integer references companies(id);
+alter table items add column if not exists company_id integer references companies(id);
 
 alter table items enable row level security;
 -- Idempotent reset to avoid duplicate policy errors on re-run

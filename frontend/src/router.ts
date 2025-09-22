@@ -90,9 +90,7 @@ const routes: Array<RouteRecordRaw> = [
   { path: '/direzione-commerciale/bpapp', name: 'bpapp', component: BPApp },
   { path: '/direzione-commerciale/agenda', name: 'direzione-commerciale-agenda', component: BPApp },
   { path: '/direzione-commerciale/periodi', name: 'direzione-commerciale-periodi', component: BPApp },
-  { path: '/direzione-commerciale/clienti', name: 'direzione-commerciale-clienti', component: BPApp },
   { path: '/direzione-commerciale/vendite', name: 'direzione-commerciale-vendite', component: BPApp },
-  { path: '/direzione-commerciale/squadra', name: 'direzione-commerciale-squadra', component: BPApp },
   { path: '/direzione-commerciale/impostazioni', name: 'direzione-commerciale-impostazioni', component: BPApp },
   // Direzione amministrativa
   { path: '/direzione-amministrativa/piano-finanziario', name: 'piano-finanziario', component: PianoFinanziario },

@@ -5,17 +5,17 @@
       <header class="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
         <div>
           <h1 class="text-2xl font-semibold text-slate-100">Direzione commerciale</h1>
-          <p class="text-sm text-slate-400">Pianificazione commerciale, andamento squadra e pipeline vendite.</p>
+          <p class="text-sm text-slate-400">Pianificazione commerciale e pipeline vendite. Clienti e utenti gestiti tramite le sezioni dedicate di MagSuite.</p>
         </div>
         <div class="flex flex-wrap gap-2 text-sm">
           <RouterLink
             class="rounded-lg border border-white/10 px-3 py-1.5 text-slate-200 hover:bg-white/10"
             to="/anagrafiche/clienti"
-          >Apri anagrafiche clienti</RouterLink>
+          >Anagrafiche clienti</RouterLink>
           <RouterLink
             class="rounded-lg border border-white/10 px-3 py-1.5 text-slate-200 hover:bg-white/10"
             to="/users"
-          >Gestisci utenti</RouterLink>
+          >Gestione utenti</RouterLink>
         </div>
       </header>
 
@@ -35,9 +35,7 @@
         <DashboardView v-if="currentView === 'dashboard'" />
         <AgendaView v-else-if="currentView === 'agenda'" />
         <PeriodsView v-else-if="currentView === 'periodi'" />
-        <ClientsView v-else-if="currentView === 'clienti'" />
         <SalesView v-else-if="currentView === 'vendite'" />
-        <TeamView v-else-if="currentView === 'squadra'" />
         <SettingsView v-else-if="currentView === 'impostazioni'" />
       </section>
     </main>
@@ -52,9 +50,7 @@ import { useBpStore } from '../../stores/bp';
 import DashboardView from './components/DashboardView.vue';
 import AgendaView from './components/AgendaView.vue';
 import PeriodsView from './components/PeriodsView.vue';
-import ClientsView from './components/ClientsView.vue';
 import SalesView from './components/SalesView.vue';
-import TeamView from './components/TeamView.vue';
 import SettingsView from './components/SettingsView.vue';
 
 const store = useBpStore();
@@ -65,9 +61,7 @@ const tabs = [
   { label: 'Dashboard', to: '/direzione-commerciale', view: 'dashboard' },
   { label: 'Agenda', to: '/direzione-commerciale/agenda', view: 'agenda' },
   { label: 'Periodi & KPI', to: '/direzione-commerciale/periodi', view: 'periodi' },
-  { label: 'Clienti', to: '/direzione-commerciale/clienti', view: 'clienti' },
   { label: 'Vendite', to: '/direzione-commerciale/vendite', view: 'vendite' },
-  { label: 'Squadra & provvigioni', to: '/direzione-commerciale/squadra', view: 'squadra' },
   { label: 'Impostazioni', to: '/direzione-commerciale/impostazioni', view: 'impostazioni' }
 ];
 
@@ -76,9 +70,7 @@ const currentView = computed(() => {
   if (path === '/direzione-commerciale') return 'dashboard';
   if (path.includes('/agenda')) return 'agenda';
   if (path.includes('/periodi')) return 'periodi';
-  if (path.includes('/clienti')) return 'clienti';
   if (path.includes('/vendite')) return 'vendite';
-  if (path.includes('/squadra')) return 'squadra';
   if (path.includes('/impostazioni')) return 'impostazioni';
   return 'dashboard';
 });

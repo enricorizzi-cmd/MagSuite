@@ -507,11 +507,7 @@ function tabsForSection(key: Section['key']): Tab[] {
 
         { label: 'Periodi & KPI', path: '/direzione-commerciale/periodi' },
 
-        { label: 'Clienti', path: '/direzione-commerciale/clienti' },
-
         { label: 'Vendite', path: '/direzione-commerciale/vendite' },
-
-        { label: 'Squadra & provvigioni', path: '/direzione-commerciale/squadra' },
 
         { label: 'Impostazioni', path: '/direzione-commerciale/impostazioni' },
 

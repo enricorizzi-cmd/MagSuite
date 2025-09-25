@@ -1,7 +1,8 @@
 const db = require('./db');
 const cache = require('./cache');
 const logger = require('./logger');
-const fs = require('fs').promises;
+const fs = require('fs');
+const fsp = fs.promises;
 const path = require('path');
 const os = require('os');
 const process = require('process');
@@ -112,20 +113,29 @@ async function checkStorage() {
     
     // Create upload directory if it doesn't exist
     try {
-      await fs.access(uploadRoot, fs.constants.W_OK);
+      await fsp.access(uploadRoot, fs.constants.W_OK);
     } catch (accessErr) {
       // Directory doesn't exist, create it
-      await fs.mkdir(uploadRoot, { recursive: true });
+      await fsp.mkdir(uploadRoot, { recursive: true });
       logger.info('Created upload directory:', uploadRoot);
     }
-    
+
     // Check disk space
-    await fs.stat(uploadRoot);
-    const tempFile = path.join(uploadRoot, '.health-check-temp');
-    
+    await fsp.stat(uploadRoot);
+    const tempFile = path.join(
+      uploadRoot,
+      `.health-check-temp-${process.pid}-${Date.now()}-${Math.random().toString(36).slice(2)}`
+    );
+
     try {
-      await fs.writeFile(tempFile, 'health-check');
-      await fs.unlink(tempFile);
+      await fsp.writeFile(tempFile, 'health-check');
+      try {
+        await fsp.unlink(tempFile);
+      } catch (unlinkErr) {
+        if (unlinkErr.code !== 'ENOENT') {
+          throw unlinkErr;
+        }
+      }
     } catch (writeErr) {
       throw new Error(`Cannot write to upload directory: ${writeErr.message}`);
     }

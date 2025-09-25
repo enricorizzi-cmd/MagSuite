@@ -80,21 +80,127 @@ const sslConfig = useSSL
     }
   : false;
 
-function createPool(overrideRejectUnauthorized) {
-  const effectiveSsl = useSSL
-    ? {
-      ...sslConfig,
-      rejectUnauthorized:
-        typeof overrideRejectUnauthorized === 'boolean'
-          ? overrideRejectUnauthorized
-          : sslConfig && typeof sslConfig === 'object'
-          ? sslConfig.rejectUnauthorized
-          : undefined,
+const supabaseConnectionErrorCodes = new Set(['ETIMEDOUT','ECONNREFUSED','ECONNRESET','EHOSTUNREACH','ENETUNREACH','EAI_AGAIN']);
+const supabaseConnectionErrorFragments = [
+  'timeout',
+  'refused',
+  'unreachable',
+  'getaddrinfo',
+  'failed to look up address',
+];
+
+function flattenErrors(err) {
+  const queue = [err];
+  const seen = new Set();
+  const result = [];
+  while (queue.length > 0) {
+    const current = queue.shift();
+    if (!current || typeof current !== 'object') continue;
+    if (seen.has(current)) continue;
+    seen.add(current);
+    result.push(current);
+    if (Array.isArray(current.errors)) {
+      for (const nested of current.errors) {
+        queue.push(nested);
+      }
     }
-    : false;
+    if (current.cause) {
+      queue.push(current.cause);
+    }
+  }
+  return result;
+}
+
+function isSupabasePoolerConnection() {
+  try {
+    const parsed = new URL(connectionString);
+    return /\.pooler\.supabase\.com$/i.test(parsed.hostname);
+  } catch (_) {
+    return false;
+  }
+}
+
+function buildSupabaseDirectConnectionString() {
+  const override = stripQuotes(process.env.SUPABASE_DIRECT_URL || '');
+  if (override) {
+    return override;
+  }
+  let parsed;
+  try {
+    parsed = new URL(connectionString);
+  } catch (_) {
+    return null;
+  }
+  if (!/\.pooler\.supabase\.com$/i.test(parsed.hostname)) {
+    return null;
+  }
+  const rawUser = decodeURIComponent(parsed.username || '');
+  const userParts = rawUser.split('.');
+  const directUser =
+    stripQuotes(process.env.SUPABASE_DIRECT_USER || '') ||
+    (userParts[0] || rawUser || 'postgres');
+  const projectRef =
+    stripQuotes(process.env.SUPABASE_PROJECT_REF || '') ||
+    (userParts.length > 1 ? userParts.slice(1).join('.') : '');
+  const host =
+    stripQuotes(process.env.SUPABASE_DIRECT_HOST || '') ||
+    (projectRef ? `db.${projectRef}.supabase.co` : '');
+  if (!host) {
+    return null;
+  }
+  const password = decodeURIComponent(parsed.password || '');
+  const database = (parsed.pathname || '/postgres').slice(1) || 'postgres';
+  const params = new URLSearchParams(parsed.search);
+  const sslmodeOverride = stripQuotes(process.env.SUPABASE_DIRECT_SSLMODE || '');
+  const sslmode = sslmodeOverride || params.get('sslmode') || 'require';
+  params.set('sslmode', sslmode);
+  const query = params.toString();
+  const port = stripQuotes(process.env.SUPABASE_DIRECT_PORT || '') || '5432';
+  const authPassword = password ? `:${encodeURIComponent(password)}` : '';
+  const authSection = `${encodeURIComponent(directUser)}${authPassword}`;
+  return `postgresql://${authSection}@${host}:${port}/${database}${query ? `?${query}` : ''}`;
+}
+
+function shouldAttemptSupabaseDirect(err) {
+  if (!isSupabasePoolerConnection()) {
+    return false;
+  }
+  const flattened = flattenErrors(err);
+  if (!flattened.length) {
+    return false;
+  }
+  for (const item of flattened) {
+    const code = item && (item.code || item.errno);
+    if (code && supabaseConnectionErrorCodes.has(String(code))) {
+      return true;
+    }
+  }
+  return flattened.some(
+    (item) =>
+      item &&
+      typeof item.message === 'string' &&
+      supabaseConnectionErrorFragments.some((fragment) =>
+        fragment && item.message.toLowerCase().includes(fragment)
+      )
+  );
+}
+
+function createPool(options = {}) {
+  const { connectionString: connStr = connectionString, rejectUnauthorized: overrideRejectUnauthorized } = options || {};
+  let effectiveSsl = false;
+  if (useSSL) {
+    const base = sslConfig && typeof sslConfig === 'object' ? { ...sslConfig } : {};
+    if (typeof overrideRejectUnauthorized === 'boolean') {
+      base.rejectUnauthorized = overrideRejectUnauthorized;
+    }
+    if (!base.minVersion) {
+      base.minVersion = 'TLSv1.2';
+    }
+    effectiveSsl = base;
+  }
 
   return new Pool({
-    connectionString,
+    connectionString: connStr,
     ssl: effectiveSsl,
     enableChannelBinding: useSSL,
     max: Number(process.env.PGPOOL_MAX) || 3,
@@ -103,6 +209,7 @@ function createPool(overrideRejectUnauthorized) {
     keepAliveInitialDelayMillis: Number(process.env.PG_KEEPALIVE_DELAY_MS) || 30000,
   });
 }
+
 
 let pool = createPool();
 
@@ -140,12 +247,34 @@ async function run() {
       });
       pool = alt;
       await pool.query('SELECT 1');
+    } else if (shouldAttemptSupabaseDirect(err)) {
+      const directConnection = buildSupabaseDirectConnectionString();
+      if (directConnection) {
+        const flattened = flattenErrors(err);
+        const codes = [];
+        for (const item of flattened) {
+          const code = item && (item.code || item.errno);
+          if (code && !codes.includes(code)) {
+            codes.push(code);
+          }
+        }
+        const codeSummary = codes.length ? codes.join(', ') : 'unknown';
+        console.warn(`[migrate] Supabase pooler connection failed (${codeSummary}); retrying with direct endpoint`);
+        try { await pool.end(); } catch (_) {}
+        try {
+          pool = createPool({ connectionString: directConnection });
+          await pool.query('SELECT 1');
+        } catch (directErr) {
+          console.error('[migrate] Supabase direct endpoint fallback failed', directErr);
+          throw err;
+        }
+      } else {
+        throw err;
+      }
     } else {
       throw err;
     }
-  }
-
-  const files = fs.readdirSync(dir).filter(f => f.endsWith('.sql')).sort();
+  }\r\n\r\n  const files = fs.readdirSync(dir).filter(f => f.endsWith('.sql')).sort();
   await pool.query('CREATE TABLE IF NOT EXISTS schema_migrations (filename text primary key)');
   for (const file of files) {
     const { rows } = await pool.query('SELECT 1 FROM schema_migrations WHERE filename = $1', [file]);
@@ -165,3 +294,8 @@ run().catch(err => {
   console.error(err);
   process.exit(1);
 });
+
+
+
+
+

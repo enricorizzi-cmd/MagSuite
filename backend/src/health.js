@@ -109,7 +109,7 @@ async function checkCache() {
 async function checkStorage() {
   try {
     // Use environment variable for upload directory, fallback to relative path
-    const uploadRoot = process.env.UPLOAD_DIR || path.join(__dirname, '..', 'uploads');
+    const uploadRoot = process.env.UPLOAD_DIR || path.join(__dirname, '..', '..', 'uploads');
     
     // Create upload directory if it doesn't exist
     try {
